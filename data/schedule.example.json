@@ -1,0 +1,31 @@
+{
+  "source": "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums",
+  "tournamentSlug": "copa-do-mundo-2026",
+  "teams": [
+    {
+      "code": "MEX",
+      "name": "México",
+      "shortName": "México",
+      "flag": "🇲🇽",
+      "group": "A"
+    },
+    {
+      "code": "RSA",
+      "name": "África do Sul",
+      "shortName": "África do Sul",
+      "flag": "🇿🇦",
+      "group": "A"
+    }
+  ],
+  "matches": [
+    {
+      "number": 1,
+      "stage": "group",
+      "group": "A",
+      "homeCode": "MEX",
+      "awayCode": "RSA",
+      "scheduledAt": "2026-06-11T19:00:00Z",
+      "venue": "Estádio Cidade do México"
+    }
+  ]
+}
