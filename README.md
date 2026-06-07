@@ -110,9 +110,14 @@ O provedor atualiza apenas um placar observado. Um administrador ainda precisa
 confirmar o resultado para pontuar os bolões. Essa separação protege o ranking
 contra placares provisórios e erros do fornecedor.
 
-Configure `RESULTS_FEED_URL` e `CRON_SECRET` na Vercel e use o Supabase Cron para
-chamar `/api/cron/results` a cada minuto. O procedimento completo e a análise de
-provedores estão em [docs/RESULTS_OPERATIONS.md](docs/RESULTS_OPERATIONS.md).
+Configure `RESULTS_FEED_URL`, `CRON_SECRET` e `SUPABASE_SERVICE_ROLE_KEY` na
+Vercel e use o Supabase Cron para chamar `/api/cron/results` a cada minuto. O
+feed principal é validado contra as 104 partidas e há uma contingência gratuita
+pela ESPN. O procedimento completo está em
+[docs/RESULTS_OPERATIONS.md](docs/RESULTS_OPERATIONS.md).
+
+O fluxo diário do painel, incluindo definição dos participantes do mata-mata,
+está em [docs/ADMIN_OPERATIONS.md](docs/ADMIN_OPERATIONS.md).
 
 Smoke tests que usam a infraestrutura real:
 

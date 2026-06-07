@@ -60,6 +60,8 @@ uma fonte oficial de agenda.
 | Supabase indisponível no desenvolvimento | Fallback explícito para demo |
 | Provedor informa placar incorreto | Observação separada da finalização oficial |
 | Endpoint de sincronização é chamado por terceiros | `CRON_SECRET` obrigatório |
+| Feed gratuito fica indisponível ou parcial | Fallback ESPN + validação das 104 partidas |
+| Participante errado entra no mata-mata | Atribuição administrativa auditada e bloqueada após palpites |
 
 Antes do lançamento, alertas de erro, backup e restauração do Supabase devem ser
 testados em ambiente de homologação.

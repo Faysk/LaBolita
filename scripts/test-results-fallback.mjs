@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 
-const PORT = 3200;
+const PORT = 3201;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const secret = randomUUID();
 const server = spawn(
@@ -13,7 +13,7 @@ const server = spawn(
     env: {
       ...process.env,
       PORT: String(PORT),
-      RESULTS_FEED_URL: "https://worldcup26.ir/get/games",
+      RESULTS_FEED_URL: "http://127.0.0.1:1/unavailable",
       CRON_SECRET: secret,
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -32,33 +32,18 @@ server.stderr.on("data", (chunk) => {
 try {
   await waitForServer();
 
-  const home = await fetch(BASE_URL);
-  const homeHtml = await home.text();
-  assert.equal(home.status, 200);
-  assert.match(homeHtml, /México/);
-  assert.doesNotMatch(homeHtml, /A agenda ainda não foi importada/);
-  const health = await fetch(`${BASE_URL}/api/health`).then((response) => response.json());
-  assert.equal(health.launchReady, true);
-  assert.equal(health.schedule.renderReady, true);
-
-  const unauthorized = await fetch(`${BASE_URL}/api/cron/results`);
-  assert.equal(unauthorized.status, 401);
-  assert.match(unauthorized.headers.get("cache-control") ?? "", /no-store/);
-
-  const authorized = await fetch(`${BASE_URL}/api/cron/results`, {
+  const response = await fetch(`${BASE_URL}/api/cron/results`, {
     headers: { authorization: `Bearer ${secret}` },
   });
-  assert.equal(authorized.status, 200);
-  const body = await authorized.json();
+  assert.equal(response.status, 200);
+  const body = await response.json();
   assert.equal(body.status, "ok");
+  assert.equal(body.source, "espn");
+  assert.equal(body.fallbackUsed, true);
   assert.equal(body.observations, 104);
   assert.equal(body.matched, 104);
-  assert.equal(body.source, "worldcup26");
-  assert.equal(body.fallbackUsed, false);
-  assert.equal(body.ignoredRegressions, 0);
-  assert.match(authorized.headers.get("cache-control") ?? "", /no-store/);
 
-  console.log("Remote results synchronization smoke test passed");
+  console.log("Free results fallback smoke test passed");
 } catch (error) {
   console.error(serverOutput);
   throw error;

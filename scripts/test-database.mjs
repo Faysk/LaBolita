@@ -7,7 +7,10 @@ const USER_TWO = "10000000-0000-0000-0000-000000000002";
 const USER_THREE = "10000000-0000-0000-0000-000000000003";
 const MATCH_ID = "20260000-0000-0000-0002-000000000001";
 const KNOCKOUT_MATCH_ID = "20260000-0000-0000-0002-000000000002";
+const UNRESOLVED_MATCH_ID = "20260000-0000-0000-0002-000000000003";
+const FOLLOWUP_MATCH_ID = "20260000-0000-0000-0002-000000000004";
 const HOME_TEAM_ID = "20260000-0000-0000-0001-000000000001";
+const AWAY_TEAM_ID = "20260000-0000-0000-0001-000000000002";
 
 const db = new PGlite();
 
@@ -81,6 +84,7 @@ async function applyProjectSql() {
 async function verifySeedAndScoring() {
   assert.equal(await scalar("select count(*)::integer from public.tournaments"), 1);
   assert.equal(await scalar("select count(*)::integer from public.matches"), 1);
+  assert.equal(await scalar("select count(*)::integer from public.results_sync_state"), 1);
   assert.equal(
     await scalar(
       "select base_points::integer from public.calculate_base_points(2, 1, 2, 1)",
@@ -169,11 +173,43 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       2,
       'final',
       '${HOME_TEAM_ID}',
-      '20260000-0000-0000-0001-000000000002',
+      '${AWAY_TEAM_ID}',
       now() + interval '2 days',
       now() + interval '2 days',
       'Estádio Teste'
+    ), (
+      '${UNRESOLVED_MATCH_ID}',
+      '20260000-0000-0000-0000-000000000001',
+      3,
+      'round_of_32',
+      null,
+      null,
+      now() + interval '3 days',
+      now() + interval '3 days',
+      'Estádio Teste'
+    ), (
+      '${FOLLOWUP_MATCH_ID}',
+      '20260000-0000-0000-0000-000000000001',
+      4,
+      'round_of_16',
+      null,
+      null,
+      now() + interval '4 days',
+      now() + interval '4 days',
+      'Estádio Teste'
     );
+
+    update public.matches
+    set
+      home_placeholder = '1º do Grupo A',
+      away_placeholder = '2º do Grupo B'
+    where id = '${UNRESOLVED_MATCH_ID}';
+
+    update public.matches
+    set
+      home_placeholder = 'Vencedor da partida 3',
+      away_placeholder = 'Vencedor da partida 2'
+    where id = '${FOLLOWUP_MATCH_ID}';
   `);
 
   await asUser(USER_ONE, async () => {
@@ -187,6 +223,11 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       HOME_TEAM_ID,
     ]);
     await db.query("select public.create_pool('Bolão Teste', false)");
+    await db.query("select public.assign_match_teams($1, $2, $3, 'classificação oficial')", [
+      UNRESOLVED_MATCH_ID,
+      HOME_TEAM_ID,
+      AWAY_TEAM_ID,
+    ]);
   });
 
   await asUser(USER_THREE, async () => {
@@ -194,6 +235,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   });
 
   const inviteCode = await scalar("select invite_code from public.pools limit 1");
+  assert.match(inviteCode, /^[A-F0-9]{12}$/);
 
   await asUser(USER_TWO, async () => {
     await db.query("select public.join_pool($1)", [inviteCode]);
@@ -270,6 +312,14 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       ]),
       "non-admin users must not finalize matches",
     );
+    await assert.rejects(
+      db.query("select public.assign_match_teams($1, $2, $3, 'tentativa indevida')", [
+        UNRESOLVED_MATCH_ID,
+        HOME_TEAM_ID,
+        AWAY_TEAM_ID,
+      ]),
+      "non-admin users must not assign knockout participants",
+    );
   });
 
   await asUser(USER_ONE, async () => {
@@ -317,6 +367,22 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       ),
       5,
       "a correction must replace, not accumulate, the previous score",
+    );
+
+    await db.query(
+      "select public.update_match_schedule($1, now() - interval '1 hour', now() - interval '1 hour', 'scheduled', 'teste de progressão', false)",
+      [UNRESOLVED_MATCH_ID],
+    );
+    await db.query(
+      "select public.finalize_match($1, 1, 1, $2, 'resultado mata-mata')",
+      [UNRESOLVED_MATCH_ID, HOME_TEAM_ID],
+    );
+    assert.equal(
+      await scalar("select home_team_id from public.matches where id = $1", [
+        FOLLOWUP_MATCH_ID,
+      ]),
+      HOME_TEAM_ID,
+      "a confirmed knockout winner must propagate to the next match",
     );
   });
 

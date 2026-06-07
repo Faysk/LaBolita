@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AlertTriangle, CheckCircle2, Database, RefreshCw } from "lucide-react";
 import { AdminMatchQueue } from "@/components/admin-match-queue";
 import { requireAdmin } from "@/lib/auth";
-import { getMatches } from "@/lib/data/matches";
+import { getMatches, getResultsSyncState, getTeams } from "@/lib/data/matches";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
 export const metadata: Metadata = {
@@ -12,11 +12,27 @@ export const metadata: Metadata = {
 
 export default async function AdminPage() {
   await requireAdmin();
-  const matches = await getMatches();
+  const [matches, teams, resultsSyncState] = await Promise.all([
+    getMatches(),
+    getTeams(),
+    getResultsSyncState(),
+  ]);
   const databaseConfigured = hasSupabaseConfig();
   const resultsSyncConfigured = Boolean(
-    process.env.RESULTS_FEED_URL && process.env.CRON_SECRET,
+    process.env.RESULTS_FEED_URL &&
+      process.env.CRON_SECRET &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
   );
+  const syncHealthy = resultsSyncConfigured && resultsSyncState?.status === "ok";
+  const syncSummary = !resultsSyncConfigured
+    ? "Resultados manuais"
+    : resultsSyncState?.status === "error"
+      ? "Falha na última tentativa"
+      : resultsSyncState?.fallbackUsed
+        ? "Contingência ESPN ativa"
+        : resultsSyncState?.status === "ok"
+          ? "Feed principal saudável"
+          : "Aguardando primeira execução";
 
   return (
     <main className="page-container py-7 md:py-10">
@@ -42,8 +58,8 @@ export default async function AdminPage() {
           [
             RefreshCw,
             "Sincronização",
-            resultsSyncConfigured ? "Feed + confirmação" : "Resultados manuais",
-            resultsSyncConfigured ? "text-brand bg-emerald-50" : "text-amber-700 bg-amber-50",
+            syncSummary,
+            syncHealthy ? "text-brand bg-emerald-50" : "text-amber-700 bg-amber-50",
           ],
           [
             CheckCircle2,
@@ -77,7 +93,7 @@ export default async function AdminPage() {
             </p>
           </div>
         </div>
-        <AdminMatchQueue matches={matches} />
+        <AdminMatchQueue matches={matches} teams={teams} />
       </section>
     </main>
   );

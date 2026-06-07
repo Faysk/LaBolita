@@ -37,6 +37,15 @@ type DatabasePrediction = {
   advancing_team_id: string | null;
 };
 
+export type ResultsSyncState = {
+  status: "never" | "ok" | "error";
+  source: string | null;
+  fallbackUsed: boolean;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  errorMessage: string | null;
+};
+
 const STAGE_LABELS: Record<MatchStage, string> = {
   group: "Fase de grupos",
   round_of_32: "Fase de 32",
@@ -71,14 +80,18 @@ export async function getMatches(): Promise<DemoMatch[]> {
         live_away_score,
         provider_status,
         provider_updated_at,
-        home_team:teams!matches_home_team_id_fkey(id, name, short_name, flag_emoji),
-        away_team:teams!matches_away_team_id_fkey(id, name, short_name, flag_emoji)
+        home_team:teams!matches_home_team_id_tournament_id_fkey(id, name, short_name, flag_emoji),
+        away_team:teams!matches_away_team_id_tournament_id_fkey(id, name, short_name, flag_emoji)
       `,
     )
     .order("scheduled_at")
     .limit(104);
 
-  if (error || !matches?.length) return [];
+  if (error) {
+    console.error("Could not load matches", error);
+    return [];
+  }
+  if (!matches?.length) return [];
 
   const {
     data: { user },
@@ -140,6 +153,53 @@ export async function getMatches(): Promise<DemoMatch[]> {
       providerUpdatedAt: match.provider_updated_at,
     };
   });
+}
+
+export async function getTeams(): Promise<DemoTeam[]> {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) {
+    return Array.from(
+      new Map(
+        demoMatches
+          .flatMap((match) => [match.homeTeam, match.awayTeam])
+          .map((team) => [team.id, team]),
+      ).values(),
+    ).sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+  }
+
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, name, short_name, flag_emoji")
+    .order("name");
+  if (error) return [];
+
+  return ((data ?? []) as DatabaseTeam[]).map((team) => ({
+    id: team.id,
+    name: team.name,
+    shortName: team.short_name,
+    flag: team.flag_emoji ?? "•",
+  }));
+}
+
+export async function getResultsSyncState(): Promise<ResultsSyncState | null> {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from("results_sync_state")
+    .select("status, source, fallback_used, last_attempt_at, last_success_at, error_message")
+    .eq("id", true)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  return {
+    status: data.status as ResultsSyncState["status"],
+    source: data.source,
+    fallbackUsed: data.fallback_used,
+    lastAttemptAt: data.last_attempt_at,
+    lastSuccessAt: data.last_success_at,
+    errorMessage: data.error_message,
+  };
 }
 
 function mapTeam(team: DatabaseTeam | null, fallback: string): DemoTeam {

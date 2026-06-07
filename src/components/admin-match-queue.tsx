@@ -1,13 +1,19 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, UserRoundCog, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { storeLocalResult, useLocalResults } from "@/lib/local-state";
-import type { DemoMatch } from "@/lib/types";
+import type { DemoMatch, DemoTeam } from "@/lib/types";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
-export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
+export function AdminMatchQueue({
+  matches,
+  teams,
+}: {
+  matches: DemoMatch[];
+  teams: DemoTeam[];
+}) {
   const results = useLocalResults();
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -15,6 +21,10 @@ export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
     <div className="divide-y">
       {matches.map((match) => {
         const effectiveResult = results[match.id] ?? match.result;
+        const needsTeamAssignment =
+          isUuid(match.id) &&
+          match.stage !== "group" &&
+          (!isUuid(match.homeTeam.id) || !isUuid(match.awayTeam.id));
         return (
           <div
             key={match.id}
@@ -44,6 +54,11 @@ export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
                       : " · ao vivo"}
                   </p>
                 )}
+                {needsTeamAssignment && (
+                  <p className="mt-1 text-sm font-bold text-amber-700">
+                    Participantes ainda não definidos
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -52,24 +67,35 @@ export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
               >
                 {activeId === match.id ? (
                   <X className="size-4" />
+                ) : needsTeamAssignment ? (
+                  <UserRoundCog className="size-4" />
                 ) : (
                   <Check className="size-4" />
                 )}
-                {effectiveResult
+                {needsTeamAssignment
+                  ? "Definir participantes"
+                  : effectiveResult
                   ? "Corrigir resultado"
                   : match.providerStatus === "finished"
                     ? "Confirmar resultado"
                     : "Informar resultado"}
               </button>
             </div>
-            {activeId === match.id && (
-              <ResultForm
-                match={match}
-                existingResult={effectiveResult}
-                providerResult={match.liveResult}
-                onSuccess={() => setActiveId(null)}
-              />
-            )}
+            {activeId === match.id &&
+              (needsTeamAssignment ? (
+                <TeamAssignmentForm
+                  match={match}
+                  teams={teams}
+                  onSuccess={() => setActiveId(null)}
+                />
+              ) : (
+                <ResultForm
+                  match={match}
+                  existingResult={effectiveResult}
+                  providerResult={match.liveResult}
+                  onSuccess={() => setActiveId(null)}
+                />
+              ))}
           </div>
         );
       })}
@@ -79,6 +105,121 @@ export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
         </p>
       )}
     </div>
+  );
+}
+
+function TeamAssignmentForm({
+  match,
+  teams,
+  onSuccess,
+}: {
+  match: DemoMatch;
+  teams: DemoTeam[];
+  onSuccess: () => void;
+}) {
+  const router = useRouter();
+  const [homeTeamId, setHomeTeamId] = useState(isUuid(match.homeTeam.id) ? match.homeTeam.id : "");
+  const [awayTeamId, setAwayTeamId] = useState(isUuid(match.awayTeam.id) ? match.awayTeam.id : "");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+
+    try {
+      if (homeTeamId === awayTeamId) throw new Error("Selecione duas seleções diferentes.");
+      const supabase = createBrowserSupabaseClient();
+      if (!supabase) throw new Error("Supabase não está configurado.");
+
+      const { error: rpcError } = await supabase.rpc("assign_match_teams", {
+        p_match_id: match.id,
+        p_home_team_id: homeTeamId,
+        p_away_team_id: awayTeamId,
+        p_reason: reason.trim(),
+      });
+      if (rpcError) throw new Error(rpcError.message);
+
+      router.refresh();
+      onSuccess();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível salvar.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="mt-4 grid gap-3 rounded-2xl bg-surface-muted p-4 md:grid-cols-2"
+    >
+      <TeamSelect
+        label="Mandante"
+        value={homeTeamId}
+        teams={teams}
+        onChange={setHomeTeamId}
+      />
+      <TeamSelect
+        label="Visitante"
+        value={awayTeamId}
+        teams={teams}
+        onChange={setAwayTeamId}
+      />
+      <label className="text-xs font-bold text-muted md:col-span-2">
+        Motivo ou fonte
+        <input
+          required
+          minLength={3}
+          maxLength={200}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="Ex.: classificação oficial confirmada pela FIFA"
+          className="mt-1 block w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-bold text-foreground outline-none focus:border-brand"
+        />
+      </label>
+      <button
+        type="submit"
+        disabled={busy || !homeTeamId || !awayTeamId || homeTeamId === awayTeamId}
+        className="rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60 md:col-span-2"
+      >
+        {busy ? "Salvando..." : "Confirmar participantes"}
+      </button>
+      {error && <p className="text-sm font-medium text-red-700 md:col-span-2">{error}</p>}
+    </form>
+  );
+}
+
+function TeamSelect({
+  label,
+  value,
+  teams,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  teams: DemoTeam[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="text-xs font-bold text-muted">
+      {label}
+      <select
+        required
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 block w-full rounded-xl border bg-white px-3 py-3 text-sm font-bold text-foreground outline-none focus:border-brand"
+      >
+        <option value="">Selecione</option>
+        {teams.map((team) => (
+          <option key={team.id} value={team.id}>
+            {team.flag} {team.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

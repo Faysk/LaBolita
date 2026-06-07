@@ -27,7 +27,8 @@
     "schedule:build": "node scripts/build-world-cup-schedule.mjs",
     "schedule:verify:sources": "node scripts/verify-schedule-sources.mjs",
     "schedule:import": "node --env-file=.env.local scripts/import-schedule.mjs",
-    "results:smoke:remote": "node --env-file=.env.local scripts/test-results-route.mjs"
+    "results:smoke:remote": "node --env-file=.env.local scripts/test-results-route.mjs",
+    "results:smoke:fallback": "node --env-file=.env.local scripts/test-results-fallback.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

@@ -9,6 +9,9 @@
 - Palpites de outros participantes só ficam visíveis depois do bloqueio.
 - O placar considerado é o resultado após prorrogação, sem cobranças de pênaltis.
 - No mata-mata, quem avança é informado separadamente.
+- Os participantes da fase de 32 são atribuídos pelo administrador após a
+  classificação oficial. Vencedores e perdedores das fases seguintes são
+  propagados automaticamente.
 
 ## Pontuação base
 
@@ -48,6 +51,8 @@ não existe na fase de grupos nem na disputa de terceiro lugar.
 - Desempate: pontos totais, placares exatos, resultados corretos e, por último,
   nome para ordenação determinística.
 - Correções de resultado recalculam o ranking e ficam registradas no histórico.
+- Cada usuário pode participar de até 100 bolões, criar até 20 e cada bolão
+  aceita até 500 participantes para proteger a operação gratuita.
 
 ## Casos operacionais
 
@@ -58,3 +63,5 @@ não existe na fase de grupos nem na disputa de terceiro lugar.
 - Resultado corrigido: usar `finalize_match` novamente com justificativa.
 - Partida mata-mata empatada nos pênaltis: salvar o empate após prorrogação e a
   seleção classificada separadamente.
+- Participantes do mata-mata: não podem ser alterados após o bloqueio ou depois
+  que houver palpites para a partida.

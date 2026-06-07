@@ -132,9 +132,12 @@ try {
   assert.equal(healthBody.launchReady, false);
   assert.equal(healthBody.schedule.requiredMatches, 104);
   assert.equal(healthBody.schedule.providerMappedMatches, 0);
+  assert.equal(healthBody.schedule.renderReady, false);
   assert.equal(healthBody.resultsSyncConfigured, false);
+  assert.equal(healthBody.resultsSync.status, "disabled");
   const disabledSync = await page.request.get(`${BASE_URL}/api/cron/results`);
   assert.equal(disabledSync.status(), 503);
+  assert.match(disabledSync.headers()["cache-control"] ?? "", /no-store/);
   assert.deepEqual(pageErrors, []);
 
   const desktopPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });

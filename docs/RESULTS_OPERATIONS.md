@@ -36,8 +36,14 @@ portanto, não altera pontos automaticamente.
 
 ```text
 RESULTS_FEED_URL=https://worldcup26.ir/get/games
+RESULTS_BACKUP_FEED_URL=
 CRON_SECRET=<segredo aleatório com pelo menos 32 caracteres>
+SUPABASE_SERVICE_ROLE_KEY=<service role key do projeto Supabase>
 ```
+
+Se `RESULTS_BACKUP_FEED_URL` ficar vazio, o app usa a agenda pública da ESPN
+somente quando o feed principal falhar. Essa API secundária não é documentada
+como produto para terceiros e também não possui SLA.
 
 2. Faça um novo deploy.
 3. No Supabase Dashboard, abra **Integrations > Cron** e crie uma chamada HTTP:
@@ -58,6 +64,11 @@ npm run results:smoke:remote
 O feed público acima é adequado como contingência e para validar o fluxo, mas
 não oferece SLA conhecido. Mantenha confirmação humana obrigatória enquanto ele
 for a fonte primária.
+
+Cada execução exige exatamente 104 partidas com identificadores únicos. O
+sistema rejeita feed parcial, placar informado muito antes do início e regressão
+de `finished` para `live` ou `scheduled`. O resumo da última tentativa fica em
+`results_sync_state` e também aparece em `/api/health`.
 
 ## Provedor recomendado
 
@@ -90,9 +101,24 @@ prorrogação e informar separadamente quem avançou.
 | Feed indisponível | Informar resultado manualmente após conferência |
 | Feed diverge da FIFA | Não confirmar; aguardar/corrigir a fonte |
 | Cron falha | Executar `npm run results:smoke:remote` e conferir logs |
+| Feed principal falha | O fallback ESPN é usado; confirmar `fallback_used` no health |
+| Feed parcial ou corrompido | A execução retorna 502 e não grava placares |
 | Horário muda após bloqueio | Usar `update_match_schedule` com justificativa |
 | Resultado é corrigido | Confirmar novamente; o banco recalcula e versiona |
 
 Automatizar a finalização só deve ser considerado depois de observar o provedor
 em produção e exigir, no mínimo, duas leituras finais idênticas, atraso de
 segurança e fonte secundária.
+
+## Capacidade no plano gratuito
+
+Uma execução por minuto representa aproximadamente 44.640 chamadas em um mês
+de 31 dias. Isso fica abaixo das 1.000.000 invocações mensais incluídas no
+[Vercel Hobby](https://vercel.com/docs/accounts/plans/hobby). O
+[Supabase Free](https://supabase.com/docs/pricing) informa 500 MB de banco, 5 GB
+de egress e até 50.000 usuários ativos mensais.
+
+O cenário atual é confortável para um beta privado. Acompanhe semanalmente o
+Usage das duas plataformas, principalmente egress, tamanho do banco e duração
+das funções. O [Supabase Cron](https://supabase.com/docs/guides/cron) recomenda
+no máximo oito jobs concorrentes; o LaBolita usa apenas um.

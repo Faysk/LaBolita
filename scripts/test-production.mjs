@@ -4,6 +4,7 @@ import { chromium } from "playwright-core";
 
 const BASE_URL = process.env.PRODUCTION_URL ?? "https://labolita.faysk.dev";
 const allowPendingDeploy = process.argv.includes("--allow-pending-deploy");
+const allowUnconfiguredSync = process.argv.includes("--allow-unconfigured-sync");
 const executablePath = await findBrowser();
 const browser = await chromium.launch({ executablePath, headless: true });
 
@@ -16,17 +17,15 @@ try {
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
 
-    const paths = [
+    const pagePaths = [
       "/",
       "/palpites",
       "/boloes",
       "/regras",
       "/entrar",
-      ...(allowPendingDeploy
-        ? []
-        : ["/privacidade", "/termos", "/robots.txt", "/sitemap.xml"]),
+      ...(allowPendingDeploy ? [] : ["/privacidade", "/termos"]),
     ];
-    for (const path of paths) {
+    for (const path of pagePaths) {
       const response = await page.goto(`${BASE_URL}${path}`, {
         waitUntil: "domcontentloaded",
       });
@@ -40,6 +39,15 @@ try {
       );
     }
 
+    if (!allowPendingDeploy) {
+      for (const path of ["/robots.txt", "/sitemap.xml"]) {
+        const response = await page.goto(`${BASE_URL}${path}`, {
+          waitUntil: "domcontentloaded",
+        });
+        assert.equal(response?.status(), 200, `${path} must respond successfully`);
+      }
+    }
+
     assert.deepEqual(errors, []);
     await page.close();
   }
@@ -51,11 +59,28 @@ try {
   assert.equal(health.launchReady, true);
   assert.equal(health.schedule.teams, 48);
   assert.equal(health.schedule.matches, 104);
+  if (!allowPendingDeploy) assert.equal(health.schedule.renderReady, true);
   if (!allowPendingDeploy) assert.equal(health.schedule.providerMappedMatches, 104);
+  if (!allowUnconfiguredSync) assert.equal(health.resultsSyncConfigured, true);
+  if (!allowPendingDeploy) {
+    assert.equal(health.resultsSync.status, "ok");
+    assert.equal(health.resultsSync.matched, 104);
+  }
 
   const home = await fetch(BASE_URL);
   assert.equal(home.headers.get("x-frame-options"), "DENY");
   assert.equal(home.headers.get("x-content-type-options"), "nosniff");
+  if (!allowPendingDeploy) {
+    const homeHtml = await home.text();
+    assert.match(homeHtml, /México/);
+    assert.doesNotMatch(homeHtml, /A agenda ainda não foi importada/);
+  }
+
+  const unauthorizedCron = await fetch(`${BASE_URL}/api/cron/results`);
+  assert.equal(unauthorizedCron.status, 401);
+  if (!allowPendingDeploy) {
+    assert.match(unauthorizedCron.headers.get("cache-control") ?? "", /no-store/);
+  }
 
   console.log("Production smoke test passed");
 } finally {
