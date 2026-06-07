@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import {
+  assertDatabaseMappingComplete,
   normalizeEspnFeed,
   normalizeWorldCupFeed,
   type ProviderObservation,
@@ -56,12 +57,11 @@ export async function syncResultsFeed() {
   }));
   const { observations, source, fallbackUsed } = await loadObservations(feedUrl, schedule);
   const byProviderId = new Map(matches.map((match) => [match.provider_match_id, match]));
+  assertDatabaseMappingComplete(
+    observations,
+    matches.map((match) => match.provider_match_id),
+  );
   const matched = observations.filter((item) => byProviderId.has(item.providerMatchId));
-  if (matched.length !== matches.length) {
-    throw new Error(
-      `Provider matched ${matched.length} database matches; expected ${matches.length}.`,
-    );
-  }
 
   let ignoredRegressions = 0;
   const changed = matched.flatMap((observation) => {
@@ -85,22 +85,26 @@ export async function syncResultsFeed() {
     return [{ match, observation }];
   });
 
-  for (let index = 0; index < changed.length; index += 10) {
-    const batch = changed.slice(index, index + 10);
-    await Promise.all(
-      batch.map(async ({ match, observation }) => {
-        const { error: updateError } = await supabase
-          .from("matches")
-          .update({
-            live_home_score: observation.homeScore,
-            live_away_score: observation.awayScore,
-            provider_status: observation.status,
-            provider_updated_at: new Date().toISOString(),
-          })
-          .eq("id", match.id);
-        if (updateError) throw updateError;
-      }),
+  if (changed.length > 0) {
+    const providerUpdatedAt = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabase.rpc(
+      "apply_results_sync_updates",
+      {
+        p_updates: changed.map(({ match, observation }) => ({
+          id: match.id,
+          live_home_score: observation.homeScore,
+          live_away_score: observation.awayScore,
+          provider_status: observation.status,
+          provider_updated_at: providerUpdatedAt,
+        })),
+      },
     );
+    if (updateError) throw updateError;
+    if (updated !== changed.length) {
+      throw new Error(
+        `Results transaction updated ${updated} matches; expected ${changed.length}.`,
+      );
+    }
   }
 
   const summary = {

@@ -50,9 +50,29 @@ try {
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/palpites`);
+  await page.getByRole("heading", { name: "Seus palpites" }).waitFor();
+  await waitForFlagFallbacks(page);
+  assert.equal(
+    await page.locator('[data-testid="team-flag"] img').evaluateAll((images) =>
+      images.every((image) => new URL(image.src).origin === window.location.origin),
+    ),
+    true,
+    "team flags must load from the application origin",
+  );
   const openingMatch = page.getByTestId("match-match-1");
   await openingMatch.getByLabel("Gols de México").fill("2");
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("prediction:match-1")),
+    null,
+    "a partial score must remain only as an unsaved draft",
+  );
   await openingMatch.getByLabel("Gols de África do Sul").fill("1");
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("prediction:match-1")),
+    null,
+    "a complete draft must wait for explicit confirmation",
+  );
+  await openingMatch.getByRole("button", { name: "Salvar palpite" }).click();
   assert.match(
     await page.evaluate(() => localStorage.getItem("prediction:match-1") ?? ""),
     /"homeScore":2/,
@@ -61,6 +81,7 @@ try {
   await finalMatch.getByLabel("Gols de Brasil").fill("1");
   await finalMatch.getByLabel("Gols de Argentina").fill("1");
   await finalMatch.getByLabel("Quem avança?").selectOption("brazil");
+  await finalMatch.getByRole("button", { name: "Salvar palpite" }).click();
   assert.match(
     await page.evaluate(() => localStorage.getItem("prediction:match-9") ?? ""),
     /"advancingTeamId":"brazil"/,
@@ -69,8 +90,8 @@ try {
   await page.goto(`${BASE_URL}/admin`);
   const adminOpeningMatch = page.getByTestId("admin-match-match-1");
   await adminOpeningMatch.getByRole("button", { name: "Informar resultado" }).click();
-  await adminOpeningMatch.getByLabel("México").fill("2");
-  await adminOpeningMatch.getByLabel("África do Sul").fill("1");
+  await adminOpeningMatch.getByRole("spinbutton", { name: "México" }).fill("2");
+  await adminOpeningMatch.getByRole("spinbutton", { name: "África do Sul" }).fill("1");
   await adminOpeningMatch.getByLabel("Motivo ou fonte").fill("Conferido na FIFA");
   await adminOpeningMatch.getByRole("button", { name: "Finalizar e pontuar" }).click();
   await adminOpeningMatch.getByText("Resultado informado: 2 x 1").waitFor();
@@ -118,8 +139,8 @@ try {
   await page.goto(`${BASE_URL}/admin`);
   const correctionMatch = page.getByTestId("admin-match-match-1");
   await correctionMatch.getByRole("button", { name: "Corrigir resultado" }).click();
-  await correctionMatch.getByLabel("México").fill("3");
-  await correctionMatch.getByLabel("África do Sul").fill("0");
+  await correctionMatch.getByRole("spinbutton", { name: "México" }).fill("3");
+  await correctionMatch.getByRole("spinbutton", { name: "África do Sul" }).fill("0");
   await correctionMatch.getByLabel("Motivo ou fonte").fill("Correção oficial");
   await correctionMatch.getByRole("button", { name: "Finalizar e pontuar" }).click();
   await correctionMatch.getByText("Resultado informado: 3 x 0").waitFor();
@@ -182,6 +203,7 @@ try {
   assert.equal(homeResponse?.headers()["x-content-type-options"], "nosniff");
   assert.equal(homeResponse?.headers()["cross-origin-resource-policy"], "same-origin");
   assert.match(homeResponse?.headers()["strict-transport-security"] ?? "", /max-age=/);
+  assert.match(homeResponse?.headers()["content-security-policy"] ?? "", /object-src 'none'/);
   await desktopPage.goto(`${BASE_URL}/privacidade`);
   await desktopPage.getByRole("heading", { name: "Política de Privacidade" }).waitFor();
   await desktopPage.getByRole("link", { name: "contato@faysk.dev" }).waitFor();
@@ -237,13 +259,18 @@ async function findBrowser() {
 }
 
 async function waitForFlagFallbacks(page) {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const brokenFlags = await page.locator('img[alt^="Bandeira de"]').evaluateAll((images) =>
-      images.filter((image) => image.naturalWidth === 0).length,
-    );
-    if (brokenFlags === 0) return;
-    await page.waitForTimeout(250);
-  }
-
-  assert.fail("flag images must either load or render their readable fallback");
+  const flags = page.getByTestId("team-flag");
+  assert.ok((await flags.count()) > 0, "team flags must be rendered");
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-testid="team-flag"] img')].every(
+      (image) => image.complete && image.naturalWidth > 0,
+    ),
+  );
+  const invalidSizes = await flags.evaluateAll((elements) =>
+    elements.filter((element) => {
+      const bounds = element.getBoundingClientRect();
+      return bounds.width < 20 || bounds.height < 16;
+    }).length,
+  );
+  assert.equal(invalidSizes, 0, "team flags must keep a readable fixed size");
 }

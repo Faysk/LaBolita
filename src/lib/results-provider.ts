@@ -151,6 +151,32 @@ export function assertCompleteObservationSet(
   }
 }
 
+export function assertDatabaseMappingComplete(
+  observations: ProviderObservation[],
+  databaseProviderIds: string[],
+  expectedMatches = EXPECTED_MATCHES,
+) {
+  if (databaseProviderIds.length !== expectedMatches) {
+    throw new Error(
+      `Database has ${databaseProviderIds.length} mapped matches; expected ${expectedMatches}.`,
+    );
+  }
+
+  const uniqueDatabaseIds = new Set(databaseProviderIds);
+  if (uniqueDatabaseIds.size !== databaseProviderIds.length) {
+    throw new Error("Database contains duplicate provider match identifiers.");
+  }
+
+  const matched = observations.filter((item) =>
+    uniqueDatabaseIds.has(item.providerMatchId),
+  );
+  if (matched.length !== expectedMatches) {
+    throw new Error(
+      `Provider matched ${matched.length} database matches; expected ${expectedMatches}.`,
+    );
+  }
+}
+
 function parseScore(value: string) {
   const score = Number(value);
   if (!Number.isInteger(score) || score < 0 || score > 30) {

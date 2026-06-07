@@ -26,6 +26,7 @@ export const localResultSchema = z.object({
 export const localPoolSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(3).max(60),
+  flagCode: z.string().regex(/^[a-z]{2}$/).optional(),
   code: z.string().min(4).max(20),
   members: z.number().int().positive(),
   position: z.number().int().positive(),

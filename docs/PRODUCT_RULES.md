@@ -8,7 +8,8 @@
 - O horário do PostgreSQL decide o bloqueio; o relógio do navegador não vale.
 - Palpites de outros participantes só ficam visíveis depois do bloqueio.
 - O placar considerado é o resultado após prorrogação, sem cobranças de pênaltis.
-- No mata-mata, quem avança é informado separadamente.
+- Na fase de grupos não existe disputa por pênaltis; partidas podem terminar empatadas.
+- No mata-mata, quem avança ou vence é informado separadamente.
 - Os participantes da fase de 32 são atribuídos pelo administrador após a
   classificação oficial. Vencedores e perdedores das fases seguintes são
   propagados automaticamente.
@@ -40,8 +41,8 @@ empate em resultado refinado.
 | Terceiro lugar | x2 |
 | Final | x5 |
 
-Acertar quem avança no mata-mata rende mais 3 pontos, sem multiplicador. O bônus
-não existe na fase de grupos nem na disputa de terceiro lugar.
+Acertar quem avança ou vence no mata-mata rende mais 3 pontos, sem
+multiplicador. O bônus não existe na fase de grupos.
 
 ## Bolões e ranking
 
@@ -57,8 +58,9 @@ não existe na fase de grupos nem na disputa de terceiro lugar.
   o ranking sem receber códigos de convite ou identificadores privados.
 - O dono pode editar, mudar a visibilidade, remover membros e arquivar o próprio
   bolão. Arquivamento nunca apaga o histórico.
-- Somente o administrador master pode recuperar um bolão arquivado ou suspender
-  e reativar contas.
+- Administradores globais podem recuperar bolões arquivados, suspender contas e
+  promover outros administradores. O master principal é único e não pode ser
+  alterado, suspenso ou rebaixado.
 - A primeira entrada exige aceite versionado dos Termos de Serviço e da Política
   de Privacidade.
 

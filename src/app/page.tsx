@@ -21,7 +21,7 @@ export default async function HomePage() {
 
   return (
     <main className="page-container py-6 md:py-10">
-      <section className="relative overflow-hidden rounded-[2rem] bg-brand-strong px-5 py-7 text-white shadow-2xl shadow-brand/20 md:px-10 md:py-11">
+      <section className="hero-panel relative overflow-hidden rounded-[2rem] px-5 py-7 text-white md:px-10 md:py-11">
         <div className="absolute -right-16 -top-20 size-64 rounded-full bg-accent/20 blur-3xl" />
         <div className="absolute -bottom-28 left-1/3 size-64 rounded-full bg-white/10 blur-3xl" />
         <div className="relative grid gap-8 md:grid-cols-[1.35fr_0.65fr] md:items-end">

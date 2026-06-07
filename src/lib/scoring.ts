@@ -65,7 +65,6 @@ export function calculateScore(
   const multiplier = STAGE_MULTIPLIERS[stage];
   const advancementPoints =
     stage !== "group" &&
-    stage !== "third_place" &&
     prediction.advancingTeamId &&
     prediction.advancingTeamId === result.advancingTeamId
       ? 3

@@ -3,6 +3,7 @@
 import { Check, LoaderCircle, UserRoundCog, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { TeamFlag } from "@/components/team-flag";
 import { storeLocalResult, useLocalResults } from "@/lib/local-state";
 import type { DemoMatch, DemoTeam } from "@/lib/types";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -36,9 +37,12 @@ export function AdminMatchQueue({
                 <p className="text-xs font-bold uppercase tracking-wider text-muted">
                   {match.stageLabel} • {match.dateLabel}
                 </p>
-                <p className="mt-1 font-bold">
-                  {match.homeTeam.flag} {match.homeTeam.name} x {match.awayTeam.name}{" "}
-                  {match.awayTeam.flag}
+                <p className="mt-2 flex flex-wrap items-center gap-2 font-bold">
+                  <TeamFlag team={match.homeTeam} size="sm" />
+                  {match.homeTeam.name}
+                  <span className="text-xs font-black text-muted">×</span>
+                  <TeamFlag team={match.awayTeam} size="sm" />
+                  {match.awayTeam.name}
                 </p>
                 {effectiveResult && (
                   <p className="mt-1 text-sm font-bold text-brand">
@@ -294,9 +298,9 @@ function ResultForm({
     >
       <ScoreField label={match.homeTeam.shortName} value={homeScore} onChange={setHomeScore} />
       <ScoreField label={match.awayTeam.shortName} value={awayScore} onChange={setAwayScore} />
-      {match.stage !== "group" && match.stage !== "third_place" && (
+      {match.stage !== "group" && (
         <label className="text-xs font-bold text-muted">
-          Quem avançou
+          {match.stage === "third_place" ? "Quem venceu" : "Quem avançou"}
           <select
             required
             value={advancingTeamId}

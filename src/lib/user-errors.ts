@@ -29,7 +29,10 @@ export function friendlyServerError(error: unknown, fallback: string) {
     return "Este bolão atingiu o limite de participantes.";
   }
   if (message.includes("only the master administrator can restore")) {
-    return "Somente o administrador master pode recuperar este bolão.";
+    return "Somente um administrador global pode recuperar este bolão.";
+  }
+  if (message.includes("principal master administrator cannot be altered")) {
+    return "O master principal é protegido e não pode ser alterado.";
   }
 
   return fallback;

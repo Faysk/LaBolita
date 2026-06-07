@@ -1,31 +1,35 @@
 import Link from "next/link";
-import { BarChart3, CircleHelp, Home, Shield, Target } from "lucide-react";
+import { Shield } from "lucide-react";
 import type { ReactNode } from "react";
 import { AccountMenu } from "@/components/account-menu";
+import {
+  DesktopNavigation,
+  MobileNavigation,
+} from "@/components/app-navigation";
 import { Brand } from "@/components/brand";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-const navigation = [
-  { href: "/", label: "Início", icon: Home },
-  { href: "/palpites", label: "Palpites", icon: Target },
-  { href: "/boloes", label: "Bolões", icon: BarChart3 },
-  { href: "/regras", label: "Regras", icon: CircleHelp },
-];
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
-  } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
-  const { data: profile } = user
+    error: userError,
+  } = (await supabase?.auth.getUser()) ?? { data: { user: null }, error: null };
+  if (userError) throw userError;
+  const { data: profile, error: profileError } = user
       ? await supabase!
         .from("profiles")
-        .select("display_name, is_admin, is_master_admin, terms_accepted_at, disabled_at")
+        .select("display_name, is_admin, is_master_admin, terms_accepted_at, terms_version, disabled_at")
         .eq("id", user.id)
         .single()
-    : { data: null };
+    : { data: null, error: null };
+  if (profileError) throw profileError;
   const demoMode = !supabase;
   const isAdmin = demoMode || Boolean(profile?.is_admin);
+  const termsAccepted =
+    Boolean(profile?.terms_accepted_at) &&
+    profile?.terms_version === CURRENT_TERMS_VERSION;
   const displayName =
     profile?.display_name ??
     user?.user_metadata?.full_name ??
@@ -34,20 +38,13 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur-xl">
-        <div className="page-container flex h-16 items-center justify-between">
+      <a href="#main-content" className="skip-link">
+        Pular para o conteúdo
+      </a>
+      <header className="app-header sticky top-0 z-40 border-b backdrop-blur-xl">
+        <div className="page-container flex h-[4.25rem] items-center justify-between">
           <Brand />
-          <nav className="hidden items-center gap-1 md:flex">
-            {navigation.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="interactive rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-muted hover:text-brand"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          <DesktopNavigation />
           <div className="flex items-center gap-2">
             {isAdmin && (
               <Link
@@ -68,13 +65,13 @@ export async function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       {demoMode && (
-        <div className="border-b bg-accent/35">
+        <div className="border-b bg-gradient-to-r from-accent/15 via-accent/45 to-accent/15">
           <p className="page-container py-2 text-center text-[11px] font-bold text-brand-strong">
             Modo demonstração: agenda parcial e dados salvos somente neste navegador.
           </p>
         </div>
       )}
-      {!demoMode && user && !profile?.terms_accepted_at && (
+      {!demoMode && user && !termsAccepted && (
         <div className="border-b border-amber-200 bg-amber-50">
           <p className="page-container py-2 text-center text-xs font-bold text-amber-800">
             Confirme os termos para salvar palpites e participar de bolões.{" "}
@@ -91,8 +88,10 @@ export async function AppShell({ children }: { children: ReactNode }) {
           </p>
         </div>
       )}
-      {children}
-      <footer className="mt-12 border-t pb-24 pt-7 md:pb-8">
+      <div id="main-content" tabIndex={-1}>
+        {children}
+      </div>
+      <footer className="mt-12 border-t bg-white/35 pb-24 pt-7 backdrop-blur-sm md:pb-8">
         <div className="page-container flex flex-col gap-3 text-xs font-semibold text-muted sm:flex-row sm:items-center sm:justify-between">
           <p>LaBolita · bolão recreativo e independente.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">
@@ -111,18 +110,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </footer>
-      <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border bg-white/95 p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl md:hidden">
-        {navigation.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="interactive flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-bold text-muted"
-          >
-            <item.icon className="size-4" />
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+      <MobileNavigation />
     </>
   );
 }

@@ -92,6 +92,7 @@ export async function GET() {
     (tournaments.count ?? 0) === 1 &&
     teamCount === REQUIRED_TEAMS &&
     matchCount === REQUIRED_MATCHES &&
+    providerMappedCount === REQUIRED_MATCHES &&
     renderReady;
 
   return NextResponse.json({

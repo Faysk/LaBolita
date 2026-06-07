@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { TermsAcceptancePanel } from "@/components/terms-acceptance-panel";
+import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { safeRedirectPath } from "@/lib/urls";
 
@@ -23,13 +24,19 @@ export default async function AcceptTermsPage({
 
   if (!user) redirect(`/entrar?next=${encodeURIComponent(nextPath)}`);
 
-  const { data: profile } = await supabase!
+  const { data: profile, error } = await supabase!
     .from("profiles")
-    .select("terms_accepted_at, disabled_at")
+    .select("terms_accepted_at, terms_version, disabled_at")
     .eq("id", user.id)
     .single();
+  if (error) throw error;
   if (profile?.disabled_at) redirect("/conta-suspensa");
-  if (profile?.terms_accepted_at) redirect(nextPath);
+  if (
+    profile?.terms_accepted_at &&
+    profile.terms_version === CURRENT_TERMS_VERSION
+  ) {
+    redirect(nextPath);
+  }
 
   return (
     <main className="page-container flex min-h-[calc(100vh-4rem)] items-center justify-center py-10">

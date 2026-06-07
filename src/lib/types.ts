@@ -65,6 +65,7 @@ export type ScoreBreakdown = {
 export type PoolSummary = {
   id: string;
   name: string;
+  flagCode?: string;
   code?: string;
   members: number;
   position: number;

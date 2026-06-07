@@ -63,7 +63,7 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
 
       <div className="mb-4 flex items-center gap-2 text-xs font-bold text-muted">
         <CheckCircle2 className="size-4 text-brand" />
-        Os palpites preenchidos são salvos automaticamente.
+        Revise o placar e toque em salvar. Assim nenhuma digitação parcial vira palpite.
       </div>
       <section className="grid gap-4 md:grid-cols-2">
         {visibleMatches.map((match) => (

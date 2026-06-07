@@ -11,7 +11,6 @@ import {
   Plus,
   Search,
   Settings2,
-  Trophy,
   UserMinus,
   Users,
   X,
@@ -19,8 +18,10 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CountryFlag } from "@/components/country-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
+import { COUNTRIES } from "@/lib/countries";
 import type { PoolsOverview } from "@/lib/data/pools";
 import {
   storeLocalPool,
@@ -295,7 +296,7 @@ export function PoolsWorkspace({
                 className="interactive rounded-2xl border bg-surface-muted p-4 text-left"
               >
                 <span className="flex items-center gap-2 font-black"><Archive className="size-4" /> {pool.name}</span>
-                <span className="mt-1 block text-xs text-muted">Somente o administrador master pode recuperar.</span>
+                <span className="mt-1 block text-xs text-muted">Um administrador global pode recuperar.</span>
               </button>
             ))}
           </div>
@@ -338,11 +339,9 @@ function PoolCard({
   onManage?: () => void;
 }) {
   return (
-    <article data-testid={`pool-${pool.id}`} className={`card p-5 ${selected ? "!bg-brand-strong text-white" : ""}`}>
+    <article data-testid={`pool-${pool.id}`} className={`card p-5 ${selected ? "card-dark text-white" : ""}`}>
       <div className="flex items-start justify-between">
-        <span className={`flex size-11 items-center justify-center rounded-2xl ${selected ? "bg-accent text-brand-strong" : "bg-surface-muted text-brand"}`}>
-          <Trophy className="size-5" />
-        </span>
+        <CountryFlag code={pool.flagCode} />
         <div className="flex items-center gap-2">
           {pool.isPublic && <Globe2 className="size-4 opacity-60" aria-label="Bolão público" />}
           {onManage && (
@@ -390,7 +389,7 @@ function PublicPoolCard({
   return (
     <article className={`card p-5 ${selected ? "ring-2 ring-brand" : ""}`}>
       <div className="flex items-center justify-between">
-        <span className="flex size-11 items-center justify-center rounded-2xl bg-surface-muted text-brand"><Globe2 className="size-5" /></span>
+        <CountryFlag code={pool.flagCode} />
         <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-black text-brand-strong">Público</span>
       </div>
       <h3 className="mt-5 text-xl font-black tracking-tight">{pool.name}</h3>
@@ -432,6 +431,7 @@ function PoolForm({
 }) {
   const [value, setValue] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [flagCode, setFlagCode] = useState("br");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -442,7 +442,7 @@ function PoolForm({
 
     try {
       const pool =
-        mode === "create" ? await createPool(value, isPublic) : await joinPool(value);
+        mode === "create" ? await createPool(value, isPublic, flagCode) : await joinPool(value);
       const isRemote = Boolean(createBrowserSupabaseClient());
       setValue("");
       onSuccess(pool, isRemote);
@@ -479,10 +479,13 @@ function PoolForm({
         </button>
       </div>
       {mode === "create" && (
-        <label className="mt-4 flex items-center gap-2 text-sm font-bold text-muted">
-          <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="size-4 accent-[var(--brand)]" />
-          Exibir este bolão na lista pública
-        </label>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <FlagPicker value={flagCode} onChange={setFlagCode} />
+          <label className="flex items-center gap-2 rounded-xl border bg-surface-muted px-3 py-3 text-sm font-bold text-muted">
+            <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="size-4 accent-[var(--brand)]" />
+            Exibir este bolão na lista pública
+          </label>
+        </div>
       )}
       {error && <p aria-live="polite" className="mt-3 text-sm font-medium text-red-700">{error}</p>}
     </form>
@@ -493,6 +496,7 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
   const router = useRouter();
   const [name, setName] = useState(pool.name);
   const [isPublic, setIsPublic] = useState(Boolean(pool.isPublic));
+  const [flagCode, setFlagCode] = useState(pool.flagCode ?? "br");
   const [reason, setReason] = useState("");
   const [members, setMembers] = useState<ManagedMember[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -511,10 +515,11 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
     if (!supabase || busy) return;
     setBusy(true);
     setError(null);
-    const { error: rpcError } = await supabase.rpc("update_pool", {
+    const { error: rpcError } = await supabase.rpc("update_pool_with_flag", {
       p_pool_id: pool.id,
       p_name: name,
       p_is_public: isPublic,
+      p_flag_code: flagCode,
       p_archived: archived,
       p_reason: reason,
     });
@@ -560,6 +565,7 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
         <label className="flex items-center gap-2 self-end rounded-xl border bg-surface-muted px-3 py-3 text-sm font-bold text-muted">
           <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="size-4 accent-[var(--brand)]" /> Listar publicamente
         </label>
+        <FlagPicker value={flagCode} onChange={setFlagCode} />
         <label className="text-xs font-bold text-muted md:col-span-2">Motivo da alteração
           <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Ex.: atualização solicitada pelo grupo" className="mt-1 block w-full rounded-xl border bg-white px-3 py-3 text-sm font-bold outline-none focus:border-brand" />
         </label>
@@ -591,23 +597,49 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
           ))}
         </div>
       )}
-      {pool.isArchived && <p className="mt-4 flex items-center gap-2 text-sm font-bold text-amber-700"><ArchiveRestore className="size-4" /> A recuperação fica disponível somente no painel master.</p>}
+      {pool.isArchived && <p className="mt-4 flex items-center gap-2 text-sm font-bold text-amber-700"><ArchiveRestore className="size-4" /> A recuperação fica disponível no painel de administração global.</p>}
       {error && <p aria-live="polite" className="mt-3 text-sm font-bold text-red-700">{error}</p>}
     </section>
   );
 }
 
-async function createPool(name: string, isPublic: boolean): Promise<PoolSummary> {
+async function createPool(name: string, isPublic: boolean, flagCode: string): Promise<PoolSummary> {
   const cleanName = name.trim();
   if (cleanName.length < 3) throw new Error("Use pelo menos 3 caracteres.");
   const supabase = createBrowserSupabaseClient();
   if (supabase) {
-    const { data, error } = await supabase.rpc("create_pool", { p_name: cleanName, p_is_public: isPublic });
+    const { data, error } = await supabase.rpc("create_pool_with_flag", {
+      p_name: cleanName,
+      p_is_public: isPublic,
+      p_flag_code: flagCode,
+    });
     if (error) throw error;
     const pool = normalizeRpcPool(data);
-    return { id: pool.id, name: pool.name, code: pool.invite_code, members: 1, position: 1, isPublic, isOwner: true };
+    return { id: pool.id, name: pool.name, flagCode, code: pool.invite_code, members: 1, position: 1, isPublic, isOwner: true };
   }
-  return { id: crypto.randomUUID(), name: cleanName, code: createInviteCode(), members: 1, position: 1, eligibleFrom: new Date().toISOString(), isOwner: true, isPublic };
+  return { id: crypto.randomUUID(), name: cleanName, flagCode, code: createInviteCode(), members: 1, position: 1, eligibleFrom: new Date().toISOString(), isOwner: true, isPublic };
+}
+
+function FlagPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="text-xs font-bold text-muted">
+      Bandeira do bolão
+      <span className="mt-1 flex items-center gap-2 rounded-xl border bg-white px-3 py-2">
+        <CountryFlag code={value} size="sm" />
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-w-0 flex-1 bg-transparent py-1 text-sm font-bold text-foreground outline-none"
+        >
+          {COUNTRIES.map((country) => (
+            <option key={country.code} value={country.code}>
+              {country.flag} {country.name}
+            </option>
+          ))}
+        </select>
+      </span>
+    </label>
+  );
 }
 
 async function joinPool(inviteCode: string): Promise<PoolSummary> {

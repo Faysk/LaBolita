@@ -102,15 +102,17 @@ try {
   });
   if (predictionError) throw predictionError;
 
-  const { data: pool, error: poolError } = await session.rpc("create_pool", {
+  const { data: pool, error: poolError } = await session.rpc("create_pool_with_flag", {
     p_name: "Auditoria automática",
     p_is_public: true,
+    p_flag_code: "pt",
   });
   if (poolError) throw poolError;
 
   const value = Array.isArray(pool) ? pool[0] : pool;
   poolId = value.id;
   assert.match(value.invite_code, /^[A-F0-9]{12}$/);
+  assert.equal(value.flag_code, "pt");
 
   const publicClient = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -121,6 +123,7 @@ try {
   );
   if (publicPoolsError) throw publicPoolsError;
   assert.equal(publicPools.length, 1);
+  assert.equal(publicPools[0].flag_code, "pt");
   assert.equal("invite_code" in publicPools[0], false, "public discovery must not expose invites");
 
   const { data: publicRanking, error: publicRankingError } = await publicClient.rpc(
@@ -138,6 +141,27 @@ try {
   const { data: myPools, error: myPoolsError } = await secondSession.rpc("get_my_pools");
   if (myPoolsError) throw myPoolsError;
   assert.equal(myPools.find((item) => item.pool_id === poolId)?.member_count, 2);
+  assert.equal(myPools.find((item) => item.pool_id === poolId)?.flag_code, "pt");
+
+  const { data: globalUsers, error: globalUsersError } = await session.rpc(
+    "master_list_users",
+    { p_search: "Auditoria LaBolita", p_limit: 100, p_offset: 0 },
+  );
+  if (globalUsersError) throw globalUsersError;
+  assert.ok(globalUsers.some((item) => item.user_id === userId), "promoted admins access global administration");
+
+  const { data: masterProfile, error: masterProfileError } = await service
+    .from("profiles")
+    .select("id")
+    .eq("is_master_admin", true)
+    .single();
+  if (masterProfileError) throw masterProfileError;
+  const { error: masterProtectionError } = await session.rpc("admin_update_user_access", {
+    p_user_id: masterProfile.id,
+    p_is_admin: false,
+    p_reason: "teste de proteção do master",
+  });
+  assert.ok(masterProtectionError, "promoted admins cannot demote the principal master");
 
   const { data: visibleProfiles, error: visibleProfilesError } = await secondSession
     .from("profiles")

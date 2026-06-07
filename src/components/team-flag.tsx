@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { DemoTeam } from "@/lib/types";
 
 export function TeamFlag({
@@ -10,60 +10,49 @@ export function TeamFlag({
   team: DemoTeam;
   size?: "sm" | "md" | "lg";
 }) {
-  const sources = flagSources(team);
-  const [sourceIndex, setSourceIndex] = useState(0);
-  const source = sources[sourceIndex];
-  const loadedRef = useRef(false);
+  const source = flagSource(team);
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const imageAvailable = Boolean(source && source !== failedSource);
   const sizeClass =
-    size === "sm" ? "size-6" : size === "lg" ? "size-11" : "size-8";
-
-  useEffect(() => {
-    loadedRef.current = false;
-    if (!source) return;
-
-    const fallbackTimeout = window.setTimeout(() => {
-      if (!loadedRef.current) {
-        setSourceIndex((current) => current + 1);
-      }
-    }, 1_500);
-
-    return () => window.clearTimeout(fallbackTimeout);
-  }, [source]);
+    size === "sm"
+      ? "h-5 w-7 rounded-md"
+      : size === "lg"
+        ? "h-10 w-14 rounded-xl"
+        : "h-7 w-10 rounded-lg";
+  const fallbackClass =
+    size === "sm" ? "text-[8px]" : size === "lg" ? "text-xs" : "text-[10px]";
 
   return (
     <span
-      className={`inline-flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden rounded-full border bg-white shadow-sm`}
+      data-testid="team-flag"
+      data-team={team.code ?? team.id}
+      className={`team-flag inline-flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden border bg-white shadow-sm`}
       title={team.name}
+      role="img"
+      aria-label={`Bandeira de ${team.name}`}
     >
-      {source ? (
-        // Small external SVG with an explicit fallback avoids image-optimizer quota.
+      {source && imageAvailable ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={source}
-          alt={`Bandeira de ${team.name}`}
+          alt=""
           className="h-full w-full object-cover"
-          loading="lazy"
-          onLoad={() => {
-            loadedRef.current = true;
-          }}
-          onError={() => setSourceIndex((current) => current + 1)}
+          onError={() => setFailedSource(source)}
         />
       ) : (
-        <span className="px-1 text-center text-[10px] font-black leading-none text-brand">
-          {team.flag !== "•" ? team.flag : team.code ?? "•"}
+        <span
+          className={`px-1 text-center font-black leading-none tracking-tight text-brand ${fallbackClass}`}
+        >
+          {team.code ?? isoCode(team)?.toUpperCase() ?? "TBD"}
         </span>
       )}
     </span>
   );
 }
 
-function flagSources(team: DemoTeam) {
+function flagSource(team: DemoTeam) {
   const iso = isoCode(team);
-  const twemoji = twemojiUrl(team.flag);
-  return [
-    iso ? `https://flagcdn.com/${iso}.svg` : null,
-    twemoji,
-  ].filter((source): source is string => Boolean(source));
+  return iso ? `/flags/${iso}.svg` : null;
 }
 
 function isoCode(team: DemoTeam) {
@@ -80,12 +69,4 @@ function isoCode(team: DemoTeam) {
   return regional
     .map((codepoint) => String.fromCharCode((codepoint ?? 0) - 0x1f1e6 + 97))
     .join("");
-}
-
-function twemojiUrl(flag: string) {
-  const codepoints = Array.from(flag)
-    .map((character) => character.codePointAt(0)?.toString(16))
-    .filter(Boolean);
-  if (codepoints.length < 2) return null;
-  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${codepoints.join("-")}.svg`;
 }

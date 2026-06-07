@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f7f0;
-  --foreground: #142419;
+  --background: #f3f7f1;
+  --foreground: #102319;
   --surface: #ffffff;
-  --surface-muted: #edf2e9;
-  --line: #dce5d8;
-  --brand: #0d6938;
-  --brand-strong: #084b29;
-  --accent: #e8ff73;
-  --muted: #66756a;
+  --surface-muted: #edf3ec;
+  --line: #d9e5d9;
+  --brand: #08713c;
+  --brand-strong: #064526;
+  --accent: #dfff65;
+  --muted: #617269;
+  --shadow-color: 21 61 37;
 }
 
 @theme inline {
@@ -31,10 +32,14 @@
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 5% -10%, rgba(223, 255, 101, 0.24), transparent 24rem),
+    radial-gradient(circle at 95% 10%, rgba(8, 113, 60, 0.12), transparent 28rem),
+    linear-gradient(180deg, #f8faf6 0%, var(--background) 38%, #eef5ee 100%);
   color: var(--foreground);
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   min-height: 100vh;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -107,8 +112,93 @@ summary:focus-visible {
 .card {
   border: 1px solid var(--line);
   border-radius: 1.5rem;
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
-  box-shadow: 0 18px 60px rgba(28, 60, 37, 0.07);
+  background: color-mix(in srgb, var(--surface) 93%, transparent);
+  box-shadow:
+    0 1px 1px rgba(var(--shadow-color) / 0.03),
+    0 18px 55px rgba(var(--shadow-color) / 0.075);
+}
+
+.card-dark {
+  border-color: rgba(255, 255, 255, 0.13);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(223, 255, 101, 0.2), transparent 14rem),
+    linear-gradient(145deg, #07522d, var(--brand-strong)) !important;
+  box-shadow: 0 24px 65px rgba(6, 69, 38, 0.22);
+}
+
+.hero-panel {
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 100% 0%, rgba(223, 255, 101, 0.2), transparent 25rem),
+    linear-gradient(145deg, #075c32, var(--brand-strong));
+  background-size: 34px 34px, 34px 34px, auto, auto;
+  box-shadow: 0 28px 85px rgba(6, 69, 38, 0.24);
+}
+
+.app-header {
+  border-color: color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--background) 82%, transparent);
+  box-shadow: 0 8px 35px rgba(var(--shadow-color) / 0.05);
+}
+
+.desktop-nav {
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, white 68%, transparent);
+  padding: 0.2rem;
+}
+
+.mobile-navigation {
+  padding-bottom: max(0.375rem, env(safe-area-inset-bottom));
+  border-color: color-mix(in srgb, var(--line) 75%, transparent);
+  background: color-mix(in srgb, white 92%, transparent);
+}
+
+.skip-link {
+  position: fixed;
+  left: 1rem;
+  top: -5rem;
+  z-index: 100;
+  border-radius: 0.75rem;
+  background: var(--brand-strong);
+  color: white;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+.team-flag {
+  border-color: color-mix(in srgb, var(--line) 75%, white);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 1), rgba(237, 243, 236, 0.8));
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.8),
+    0 6px 16px rgba(var(--shadow-color) / 0.12);
+}
+
+.team-flag img {
+  transform: scale(1.02);
+}
+
+.match-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.match-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  content: "";
+  background: linear-gradient(90deg, var(--brand), var(--accent), transparent);
+  opacity: 0.65;
 }
 
 .eyebrow {
@@ -121,6 +211,23 @@ summary:focus-visible {
 
 .score-input {
   appearance: textfield;
+  border-color: color-mix(in srgb, var(--line) 82%, var(--brand));
+  box-shadow: inset 0 1px 2px rgba(var(--shadow-color) / 0.04);
+}
+
+input,
+select,
+textarea {
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 .score-input::-webkit-inner-spin-button,
@@ -168,7 +275,15 @@ summary:focus-visible {
 
 @media (max-width: 767px) {
   body {
-    padding-bottom: 5.5rem;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  }
+
+  .page-container {
+    width: min(100% - 1.25rem, 72rem);
+  }
+
+  .card {
+    border-radius: 1.25rem;
   }
 }
 

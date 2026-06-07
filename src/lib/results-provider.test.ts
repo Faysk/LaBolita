@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertCompleteObservationSet,
+  assertDatabaseMappingComplete,
   normalizeEspnFeed,
   normalizeWorldCupFeed,
 } from "@/lib/results-provider";
@@ -142,5 +143,40 @@ describe("assertCompleteObservationSet", () => {
         1,
       ),
     ).not.toThrow();
+  });
+});
+
+describe("assertDatabaseMappingComplete", () => {
+  const observations = Array.from({ length: 104 }, (_, index) => ({
+    providerMatchId: `provider:${index + 1}`,
+    status: "scheduled" as const,
+    homeScore: null,
+    awayScore: null,
+  }));
+
+  it("accepts a complete one-to-one provider mapping", () => {
+    expect(() =>
+      assertDatabaseMappingComplete(
+        observations,
+        observations.map((item) => item.providerMatchId),
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects an incomplete database even when every stored match maps", () => {
+    expect(() =>
+      assertDatabaseMappingComplete(
+        observations,
+        observations.slice(0, 103).map((item) => item.providerMatchId),
+      ),
+    ).toThrow(/Database has 103 mapped matches/);
+  });
+
+  it("rejects mappings that point at a different provider match", () => {
+    const ids = observations.map((item) => item.providerMatchId);
+    ids[103] = "provider:missing";
+    expect(() => assertDatabaseMappingComplete(observations, ids)).toThrow(
+      /matched 103 database matches/,
+    );
   });
 });

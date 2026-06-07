@@ -9,6 +9,7 @@ const MATCH_ID = "20260000-0000-0000-0002-000000000001";
 const KNOCKOUT_MATCH_ID = "20260000-0000-0000-0002-000000000002";
 const UNRESOLVED_MATCH_ID = "20260000-0000-0000-0002-000000000003";
 const FOLLOWUP_MATCH_ID = "20260000-0000-0000-0002-000000000004";
+const THIRD_PLACE_MATCH_ID = "20260000-0000-0000-0002-000000000005";
 const HOME_TEAM_ID = "20260000-0000-0000-0001-000000000001";
 const AWAY_TEAM_ID = "20260000-0000-0000-0001-000000000002";
 
@@ -144,6 +145,24 @@ async function verifySeedAndScoring() {
       expected,
     );
   }
+
+  await asService(async () => {
+    assert.equal(
+      await scalar("select public.apply_results_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: MATCH_ID,
+            live_home_score: null,
+            live_away_score: null,
+            provider_status: "scheduled",
+            provider_updated_at: new Date().toISOString(),
+          },
+        ]),
+      ]),
+      1,
+      "provider updates must be applied through one database transaction",
+    );
+  });
 }
 
 async function verifyPredictionPrivacyAndResultCorrection() {
@@ -200,6 +219,16 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       now() + interval '4 days',
       now() + interval '4 days',
       'Estádio Teste'
+    ), (
+      '${THIRD_PLACE_MATCH_ID}',
+      '20260000-0000-0000-0000-000000000001',
+      5,
+      'third_place',
+      '${HOME_TEAM_ID}',
+      '${AWAY_TEAM_ID}',
+      now() + interval '5 days',
+      now() + interval '5 days',
+      'Estádio Teste'
     );
 
     update public.matches
@@ -231,13 +260,34 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       KNOCKOUT_MATCH_ID,
       HOME_TEAM_ID,
     ]);
-    await db.query("select public.create_pool('Bolão Teste', true)");
+    await assert.rejects(
+      db.query("select public.save_prediction($1, 1, 1, null)", [THIRD_PLACE_MATCH_ID]),
+      "third-place predictions must require a winning team",
+    );
+    await db.query("select public.save_prediction($1, 1, 1, $2)", [
+      THIRD_PLACE_MATCH_ID,
+      AWAY_TEAM_ID,
+    ]);
+    await db.query("select public.create_pool_with_flag('Bolão Teste', true, 'pt')");
     await db.query("select public.assign_match_teams($1, $2, $3, 'classificação oficial')", [
       UNRESOLVED_MATCH_ID,
       HOME_TEAM_ID,
       AWAY_TEAM_ID,
     ]);
   });
+
+  await db.exec(
+    "update public.app_settings set current_terms_version = '2026-06-08' where id",
+  );
+  await asUser(USER_ONE, async () => {
+    await assert.rejects(
+      db.query("select public.save_prediction($1, 1, 0, null)", [MATCH_ID]),
+      "a newer terms version must require a fresh acceptance",
+    );
+  });
+  await db.exec(
+    "update public.app_settings set current_terms_version = '2026-06-07' where id",
+  );
 
   await asUser(USER_THREE, async () => {
     await db.query("select public.accept_terms('2026-06-07')");
@@ -252,6 +302,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   const inviteCode = await scalar("select invite_code from public.pools limit 1");
   const publicPoolId = await scalar("select id from public.pools limit 1");
   assert.match(inviteCode, /^[A-F0-9]{12}$/);
+  assert.equal(await scalar("select flag_code from public.pools where id = $1", [publicPoolId]), "pt");
 
   await asAnon(async () => {
     assert.equal(
@@ -321,6 +372,29 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   });
 
   await asUser(USER_ONE, async () => {
+    await db.query("select public.admin_update_user_access($1, true, 'promoção de teste')", [USER_TWO]);
+  });
+  await asUser(USER_TWO, async () => {
+    assert.ok(
+      (await scalar("select count(*)::integer from public.master_list_users(null, 100, 0)")) >= 2,
+      "promoted administrators must access global administration",
+    );
+    await assert.rejects(
+      db.query("select public.admin_update_user_access($1, false, 'tentativa contra master')", [USER_ONE]),
+      "promoted administrators cannot demote the principal master",
+    );
+    await assert.rejects(
+      db.query("select public.master_update_user($1, 'Outro Master', false, 'tentativa contra master')", [USER_ONE]),
+      "promoted administrators cannot alter the principal master",
+    );
+  });
+  await asUser(USER_ONE, async () => {
+    await db.query("select public.admin_update_user_access($1, false, 'fim da promoção de teste')", [USER_TWO]);
+  });
+
+  await db.exec(`update public.profiles set is_admin = true where id = '${USER_TWO}'`);
+
+  await asUser(USER_ONE, async () => {
     await db.query("select public.update_pool($1, 'Bolão Recuperado', false, false, 'recuperação master')", [
       secondPoolId,
     ]);
@@ -330,9 +404,22 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   });
 
   await asUser(USER_TWO, async () => {
+    assert.equal(
+      await scalar("select public.is_admin()"),
+      false,
+      "disabled administrators must lose effective administrator permission",
+    );
     await assert.rejects(
       db.query("select public.save_prediction($1, 1, 0, null)", [MATCH_ID]),
       "disabled users must not save predictions",
+    );
+    await assert.rejects(
+      db.query("select public.assign_match_teams($1, $2, $3, 'tentativa suspensa')", [
+        UNRESOLVED_MATCH_ID,
+        HOME_TEAM_ID,
+        AWAY_TEAM_ID,
+      ]),
+      "disabled administrators must not assign knockout participants",
     );
   });
 
@@ -341,6 +428,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       USER_TWO,
     ]);
   });
+  await db.exec(`update public.profiles set is_admin = false where id = '${USER_TWO}'`);
 
   await db.exec(`
     update public.matches
@@ -518,6 +606,22 @@ async function asAnon(operation) {
     select set_config('app.test_uid', '', false);
     select set_config('app.test_role', 'anon', false);
     set role anon;
+  `);
+  try {
+    await operation();
+  } finally {
+    await db.exec(`
+      reset role;
+      select set_config('app.test_role', '', false);
+    `);
+  }
+}
+
+async function asService(operation) {
+  await db.exec(`
+    select set_config('app.test_uid', '', false);
+    select set_config('app.test_role', 'service_role', false);
+    set role service_role;
   `);
   try {
     await operation();

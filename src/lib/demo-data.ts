@@ -169,9 +169,9 @@ export const demoMatches: DemoMatch[] = [
 ];
 
 export const demoPools = [
-  { id: "family", name: "Família Faysk", code: "FYSK26", members: 12, position: 2 },
-  { id: "friends", name: "Resenha da Firma", code: "FIRMA7", members: 8, position: 1 },
-  { id: "football", name: "Só Quem Entende", code: "BOLA10", members: 6, position: 4 },
+  { id: "family", name: "Família Faysk", flagCode: "br", code: "FYSK26", members: 12, position: 2 },
+  { id: "friends", name: "Resenha da Firma", flagCode: "pt", code: "FIRMA7", members: 8, position: 1 },
+  { id: "football", name: "Só Quem Entende", flagCode: "ar", code: "BOLA10", members: 6, position: 4 },
 ];
 
 export const demoRanking = [

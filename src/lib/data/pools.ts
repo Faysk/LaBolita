@@ -1,3 +1,4 @@
+import "server-only";
 import { demoPools, demoRanking } from "@/lib/demo-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { PoolSummary, RankingEntry } from "@/lib/types";
@@ -9,6 +10,7 @@ type MyPoolRow = {
   pool_name: string;
   invite_code: string;
   is_public: boolean;
+  flag_code: string;
   archived_at: string | null;
   member_role: "owner" | "admin" | "member";
   member_count: number;
@@ -18,6 +20,7 @@ type PublicPoolRow = {
   pool_id: string;
   pool_name: string;
   owner_name: string;
+  flag_code: string;
   member_count: number;
   total_count: number;
 };
@@ -57,7 +60,9 @@ export async function getPoolsOverview({
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
+  if (userError) throw userError;
   const safePage = Math.max(1, Math.trunc(publicPage) || 1);
   const cleanSearch = publicSearch.trim().slice(0, 60);
 
@@ -74,15 +79,24 @@ export async function getPoolsOverview({
       : Promise.resolve({ data: [], error: null }),
   ]);
 
-  const publicRows = publicError ? [] : ((publicData ?? []) as PublicPoolRow[]);
-  const myPoolRows = myPoolsResult.error
-    ? []
-    : ((myPoolsResult.data ?? []) as MyPoolRow[]);
+  if (publicError) {
+    throw new Error("Não foi possível carregar os bolões públicos.", {
+      cause: publicError,
+    });
+  }
+  if (myPoolsResult.error) {
+    throw new Error("Não foi possível carregar seus bolões.", {
+      cause: myPoolsResult.error,
+    });
+  }
+  const publicRows = (publicData ?? []) as PublicPoolRow[];
+  const myPoolRows = (myPoolsResult.data ?? []) as MyPoolRow[];
   const pools = myPoolRows.map(
     (pool) =>
       ({
         id: pool.pool_id,
         name: pool.pool_name,
+        flagCode: pool.flag_code,
         code: pool.invite_code,
         members: Number(pool.member_count),
         position: 1,
@@ -99,6 +113,7 @@ export async function getPoolsOverview({
         ({
           id: pool.pool_id,
           name: pool.pool_name,
+          flagCode: pool.flag_code,
           members: Number(pool.member_count),
           position: 1,
           ownerName: pool.owner_name,
@@ -108,16 +123,26 @@ export async function getPoolsOverview({
   const rankingsByPool: Record<string, RankingEntry[]> = {};
   const primaryPrivatePool = pools.find((pool) => !pool.isArchived);
   if (primaryPrivatePool) {
-    const { data } = await supabase.rpc("get_pool_ranking", {
+    const { data, error } = await supabase.rpc("get_pool_ranking", {
       p_pool_id: primaryPrivatePool.id,
     });
+    if (error) {
+      throw new Error("Não foi possível carregar o ranking do bolão.", {
+        cause: error,
+      });
+    }
     rankingsByPool[primaryPrivatePool.id] = mapRanking((data ?? []) as RankingRow[], user?.id);
   } else if (publicPools[0]) {
-    const { data } = await supabase.rpc("get_public_pool_ranking", {
+    const { data, error } = await supabase.rpc("get_public_pool_ranking", {
       p_pool_id: publicPools[0].id,
       p_limit: 25,
       p_offset: 0,
     });
+    if (error) {
+      throw new Error("Não foi possível carregar o ranking público.", {
+        cause: error,
+      });
+    }
     rankingsByPool[publicPools[0].id] = mapRanking((data ?? []) as RankingRow[], user?.id);
   }
   const primaryPool = primaryPrivatePool ?? publicPools[0];

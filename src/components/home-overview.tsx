@@ -70,7 +70,7 @@ export function HomeOverview({
       </section>
 
       <section className="mt-10 grid gap-5 md:grid-cols-[1fr_1.4fr]">
-        <div className="card overflow-hidden !bg-brand-strong p-6 text-white">
+        <div className="card card-dark overflow-hidden p-6 text-white">
           <p className="eyebrow !text-accent">Bolão em destaque</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight">
             {primaryPool?.name ?? "Seu primeiro bolão"}

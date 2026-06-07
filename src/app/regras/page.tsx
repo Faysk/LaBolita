@@ -35,6 +35,11 @@ export default function RulesPage() {
           A pontuação do LaBolita é igual para todos os grupos. Em cada partida,
           somente o melhor tipo de acerto é considerado.
         </p>
+        <p className="mt-3 text-sm leading-6 text-muted md:text-base">
+          Na fase de grupos, partidas podem terminar empatadas e não há disputa
+          por pênaltis. No mata-mata, inclusive na disputa de terceiro lugar, o
+          placar considerado exclui as cobranças e o vencedor é informado separadamente.
+        </p>
       </div>
 
       <section className="mt-8 grid gap-4 md:grid-cols-3">
@@ -90,7 +95,7 @@ export default function RulesPage() {
               </div>
             ))}
           </div>
-          <div className="m-4 rounded-2xl bg-brand-strong p-4 text-white">
+          <div className="card-dark m-4 rounded-2xl p-4 text-white">
             <div className="flex gap-3">
               <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-accent" />
               <p className="text-sm leading-6 text-white/75">

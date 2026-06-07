@@ -1,3 +1,4 @@
+import "server-only";
 import { demoMatches } from "@/lib/demo-data";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { DemoMatch, DemoTeam, MatchStage } from "@/lib/types";
@@ -61,6 +62,17 @@ export async function getMatches(): Promise<DemoMatch[]> {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return demoMatches;
 
+  const { data: tournament, error: tournamentError } = await supabase
+    .from("tournaments")
+    .select("id")
+    .eq("is_active", true)
+    .single();
+  if (tournamentError) {
+    throw new Error("Não foi possível identificar o torneio ativo.", {
+      cause: tournamentError,
+    });
+  }
+
   const { data: matches, error } = await supabase
     .from("matches")
     .select(
@@ -85,25 +97,33 @@ export async function getMatches(): Promise<DemoMatch[]> {
         away_team:teams!matches_away_team_id_tournament_id_fkey(id, code, name, short_name, flag_emoji)
       `,
     )
+    .eq("tournament_id", tournament.id)
     .order("scheduled_at")
     .limit(104);
 
   if (error) {
     console.error("Could not load matches", error);
-    return [];
+    throw new Error("Não foi possível carregar as partidas.", { cause: error });
   }
   if (!matches?.length) return [];
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
+  if (userError) throw userError;
   let predictions: DatabasePrediction[] = [];
 
   if (user) {
-    const { data } = await supabase
+    const { data, error: predictionsError } = await supabase
       .from("predictions")
       .select("match_id, home_score, away_score, advancing_team_id")
       .eq("user_id", user.id);
+    if (predictionsError) {
+      throw new Error("Não foi possível carregar seus palpites.", {
+        cause: predictionsError,
+      });
+    }
     predictions = (data ?? []) as DatabasePrediction[];
   }
 
@@ -168,11 +188,25 @@ export async function getTeams(): Promise<DemoTeam[]> {
     ).sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
   }
 
+  const { data: tournament, error: tournamentError } = await supabase
+    .from("tournaments")
+    .select("id")
+    .eq("is_active", true)
+    .single();
+  if (tournamentError) {
+    throw new Error("Não foi possível identificar o torneio ativo.", {
+      cause: tournamentError,
+    });
+  }
+
   const { data, error } = await supabase
     .from("teams")
     .select("id, code, name, short_name, flag_emoji")
+    .eq("tournament_id", tournament.id)
     .order("name");
-  if (error) return [];
+  if (error) {
+    throw new Error("Não foi possível carregar as seleções.", { cause: error });
+  }
 
   return ((data ?? []) as DatabaseTeam[]).map((team) => ({
     id: team.id,
@@ -192,7 +226,12 @@ export async function getResultsSyncState(): Promise<ResultsSyncState | null> {
     .select("status, source, fallback_used, last_attempt_at, last_success_at, error_message")
     .eq("id", true)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    throw new Error("Não foi possível consultar a sincronização de resultados.", {
+      cause: error,
+    });
+  }
+  if (!data) return null;
 
   return {
     status: data.status as ResultsSyncState["status"],

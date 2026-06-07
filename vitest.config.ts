@@ -11,7 +11,12 @@ export default defineConfig({
     environment: "node",
     coverage: {
       reporter: ["text", "html"],
-      include: ["src/lib/scoring.ts"],
+      include: [
+        "src/lib/scoring.ts",
+        "src/lib/demo-engine.ts",
+        "src/lib/results-provider.ts",
+        "src/lib/urls.ts",
+      ],
     },
   },
 });

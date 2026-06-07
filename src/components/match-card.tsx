@@ -1,8 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Clock3, LoaderCircle, LockKeyhole, TriangleAlert } from "lucide-react";
+import {
+  Check,
+  Clock3,
+  LoaderCircle,
+  LockKeyhole,
+  Save,
+  TriangleAlert,
+  Undo2,
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { calculateScore } from "@/lib/scoring";
 import { TeamFlag } from "@/components/team-flag";
 import {
@@ -32,6 +41,7 @@ export function MatchCard({
   isAuthenticated?: boolean;
   termsAccepted?: boolean;
 }) {
+  const router = useRouter();
   const storedPrediction = useLocalPrediction(match.id);
   const localResults = useLocalResults();
   const supabase = createBrowserSupabaseClient();
@@ -42,8 +52,10 @@ export function MatchCard({
     "idle" | "saving" | "error" | "auth-required" | "terms-required"
   >("idle");
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const currentPrediction = draft ??
-    (usesSupabase ? confirmedPrediction : storedPrediction ?? match.prediction) ?? {
+  const persistedPrediction = usesSupabase
+    ? confirmedPrediction
+    : storedPrediction ?? match.prediction;
+  const currentPrediction = draft ?? persistedPrediction ?? {
       homeScore: "",
       awayScore: "",
     };
@@ -52,9 +64,13 @@ export function MatchCard({
   const effectiveLocked = match.locked || Boolean(result);
   const saved =
     draft === null &&
-    Boolean(usesSupabase ? confirmedPrediction : storedPrediction ?? match.prediction);
+    Boolean(persistedPrediction);
+  const dirty = draft !== null;
   const requiresAdvancingTeam =
-    match.stage !== "group" && match.stage !== "third_place";
+    match.stage !== "group";
+  const complete =
+    isCompletePrediction(currentPrediction) &&
+    (!requiresAdvancingTeam || Boolean(currentPrediction.advancingTeamId));
   const score =
     result && isCompletePrediction(currentPrediction)
       ? calculateScore(currentPrediction, result, match.stage)
@@ -71,32 +87,41 @@ export function MatchCard({
       homeScore: side === "home" ? value : homeScore,
       awayScore: side === "away" ? value : awayScore,
     };
-    void persistOrDraft(next);
+    setDraft(next);
+    setSyncState("idle");
+    setSyncMessage(null);
   }
 
   function updateAdvancingTeam(advancingTeamId: string) {
-    void persistOrDraft({
+    setDraft({
       ...currentPrediction,
       advancingTeamId: advancingTeamId || null,
     });
+    setSyncState("idle");
+    setSyncMessage(null);
   }
 
-  async function persistOrDraft(next: EditablePrediction) {
-    const complete =
-      next.homeScore !== "" &&
-      next.awayScore !== "" &&
-      (!requiresAdvancingTeam || Boolean(next.advancingTeamId));
+  function discardChanges() {
+    setDraft(null);
+    setSyncState("idle");
+    setSyncMessage(null);
+  }
 
-    if (!complete) {
-      setDraft(next);
-      setSyncState("idle");
+  async function savePrediction() {
+    const next = draft ?? currentPrediction;
+    if (
+      !isCompletePrediction(next) ||
+      (requiresAdvancingTeam && !next.advancingTeamId)
+    ) {
       return;
     }
 
     if (!usesSupabase || !supabase) {
-      storeLocalPrediction(match.id, next as ScorePrediction);
+      storeLocalPrediction(match.id, next);
       setDraft(null);
       setSyncState("idle");
+      setSyncMessage(null);
+      navigator.vibrate?.(20);
       return;
     }
 
@@ -116,7 +141,6 @@ export function MatchCard({
       return;
     }
 
-    setDraft(next);
     setSyncState("saving");
     setSyncMessage(null);
     const { error } = await supabase.rpc("save_prediction", {
@@ -137,17 +161,18 @@ export function MatchCard({
     }
 
     removeLocalPrediction(match.id);
-    setConfirmedPrediction(next as ScorePrediction);
+    setConfirmedPrediction(next);
     setDraft(null);
     setSyncState("idle");
     setSyncMessage(null);
     navigator.vibrate?.(20);
+    router.refresh();
   }
 
   return (
     <article
       data-testid={`match-${match.id}`}
-      className={`card p-5 ${effectiveLocked ? "opacity-80" : ""}`}
+      className={`card match-card p-5 ${effectiveLocked ? "opacity-80" : ""}`}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -166,8 +191,8 @@ export function MatchCard({
                 ? "bg-red-50 text-red-700"
                 : syncState === "saving"
                   ? "bg-blue-50 text-blue-700"
-              : saved
-                ? "bg-emerald-50 text-brand"
+                : saved
+                  ? "bg-emerald-50 text-brand"
                 : "bg-amber-50 text-amber-700"
           }`}
         >
@@ -196,11 +221,13 @@ export function MatchCard({
                 ? "Salvando"
                 : saved
                   ? "Salvo"
-                  : "Pendente"}
+                  : dirty
+                    ? "Não salvo"
+                    : "Pendente"}
         </span>
       </div>
 
-      <div className={`mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 ${compact ? "" : "md:gap-5"}`}>
+      <div className={`mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl border bg-surface-muted/65 px-2 py-4 ${compact ? "" : "md:gap-5 md:px-4"}`}>
         <Team team={match.homeTeam} align="right" compact={compact} />
         <div className="flex items-center gap-2">
           <ScoreInput
@@ -221,7 +248,7 @@ export function MatchCard({
       </div>
       {requiresAdvancingTeam && (
         <label className="mt-4 block text-xs font-bold text-muted">
-          Quem avança?
+          {match.stage === "third_place" ? "Quem vence?" : "Quem avança?"}
           <select
             disabled={effectiveLocked || syncState === "saving"}
             value={currentPrediction.advancingTeamId ?? ""}
@@ -234,6 +261,34 @@ export function MatchCard({
           </select>
         </label>
       )}
+      {!effectiveLocked && (
+        <div className="mt-4 flex items-center gap-2">
+          {dirty && (
+            <button
+              type="button"
+              onClick={discardChanges}
+              disabled={syncState === "saving"}
+              className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-white px-3 text-xs font-extrabold text-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Undo2 className="size-3.5" />
+              Descartar
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={savePrediction}
+            disabled={!dirty || !complete || syncState === "saving"}
+            className="interactive inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-4 text-xs font-extrabold text-white shadow-lg shadow-brand/15 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted disabled:shadow-none"
+          >
+            {syncState === "saving" ? (
+              <LoaderCircle className="size-3.5 animate-spin" />
+            ) : (
+              <Save className="size-3.5" />
+            )}
+            {persistedPrediction ? "Salvar alterações" : "Salvar palpite"}
+          </button>
+        </div>
+      )}
       {!compact && (
         <p className="mt-5 text-center text-xs text-muted">{match.venue}</p>
       )}
@@ -242,6 +297,13 @@ export function MatchCard({
           <p className="font-black text-foreground">
             Resultado: {result.homeScore} × {result.awayScore}
           </p>
+          {match.stage !== "group" && result.advancingTeamId && (
+            <p className="mt-1 font-bold text-muted">
+              {match.stage === "third_place" ? "Vencedor" : "Classificado"}:{" "}
+              {result.advancingTeamId === match.homeTeam.id ? match.homeTeam.name : match.awayTeam.name}
+              {result.homeScore === result.awayScore ? " (decidido nos pênaltis)" : ""}
+            </p>
+          )}
           {score && (
             <p className="mt-1 font-bold text-brand">
               Seu palpite rendeu {score.totalPoints} pontos

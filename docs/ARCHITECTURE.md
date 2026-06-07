@@ -14,7 +14,7 @@ ranking oficial. Essas operações ficam no PostgreSQL:
 - `get_my_pools` agrega os bolões do usuário em uma consulta; rankings adicionais
   são carregados somente quando abertos.
 - Linhas completas de perfil ficam visíveis apenas para o próprio usuário e
-  para o administrador master; rankings expõem somente os dados necessários.
+  para administradores globais; rankings expõem somente os dados necessários.
 - `update_pool` usa arquivamento reversível e registra alterações auditáveis.
 - `is_master_admin` separa operação de partidas do controle global exclusivo.
 
