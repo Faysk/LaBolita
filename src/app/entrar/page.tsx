@@ -4,6 +4,7 @@ import { safeRedirectPath } from "@/lib/urls";
 
 export const metadata: Metadata = {
   title: "Entrar",
+  robots: { index: false, follow: false },
 };
 
 export default async function LoginPage({

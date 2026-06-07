@@ -13,6 +13,8 @@ type DatabaseMatch = {
   id: string;
   stage: MatchStage;
   group_name: string | null;
+  home_placeholder: string | null;
+  away_placeholder: string | null;
   scheduled_at: string;
   prediction_lock_at: string;
   status: "scheduled" | "postponed" | "live" | "finished" | "cancelled";
@@ -20,6 +22,10 @@ type DatabaseMatch = {
   home_score: number | null;
   away_score: number | null;
   advancing_team_id: string | null;
+  live_home_score: number | null;
+  live_away_score: number | null;
+  provider_status: string | null;
+  provider_updated_at: string | null;
   home_team: DatabaseTeam | null;
   away_team: DatabaseTeam | null;
 };
@@ -52,6 +58,8 @@ export async function getMatches(): Promise<DemoMatch[]> {
         id,
         stage,
         group_name,
+        home_placeholder,
+        away_placeholder,
         scheduled_at,
         prediction_lock_at,
         status,
@@ -59,6 +67,10 @@ export async function getMatches(): Promise<DemoMatch[]> {
         home_score,
         away_score,
         advancing_team_id,
+        live_home_score,
+        live_away_score,
+        provider_status,
+        provider_updated_at,
         home_team:teams!matches_home_team_id_fkey(id, name, short_name, flag_emoji),
         away_team:teams!matches_away_team_id_fkey(id, name, short_name, flag_emoji)
       `,
@@ -100,8 +112,8 @@ export async function getMatches(): Promise<DemoMatch[]> {
       locked:
         !["scheduled", "postponed"].includes(match.status) ||
         Date.now() >= new Date(match.prediction_lock_at).getTime(),
-      homeTeam: mapTeam(match.home_team, "Mandante"),
-      awayTeam: mapTeam(match.away_team, "Visitante"),
+      homeTeam: mapTeam(match.home_team, match.home_placeholder ?? "Mandante"),
+      awayTeam: mapTeam(match.away_team, match.away_placeholder ?? "Visitante"),
       prediction: prediction
         ? {
             homeScore: prediction.home_score,
@@ -117,6 +129,15 @@ export async function getMatches(): Promise<DemoMatch[]> {
               advancingTeamId: match.advancing_team_id,
             }
           : undefined,
+      liveResult:
+        match.live_home_score !== null && match.live_away_score !== null
+          ? {
+              homeScore: match.live_home_score,
+              awayScore: match.live_away_score,
+            }
+          : undefined,
+      providerStatus: match.provider_status,
+      providerUpdatedAt: match.provider_updated_at,
     };
   });
 }
@@ -131,7 +152,7 @@ function mapTeam(team: DatabaseTeam | null, fallback: string): DemoTeam {
       }
     : {
         id: `unknown-${fallback.toLowerCase()}`,
-        name: "A definir",
+        name: fallback,
         shortName: fallback,
         flag: "•",
       };

@@ -77,6 +77,43 @@ a {
   margin: 0;
 }
 
+.legal-content {
+  display: grid;
+  gap: 2rem;
+}
+
+.legal-content h2 {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.legal-content p,
+.legal-content li {
+  color: var(--muted);
+  font-size: 0.925rem;
+  line-height: 1.75;
+}
+
+.legal-content p,
+.legal-content ul {
+  margin-top: 0.75rem;
+}
+
+.legal-content ul {
+  display: grid;
+  gap: 0.5rem;
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.legal-content a {
+  color: var(--brand);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 @media (max-width: 767px) {
   body {
     padding-bottom: 5.5rem;

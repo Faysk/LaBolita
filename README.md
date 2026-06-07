@@ -35,7 +35,8 @@ npm run check
 ```
 
 `npm run check` executa lint, tipos, regras de pontuação, validação da agenda,
-build e um fluxo ponta a ponta em Chrome/Chromium. Também sobe um PostgreSQL
+um build isolado de demonstração e um fluxo ponta a ponta em Chrome/Chromium.
+Também sobe um PostgreSQL
 embutido para aplicar a migration, carregar o seed e provar privacidade de
 palpites, entrada tardia, finalização e correção de resultados sem exigir
 Docker.
@@ -64,21 +65,23 @@ set is_admin = true
 where id = 'UUID_DO_USUARIO';
 ```
 
-Para importar a agenda completa a partir do formato validado em
-`data/schedule.example.json`:
+Para regenerar, validar e importar a agenda completa:
 
 ```bash
-npm run schedule:validate
-npm run schedule:import -- caminho/agenda-oficial.json
+npm run schedule:build
+node scripts/import-schedule.mjs --validate-only --require-complete data/world-cup-2026.json
+npm run schedule:verify:sources
+npm run schedule:import -- --require-complete data/world-cup-2026.json
 ```
 
 O importador usa a service role somente no processo Node local e nunca a envia
-ao navegador.
+ao navegador. O arquivo completo contém proveniência, identificadores do
+provedor e rótulos da árvore mata-mata.
 
 Antes do lançamento, exija exatamente 48 seleções e 104 partidas:
 
 ```bash
-node --env-file=.env.local scripts/import-schedule.mjs --validate-only --require-complete caminho/agenda-oficial.json
+node --env-file=.env.local scripts/import-schedule.mjs --validate-only --require-complete data/world-cup-2026.json
 ```
 
 Para executar Supabase e pgTAP localmente também é necessário Docker Desktop:
@@ -101,6 +104,24 @@ npm run db:lint
 
 As regras completas estão em [docs/PRODUCT_RULES.md](docs/PRODUCT_RULES.md).
 
+## Resultados ao vivo
+
+O provedor atualiza apenas um placar observado. Um administrador ainda precisa
+confirmar o resultado para pontuar os bolões. Essa separação protege o ranking
+contra placares provisórios e erros do fornecedor.
+
+Configure `RESULTS_FEED_URL` e `CRON_SECRET` na Vercel e use o Supabase Cron para
+chamar `/api/cron/results` a cada minuto. O procedimento completo e a análise de
+provedores estão em [docs/RESULTS_OPERATIONS.md](docs/RESULTS_OPERATIONS.md).
+
+Smoke tests que usam a infraestrutura real:
+
+```bash
+npm run db:smoke:remote
+npm run results:smoke:remote
+npm run test:production
+```
+
 ## Estrutura principal
 
 ```text
@@ -120,8 +141,11 @@ e adicione `labolita.faysk.dev` como domínio. No Cloudflare, crie o registro
 indicado pela própria Vercel; mantenha o proxy desligado durante a validação
 inicial do domínio.
 
-O calendário mínimo do seed contém a abertura confirmada entre México e África
-do Sul. Antes do beta, os 104 jogos precisam ser importados e conferidos com o
+O banco publicado já pode receber os 104 jogos de `data/world-cup-2026.json`.
+Antes de alterações futuras, confira sempre o
 [calendário oficial da FIFA](https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums).
+
+As páginas públicas exigidas pelo login Google estão disponíveis em
+`/privacidade` e `/termos`. Garanta que `contato@faysk.dev` receba mensagens.
 
 Veja o plano urgente em [docs/ROADMAP.md](docs/ROADMAP.md).

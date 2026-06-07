@@ -24,6 +24,8 @@ const matchSchema = z.object({
   group: z.string().nullable().optional(),
   homeCode: z.string().transform((value) => value.toUpperCase()).nullable().optional(),
   awayCode: z.string().transform((value) => value.toUpperCase()).nullable().optional(),
+  homeLabel: z.string().min(2).nullable().optional(),
+  awayLabel: z.string().min(2).nullable().optional(),
   scheduledAt: z.iso.datetime({ offset: true }),
   lockAt: z.iso.datetime({ offset: true }).optional(),
   venue: z.string().nullable().optional(),
@@ -105,19 +107,33 @@ function teamId(code) {
   return id;
 }
 
+const matchRows = schedule.matches.map((match) => ({
+  tournament_id: tournament.id,
+  match_number: match.number,
+  stage: match.stage,
+  group_name: match.group ?? null,
+  home_team_id: teamId(match.homeCode),
+  away_team_id: teamId(match.awayCode),
+  home_placeholder: match.homeLabel ?? null,
+  away_placeholder: match.awayLabel ?? null,
+  scheduled_at: match.scheduledAt,
+  prediction_lock_at: match.lockAt ?? match.scheduledAt,
+  venue: match.venue ?? null,
+  provider_match_id: match.providerMatchId ?? null,
+}));
+
+const { data: existingMatches, error: existingMatchesError } = await supabase
+  .from("matches")
+  .select(
+    "match_number, stage, group_name, home_team_id, away_team_id, home_placeholder, away_placeholder, scheduled_at, prediction_lock_at, status, venue, provider_match_id",
+  )
+  .eq("tournament_id", tournament.id);
+
+if (existingMatchesError) throw existingMatchesError;
+assertLockedMatchesAreUnchanged(existingMatches ?? [], matchRows);
+
 const { error: matchesError } = await supabase.from("matches").upsert(
-  schedule.matches.map((match) => ({
-    tournament_id: tournament.id,
-    match_number: match.number,
-    stage: match.stage,
-    group_name: match.group ?? null,
-    home_team_id: teamId(match.homeCode),
-    away_team_id: teamId(match.awayCode),
-    scheduled_at: match.scheduledAt,
-    prediction_lock_at: match.lockAt ?? match.scheduledAt,
-    venue: match.venue ?? null,
-    provider_match_id: match.providerMatchId ?? null,
-  })),
+  matchRows,
   { onConflict: "tournament_id,match_number" },
 );
 
@@ -130,7 +146,13 @@ console.log(
 function validateSchedule(value, enforceComplete) {
   assertUnique(value.teams.map((team) => team.code), "código de seleção");
   assertUnique(value.matches.map((match) => match.number), "número de partida");
+  assertUnique(
+    value.matches.flatMap((match) => (match.providerMatchId ? [match.providerMatchId] : [])),
+    "identificador do provedor",
+  );
   const teamCodes = new Set(value.teams.map((team) => team.code));
+  const teamGroups = new Map(value.teams.map((team) => [team.code, team.group ?? null]));
+  const groupMatchups = [];
 
   for (const match of value.matches) {
     if (match.homeCode && !teamCodes.has(match.homeCode.toUpperCase())) {
@@ -147,6 +169,22 @@ function validateSchedule(value, enforceComplete) {
     }
     if (match.stage === "group" && (!match.group || !match.homeCode || !match.awayCode)) {
       throw new Error(`A partida de grupo ${match.number} precisa de grupo e seleções.`);
+    }
+    if (
+      match.stage === "group" &&
+      (teamGroups.get(match.homeCode) !== match.group ||
+        teamGroups.get(match.awayCode) !== match.group)
+    ) {
+      throw new Error(`A partida ${match.number} contém seleção fora do Grupo ${match.group}.`);
+    }
+    if (match.stage === "group") {
+      groupMatchups.push([match.homeCode, match.awayCode].sort().join(":"));
+    }
+    if (
+      match.stage !== "group" &&
+      ((!match.homeCode && !match.homeLabel) || (!match.awayCode && !match.awayLabel))
+    ) {
+      throw new Error(`A partida mata-mata ${match.number} precisa de seleções ou rótulos.`);
     }
   }
 
@@ -181,6 +219,7 @@ function validateSchedule(value, enforceComplete) {
     }
 
     const expectedGroups = "ABCDEFGHIJKL".split("");
+    assertUnique(groupMatchups, "confronto da fase de grupos");
     for (const group of expectedGroups) {
       const teams = value.teams.filter((team) => team.group === group).length;
       const matches = value.matches.filter(
@@ -192,11 +231,59 @@ function validateSchedule(value, enforceComplete) {
         );
       }
     }
+
+    for (const team of value.teams) {
+      const appearances = value.matches.filter(
+        (match) =>
+          match.stage === "group" &&
+          (match.homeCode === team.code || match.awayCode === team.code),
+      ).length;
+      if (appearances !== 3) {
+        throw new Error(
+          `Seleção ${team.code}: esperado 3 jogos de grupo; recebido ${appearances}.`,
+        );
+      }
+    }
   }
 }
 
 function assertUnique(values, label) {
   if (new Set(values).size !== values.length) {
     throw new Error(`Agenda contém ${label} duplicado.`);
+  }
+}
+
+function assertLockedMatchesAreUnchanged(existingMatches, incomingMatches) {
+  const incomingByNumber = new Map(
+    incomingMatches.map((match) => [match.match_number, match]),
+  );
+
+  for (const existing of existingMatches) {
+    const incoming = incomingByNumber.get(existing.match_number);
+    if (!incoming) continue;
+    const locked =
+      existing.status === "finished" ||
+      Date.now() >= new Date(existing.prediction_lock_at).getTime();
+    if (!locked) continue;
+
+    const changed =
+      existing.stage !== incoming.stage ||
+      existing.group_name !== incoming.group_name ||
+      existing.home_team_id !== incoming.home_team_id ||
+      existing.away_team_id !== incoming.away_team_id ||
+      existing.home_placeholder !== incoming.home_placeholder ||
+      existing.away_placeholder !== incoming.away_placeholder ||
+      new Date(existing.scheduled_at).getTime() !==
+        new Date(incoming.scheduled_at).getTime() ||
+      new Date(existing.prediction_lock_at).getTime() !==
+        new Date(incoming.prediction_lock_at).getTime() ||
+      existing.venue !== incoming.venue ||
+      existing.provider_match_id !== incoming.provider_match_id;
+
+    if (changed) {
+      throw new Error(
+        `A partida ${existing.match_number} já foi bloqueada e não pode ser alterada pelo importador. Use o fluxo administrativo auditável.`,
+      );
+    }
   }
 }

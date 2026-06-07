@@ -20,6 +20,8 @@ flowchart LR
   U["Usuário"] --> N["Next.js / Vercel"]
   N --> A["Supabase Auth"]
   N --> D["PostgreSQL + RLS"]
+  P["Provedor de placares"] --> C["Cron protegido"]
+  C --> D
   D --> S["save_prediction"]
   D --> F["finalize_match"]
   F --> H["Histórico de resultados"]
@@ -35,11 +37,12 @@ validar produto, responsividade e navegação sem infraestrutura. O endpoint de
 saúde e o banner global deixam esse estado explícito. O modo demonstração não é
 uma fonte oficial de agenda.
 
-## Decisões ainda abertas
+## Decisões operacionais
 
-- Provedor confiável de resultados e frequência de sincronização.
-- Processo de conferência humana antes de finalizar uma partida.
-- Critério final de desempate.
+- Sincronização de placares observados a cada minuto, com confirmação humana
+  obrigatória antes de finalizar e pontuar.
+- Sportmonks é o provedor recomendado para produção; o feed público atual é
+  contingência sem SLA.
 - Se haverá palpites especiais, prêmios ou pagamentos. Pagamentos estão fora do
   MVP por risco jurídico e operacional.
 - Fuso horário exibido. O primeiro release usa `America/Sao_Paulo` para dados
@@ -55,6 +58,8 @@ uma fonte oficial de agenda.
 | Entrada tardia ganha pontos antigos | `eligible_from` no ranking |
 | Chave administrativa exposta | Service role não é importada no browser |
 | Supabase indisponível no desenvolvimento | Fallback explícito para demo |
+| Provedor informa placar incorreto | Observação separada da finalização oficial |
+| Endpoint de sincronização é chamado por terceiros | `CRON_SECRET` obrigatório |
 
 Antes do lançamento, alertas de erro, backup e restauração do Supabase devem ser
 testados em ambiente de homologação.

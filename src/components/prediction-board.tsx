@@ -43,6 +43,8 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
           {filters.map(([value, label]) => (
             <button
               key={value}
+              type="button"
+              aria-pressed={filter === value}
               onClick={() => setFilter(value)}
               className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold transition ${
                 filter === value ? "bg-brand text-white" : "text-muted hover:bg-surface-muted"

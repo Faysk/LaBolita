@@ -1,6 +1,7 @@
 "use client";
 
 import { LogIn, Settings2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -45,6 +46,17 @@ export function LoginPanel({ nextPath = "/" }: { nextPath?: string }) {
         Continuar com Google
       </button>
       {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
+      <p className="mt-4 text-center text-xs leading-5 text-muted">
+        Ao continuar, você concorda com os{" "}
+        <Link href="/termos" className="font-bold text-brand underline">
+          Termos
+        </Link>{" "}
+        e a{" "}
+        <Link href="/privacidade" className="font-bold text-brand underline">
+          Política de Privacidade
+        </Link>
+        .
+      </p>
     </div>
   );
 }

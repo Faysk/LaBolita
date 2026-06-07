@@ -11,7 +11,14 @@ const server = spawn(
   ["node_modules/next/dist/bin/next", "start", "-p", String(PORT)],
   {
     cwd: process.cwd(),
-    env: { ...process.env, PORT: String(PORT) },
+    env: {
+      ...process.env,
+      PORT: String(PORT),
+      NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_URL: "",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+      SUPABASE_SERVICE_ROLE_KEY: "",
+    },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   },
@@ -115,6 +122,8 @@ try {
   await page.getByTestId("home-ranking-current-user").getByText("126 pts").waitFor();
   await page.getByRole("button", { name: "Abrir menu da conta" }).click();
   await page.getByText("Faysk · demonstração").waitFor();
+  await page.keyboard.press("Escape");
+  await page.getByText("Faysk · demonstração").waitFor({ state: "hidden" });
 
   const health = await page.request.get(`${BASE_URL}/api/health`);
   assert.equal(health.status(), 200);
@@ -122,12 +131,27 @@ try {
   assert.equal(healthBody.database, "demo");
   assert.equal(healthBody.launchReady, false);
   assert.equal(healthBody.schedule.requiredMatches, 104);
+  assert.equal(healthBody.schedule.providerMappedMatches, 0);
+  assert.equal(healthBody.resultsSyncConfigured, false);
+  const disabledSync = await page.request.get(`${BASE_URL}/api/cron/results`);
+  assert.equal(disabledSync.status(), 503);
   assert.deepEqual(pageErrors, []);
 
   const desktopPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const desktopErrors = [];
   desktopPage.on("pageerror", (error) => desktopErrors.push(error.message));
-  for (const path of ["/", "/palpites", "/boloes", "/regras", "/admin", "/entrar"]) {
+  for (const path of [
+    "/",
+    "/palpites",
+    "/boloes",
+    "/regras",
+    "/admin",
+    "/entrar",
+    "/privacidade",
+    "/termos",
+    "/robots.txt",
+    "/sitemap.xml",
+  ]) {
     const response = await desktopPage.goto(`${BASE_URL}${path}`);
     assert.equal(response?.status(), 200, `${path} must respond successfully`);
     assert.equal(
@@ -141,6 +165,13 @@ try {
   const homeResponse = await desktopPage.goto(BASE_URL);
   assert.equal(homeResponse?.headers()["x-frame-options"], "DENY");
   assert.equal(homeResponse?.headers()["x-content-type-options"], "nosniff");
+  assert.equal(homeResponse?.headers()["cross-origin-resource-policy"], "same-origin");
+  assert.match(homeResponse?.headers()["strict-transport-security"] ?? "", /max-age=/);
+  await desktopPage.goto(`${BASE_URL}/privacidade`);
+  await desktopPage.getByRole("heading", { name: "Política de Privacidade" }).waitFor();
+  await desktopPage.getByRole("link", { name: "contato@faysk.dev" }).waitFor();
+  await desktopPage.goto(`${BASE_URL}/termos`);
+  await desktopPage.getByRole("heading", { name: "Termos de Serviço" }).waitFor();
   assert.deepEqual(desktopErrors, []);
 
   console.log("UI flow test passed");

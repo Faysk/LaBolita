@@ -1,4 +1,5 @@
 export function hasSupabaseConfig() {
+  if (process.env.NEXT_PUBLIC_LABOLITA_DEMO_MODE === "1") return false;
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -6,6 +7,7 @@ export function hasSupabaseConfig() {
 }
 
 export function getSupabaseConfig() {
+  if (process.env.NEXT_PUBLIC_LABOLITA_DEMO_MODE === "1") return null;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 

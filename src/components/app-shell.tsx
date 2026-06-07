@@ -75,6 +75,25 @@ export async function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
       {children}
+      <footer className="mt-12 border-t pb-24 pt-7 md:pb-8">
+        <div className="page-container flex flex-col gap-3 text-xs font-semibold text-muted sm:flex-row sm:items-center sm:justify-between">
+          <p>LaBolita · bolão recreativo e independente.</p>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link href="/privacidade" className="transition hover:text-brand">
+              Privacidade
+            </Link>
+            <Link href="/termos" className="transition hover:text-brand">
+              Termos
+            </Link>
+            <a
+              href="mailto:contato@faysk.dev"
+              className="transition hover:text-brand"
+            >
+              Contato
+            </a>
+          </div>
+        </div>
+      </footer>
       <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-2xl border bg-white/95 p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl md:hidden">
         {navigation.map((item) => (
           <Link

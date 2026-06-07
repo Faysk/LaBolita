@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 
 const USER_ONE = "10000000-0000-0000-0000-000000000001";
@@ -62,16 +62,19 @@ async function bootstrapSupabasePrimitives() {
 }
 
 async function applyProjectSql() {
-  let migration = await readFile(
-    "supabase/migrations/202606060001_initial_schema.sql",
-    "utf8",
-  );
-  migration = migration.replace(
-    "create extension if not exists pgcrypto;",
-    "-- pgcrypto primitives supplied by the embedded smoke test",
-  );
+  const migrations = (await readdir("supabase/migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
 
-  await db.exec(migration);
+  for (const name of migrations) {
+    let migration = await readFile(`supabase/migrations/${name}`, "utf8");
+    migration = migration.replace(
+      "create extension if not exists pgcrypto;",
+      "-- pgcrypto primitives supplied by the embedded smoke test",
+    );
+    await db.exec(migration);
+  }
+
   await db.exec(await readFile("supabase/seed.sql", "utf8"));
 }
 
@@ -221,6 +224,21 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     await assert.rejects(
       db.query("select public.finalize_match($1, 2, 1, null, 'cedo demais')", [MATCH_ID]),
       "finalization must be rejected before prediction lock",
+    );
+  });
+
+  await db.exec(`
+    update public.matches
+    set
+      scheduled_at = now() + interval '1 hour',
+      prediction_lock_at = now() - interval '1 minute'
+    where id = '${MATCH_ID}';
+  `);
+
+  await asUser(USER_ONE, async () => {
+    await assert.rejects(
+      db.query("select public.finalize_match($1, 2, 1, null, 'antes do jogo')", [MATCH_ID]),
+      "finalization must be rejected before kickoff even when predictions are locked",
     );
   });
 

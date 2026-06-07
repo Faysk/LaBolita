@@ -5,6 +5,7 @@ import { getPoolsOverview } from "@/lib/data/pools";
 
 export const metadata: Metadata = {
   title: "Bolões",
+  robots: { index: false, follow: false },
 };
 
 export default async function PoolsPage() {

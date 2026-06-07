@@ -5,6 +5,7 @@ import { getMatches } from "@/lib/data/matches";
 
 export const metadata: Metadata = {
   title: "Palpites",
+  robots: { index: false, follow: false },
 };
 
 export default async function PredictionsPage() {

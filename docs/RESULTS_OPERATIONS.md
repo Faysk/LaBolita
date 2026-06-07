@@ -1,0 +1,98 @@
+# Operação de agenda e resultados
+
+## Fontes e responsabilidade
+
+- A [FIFA](https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums)
+  é a fonte de verdade para participantes, confrontos, horários, locais e
+  resultados finais.
+- `data/world-cup-2026.json` contém as 48 seleções e 104 partidas verificadas em
+  7 de junho de 2026. O arquivo foi estruturado com auxílio de um feed público e
+  passa pelo validador completo do projeto antes de poder ser importado.
+- `npm run schedule:verify:sources` compara automaticamente os 104 horários com
+  uma segunda agenda pública. Essa conferência detectou e corrigiu o horário
+  oficial de Brasil x Haiti para 20h30 EDT em 19 de junho.
+- Um provedor esportivo serve para velocidade operacional. Ele nunca deve
+  substituir a conferência final quando houver divergência com a FIFA.
+
+## Estratégia implementada
+
+```mermaid
+flowchart LR
+  P["Provedor esportivo"] --> C["Supabase Cron (1 minuto)"]
+  C --> E["GET /api/cron/results"]
+  E --> O["Placar observado no PostgreSQL"]
+  O --> A["Administrador confere"]
+  A --> F["finalize_match"]
+  F --> R["Ranking e histórico auditável"]
+```
+
+O endpoint protegido atualiza apenas `live_home_score`, `live_away_score`,
+`provider_status` e `provider_updated_at`. Ele não chama `finalize_match` e,
+portanto, não altera pontos automaticamente.
+
+## Ativar sincronização
+
+1. Na Vercel, configure:
+
+```text
+RESULTS_FEED_URL=https://worldcup26.ir/get/games
+CRON_SECRET=<segredo aleatório com pelo menos 32 caracteres>
+```
+
+2. Faça um novo deploy.
+3. No Supabase Dashboard, abra **Integrations > Cron** e crie uma chamada HTTP:
+
+```text
+Método: GET
+URL: https://labolita.faysk.dev/api/cron/results
+Agenda: * * * * *
+Header: Authorization: Bearer <mesmo CRON_SECRET>
+```
+
+4. Valide manualmente:
+
+```bash
+npm run results:smoke:remote
+```
+
+O feed público acima é adequado como contingência e para validar o fluxo, mas
+não oferece SLA conhecido. Mantenha confirmação humana obrigatória enquanto ele
+for a fonte primária.
+
+## Provedor recomendado
+
+Para a Copa em produção, a recomendação é contratar o plano específico da
+[Sportmonks](https://www.sportmonks.com/football-api/world-plan/). A
+documentação informa cobertura dos 104 jogos, placares em menos de 15 segundos
+e um endpoint de partidas alteradas nos últimos 10 segundos. O plano atual do
+`football-data.org` configurado no projeto retorna `403` para a competição
+`WC`, portanto não serve para esta Copa sem mudança de assinatura.
+
+Antes de trocar para Sportmonks será necessário adicionar um adaptador para o
+formato de resposta deles; a proteção, o endpoint, o cron e a confirmação
+administrativa permanecem iguais.
+
+## Procedimento por partida
+
+1. Confirmar que horário e participantes estão corretos antes do bloqueio.
+2. Acompanhar `provider_status` durante o jogo.
+3. Depois do apito final, comparar o placar sugerido com a FIFA.
+4. Confirmar pelo painel administrativo, informando a fonte.
+5. Em caso de correção, usar novamente o painel com justificativa explícita.
+
+Nunca considerar disputa por pênaltis no placar: registrar o resultado após a
+prorrogação e informar separadamente quem avançou.
+
+## Falhas e contingência
+
+| Situação | Ação |
+| --- | --- |
+| Feed indisponível | Informar resultado manualmente após conferência |
+| Feed diverge da FIFA | Não confirmar; aguardar/corrigir a fonte |
+| Cron falha | Executar `npm run results:smoke:remote` e conferir logs |
+| Horário muda após bloqueio | Usar `update_match_schedule` com justificativa |
+| Resultado é corrigido | Confirmar novamente; o banco recalcula e versiona |
+
+Automatizar a finalização só deve ser considerado depois de observar o provedor
+em produção e exigir, no mínimo, duas leituras finais idênticas, atraso de
+segurança e fonte secundária.

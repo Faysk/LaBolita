@@ -45,9 +45,8 @@ não existe na fase de grupos nem na disputa de terceiro lugar.
 - Ao entrar em um bolão, o participante começa a pontuar nas partidas que ainda
   não estavam bloqueadas naquele instante.
 - Pontos antigos não entram retroativamente.
-- Desempate atual: pontos totais, depois quantidade de placares exatos, depois
-  nome. Antes do lançamento público, o terceiro critério deve ser substituído
-  por um critério competitivo aprovado.
+- Desempate: pontos totais, placares exatos, resultados corretos e, por último,
+  nome para ordenação determinística.
 - Correções de resultado recalculam o ranking e ficam registradas no histórico.
 
 ## Casos operacionais

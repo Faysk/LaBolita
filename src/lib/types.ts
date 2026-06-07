@@ -30,6 +30,9 @@ export type DemoMatch = {
     advancingTeamId?: string | null;
   };
   result?: MatchResult;
+  liveResult?: MatchResult;
+  providerStatus?: string | null;
+  providerUpdatedAt?: string | null;
 };
 
 export type ScorePrediction = {

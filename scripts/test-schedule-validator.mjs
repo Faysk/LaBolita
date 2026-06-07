@@ -5,11 +5,13 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const examplePath = "data/schedule.example.json";
+const completePath = "data/world-cup-2026.json";
 const example = JSON.parse(await readFile(examplePath, "utf8"));
 const temporaryDirectory = await mkdtemp(join(tmpdir(), "labolita-schedule-"));
 
 try {
   assert.equal(runValidator(examplePath).status, 0);
+  assert.equal(runValidator(completePath, "--require-complete").status, 0);
 
   const incomplete = runValidator(examplePath, "--require-complete");
   assert.notEqual(incomplete.status, 0);
@@ -35,6 +37,32 @@ try {
   const invalidLock = runValidator(invalidLockPath);
   assert.notEqual(invalidLock.status, 0);
   assert.match(invalidLock.stderr, /bloqueio da partida 1 ocorre após o início/);
+
+  const invalidGroupPath = await writeFixture("invalid-group.json", {
+    ...example,
+    teams: example.teams.map((team) =>
+      team.code === "RSA" ? { ...team, group: "B" } : team,
+    ),
+  });
+  const invalidGroup = runValidator(invalidGroupPath);
+  assert.notEqual(invalidGroup.status, 0);
+  assert.match(invalidGroup.stderr, /seleção fora do Grupo A/);
+
+  const invalidKnockoutPath = await writeFixture("invalid-knockout.json", {
+    ...example,
+    matches: [
+      ...example.matches,
+      {
+        number: 73,
+        stage: "round_of_32",
+        scheduledAt: "2026-06-28T19:00:00Z",
+        venue: "Los Angeles Stadium",
+      },
+    ],
+  });
+  const invalidKnockout = runValidator(invalidKnockoutPath);
+  assert.notEqual(invalidKnockout.status, 0);
+  assert.match(invalidKnockout.stderr, /precisa de seleções ou rótulos/);
 
   console.log("Schedule validator test passed");
 } finally {

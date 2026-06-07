@@ -36,6 +36,14 @@ export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
                     {effectiveResult.awayScore}
                   </p>
                 )}
+                {!effectiveResult && match.liveResult && (
+                  <p className="mt-1 text-sm font-bold text-amber-700">
+                    Provedor: {match.liveResult.homeScore} x {match.liveResult.awayScore}
+                    {match.providerStatus === "finished"
+                      ? " · aguardando confirmação"
+                      : " · ao vivo"}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -47,13 +55,18 @@ export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
                 ) : (
                   <Check className="size-4" />
                 )}
-                {effectiveResult ? "Corrigir resultado" : "Informar resultado"}
+                {effectiveResult
+                  ? "Corrigir resultado"
+                  : match.providerStatus === "finished"
+                    ? "Confirmar resultado"
+                    : "Informar resultado"}
               </button>
             </div>
             {activeId === match.id && (
               <ResultForm
                 match={match}
                 existingResult={effectiveResult}
+                providerResult={match.liveResult}
                 onSuccess={() => setActiveId(null)}
               />
             )}
@@ -72,18 +85,21 @@ export function AdminMatchQueue({ matches }: { matches: DemoMatch[] }) {
 function ResultForm({
   match,
   existingResult,
+  providerResult,
   onSuccess,
 }: {
   match: DemoMatch;
   existingResult?: DemoMatch["result"];
+  providerResult?: DemoMatch["liveResult"];
   onSuccess: () => void;
 }) {
   const router = useRouter();
+  const suggestedResult = existingResult ?? providerResult;
   const [homeScore, setHomeScore] = useState(
-    existingResult ? String(existingResult.homeScore) : "",
+    suggestedResult ? String(suggestedResult.homeScore) : "",
   );
   const [awayScore, setAwayScore] = useState(
-    existingResult ? String(existingResult.awayScore) : "",
+    suggestedResult ? String(suggestedResult.awayScore) : "",
   );
   const [advancingTeamId, setAdvancingTeamId] = useState(
     existingResult?.advancingTeamId ?? "",

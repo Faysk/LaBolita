@@ -11,10 +11,10 @@ O plano abaixo prioriza um bolão privado confiável antes de recursos sociais.
 
 ## 7 de junho
 
-- Criar projeto Supabase e preencher variáveis.
-- Aplicar migration e seed; validar pgTAP.
-- Habilitar Google OAuth e nomear primeiro administrador.
-- Importar e conferir os 104 jogos contra a FIFA.
+- Projeto Supabase, Google OAuth, Vercel e domínio configurados.
+- Migrations aplicadas e criação real de bolão validada.
+- Agenda completa de 48 seleções e 104 jogos importada e validada.
+- Política de Privacidade, Termos e base segura de sincronização implementados.
 
 Critério de saída: login, salvamento de palpite e bloqueio funcionando no banco.
 
@@ -22,7 +22,7 @@ Critério de saída: login, salvamento de palpite e bloqueio funcionando no banc
 
 - Teste ponta a ponta com pelo menos três contas.
 - Validar criação, convite, entrada tardia, privacidade e ranking.
-- Escolher e integrar fonte de resultados ou definir operação manual.
+- Contratar/ativar provedor de resultados com SLA e configurar Supabase Cron.
 
 Critério de saída: um jogo fictício finalizado e corrigido sem divergência.
 

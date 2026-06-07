@@ -5,12 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:demo": "node scripts/build-demo.mjs",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm test && npm run schedule:test && npm run db:smoke && npm run build && npm run test:ui",
+    "check": "npm run lint && npm run typecheck && npm test && npm run schedule:test && npm run db:smoke && npm run build:demo && npm run test:ui",
     "test": "vitest run",
     "test:ui": "node scripts/test-ui.mjs",
+    "test:production": "node scripts/test-production.mjs",
+    "test:production:current": "node scripts/test-production.mjs --allow-pending-deploy",
     "test:watch": "vitest",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
@@ -18,9 +21,13 @@
     "db:test": "supabase test db",
     "db:lint": "supabase db lint --local --fail-on error",
     "db:smoke": "node scripts/test-database.mjs",
+    "db:smoke:remote": "node --env-file=.env.local scripts/test-remote-database.mjs",
     "schedule:validate": "node scripts/import-schedule.mjs --validate-only data/schedule.example.json",
     "schedule:test": "node scripts/test-schedule-validator.mjs",
-    "schedule:import": "node --env-file=.env.local scripts/import-schedule.mjs"
+    "schedule:build": "node scripts/build-world-cup-schedule.mjs",
+    "schedule:verify:sources": "node scripts/verify-schedule-sources.mjs",
+    "schedule:import": "node --env-file=.env.local scripts/import-schedule.mjs",
+    "results:smoke:remote": "node --env-file=.env.local scripts/test-results-route.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

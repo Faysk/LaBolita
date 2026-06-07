@@ -7,12 +7,16 @@ import { hasSupabaseConfig } from "@/lib/supabase/config";
 
 export const metadata: Metadata = {
   title: "Administração",
+  robots: { index: false, follow: false },
 };
 
 export default async function AdminPage() {
   await requireAdmin();
   const matches = await getMatches();
   const databaseConfigured = hasSupabaseConfig();
+  const resultsSyncConfigured = Boolean(
+    process.env.RESULTS_FEED_URL && process.env.CRON_SECRET,
+  );
 
   return (
     <main className="page-container py-7 md:py-10">
@@ -35,7 +39,12 @@ export default async function AdminPage() {
             databaseConfigured ? "Supabase conectado" : "Modo demonstração",
             databaseConfigured ? "text-brand bg-emerald-50" : "text-amber-700 bg-amber-50",
           ],
-          [RefreshCw, "Operação", "Resultados manuais", "text-brand bg-emerald-50"],
+          [
+            RefreshCw,
+            "Sincronização",
+            resultsSyncConfigured ? "Feed + confirmação" : "Resultados manuais",
+            resultsSyncConfigured ? "text-brand bg-emerald-50" : "text-amber-700 bg-amber-50",
+          ],
           [
             CheckCircle2,
             "Partidas carregadas",

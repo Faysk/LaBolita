@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { LogOut, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export function AccountMenu({
@@ -19,12 +19,32 @@ export function AccountMenu({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const initials = displayName
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    function closeOutside(event: PointerEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOutside);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOutside);
+    };
+  }, [open]);
 
   if (!isAuthenticated) {
     return (
@@ -46,18 +66,24 @@ export function AccountMenu({
   }
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         aria-label="Abrir menu da conta"
         aria-expanded={open}
+        aria-haspopup="menu"
+        aria-controls="account-menu"
         onClick={() => setOpen((value) => !value)}
         className="flex size-9 items-center justify-center rounded-full bg-brand text-xs font-black text-white"
       >
         {initials || "LB"}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 w-52 rounded-2xl border bg-white p-2 shadow-2xl shadow-brand/15">
+        <div
+          id="account-menu"
+          role="menu"
+          className="absolute right-0 top-12 w-52 rounded-2xl border bg-white p-2 shadow-2xl shadow-brand/15"
+        >
           <p className="truncate px-3 py-2 text-sm font-black">{displayName}</p>
           {isAdmin && (
             <Link

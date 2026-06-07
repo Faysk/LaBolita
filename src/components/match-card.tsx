@@ -212,6 +212,19 @@ export function MatchCard({
           )}
         </div>
       )}
+      {!result && match.liveResult && (
+        <div className="mt-4 rounded-2xl border border-brand/20 bg-emerald-50 p-3 text-center text-xs">
+          <p className="font-black text-foreground">
+            {match.providerStatus === "finished"
+              ? "Placar aguardando confirmação"
+              : "Placar ao vivo"}
+            : {match.liveResult.homeScore} × {match.liveResult.awayScore}
+          </p>
+          <p className="mt-1 font-semibold text-muted">
+            O ranking só muda após confirmação administrativa.
+          </p>
+        </div>
+      )}
       {syncState === "error" && (
         <p className="mt-3 text-center text-xs font-bold text-red-700">
           O servidor recusou o palpite. Revise e tente novamente.
