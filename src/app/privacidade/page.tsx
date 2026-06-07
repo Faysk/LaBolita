@@ -29,6 +29,8 @@ export default function PrivacyPage() {
         <ul>
           <li>Nome, e-mail, identificador e foto fornecidos pelo login Google.</li>
           <li>Palpites, participação em bolões, pontuação e ações administrativas.</li>
+          <li>Data e versão do aceite dos Termos de Serviço.</li>
+          <li>Registros de arquivamento, recuperação e suspensão reversível.</li>
           <li>
             Dados técnicos essenciais, como sessão, endereço IP e registros de
             segurança mantidos pelos provedores de infraestrutura.
@@ -62,6 +64,12 @@ export default function PrivacyPage() {
         <p>
           Dentro dos bolões, participantes podem ver nome, foto, pontuação e,
           somente após o bloqueio da partida, os palpites dos adversários.
+          Em bolões marcados como públicos, visitantes também podem ver o nome do
+          bolão, seu organizador, quantidade de participantes e ranking, mas não
+          recebem códigos de convite nem acesso aos palpites privados.
+          Pequenos arquivos visuais de bandeiras podem ser carregados por CDNs
+          públicas, que recebem dados técnicos usuais da requisição, como endereço
+          IP e navegador.
         </p>
       </section>
 

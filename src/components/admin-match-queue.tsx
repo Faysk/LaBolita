@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, UserRoundCog, X } from "lucide-react";
+import { Check, LoaderCircle, UserRoundCog, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { storeLocalResult, useLocalResults } from "@/lib/local-state";
@@ -63,7 +63,7 @@ export function AdminMatchQueue({
               <button
                 type="button"
                 onClick={() => setActiveId(activeId === match.id ? null : match.id)}
-                className="flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-2.5 text-sm font-bold text-brand"
+                className="interactive flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-2.5 text-sm font-bold text-brand"
               >
                 {activeId === match.id ? (
                   <X className="size-4" />
@@ -183,8 +183,10 @@ function TeamAssignmentForm({
       <button
         type="submit"
         disabled={busy || !homeTeamId || !awayTeamId || homeTeamId === awayTeamId}
-        className="rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60 md:col-span-2"
+        aria-busy={busy}
+        className="interactive flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60 md:col-span-2"
       >
+        {busy && <LoaderCircle className="size-4 animate-spin" />}
         {busy ? "Salvando..." : "Confirmar participantes"}
       </button>
       {error && <p className="text-sm font-medium text-red-700 md:col-span-2">{error}</p>}
@@ -322,8 +324,10 @@ function ResultForm({
       <button
         type="submit"
         disabled={busy}
-        className="rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60"
+        aria-busy={busy}
+        className="interactive flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60"
       >
+        {busy && <LoaderCircle className="size-4 animate-spin" />}
         {busy ? "Calculando..." : "Finalizar e pontuar"}
       </button>
       {error && <p className="text-sm font-medium text-red-700">{error}</p>}

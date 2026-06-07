@@ -147,6 +147,7 @@ async function verifySeedAndScoring() {
 }
 
 async function verifyPredictionPrivacyAndResultCorrection() {
+  let secondPoolId;
   await db.exec(`
     insert into auth.users (id, email, raw_user_meta_data)
     values
@@ -154,7 +155,9 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       ('${USER_TWO}', 'member@example.com', '{"full_name":"Member"}'),
       ('${USER_THREE}', 'late@example.com', '{"full_name":"Late Member"}');
 
-    update public.profiles set is_admin = true where id = '${USER_ONE}';
+    update public.profiles
+    set is_admin = true, is_master_admin = true
+    where id = '${USER_ONE}';
 
     insert into public.matches (
       id,
@@ -213,6 +216,12 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   `);
 
   await asUser(USER_ONE, async () => {
+    await db.query("select public.master_set_terms_enforcement(true, 'ativação de teste')");
+    await assert.rejects(
+      db.query("select public.save_prediction($1, 2, 1, null)", [MATCH_ID]),
+      "predictions must require terms acceptance",
+    );
+    await db.query("select public.accept_terms('2026-06-07')");
     await db.query("select public.save_prediction($1, 2, 1, null)", [MATCH_ID]);
     await assert.rejects(
       db.query("select public.save_prediction($1, 1, 1, null)", [KNOCKOUT_MATCH_ID]),
@@ -222,7 +231,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       KNOCKOUT_MATCH_ID,
       HOME_TEAM_ID,
     ]);
-    await db.query("select public.create_pool('Bolão Teste', false)");
+    await db.query("select public.create_pool('Bolão Teste', true)");
     await db.query("select public.assign_match_teams($1, $2, $3, 'classificação oficial')", [
       UNRESOLVED_MATCH_ID,
       HOME_TEAM_ID,
@@ -231,14 +240,56 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   });
 
   await asUser(USER_THREE, async () => {
+    await db.query("select public.accept_terms('2026-06-07')");
+    assert.equal(
+      await scalar("select count(*)::integer from public.pools"),
+      0,
+      "public discovery must not expose pool rows or invite codes directly",
+    );
     await db.query("select public.save_prediction($1, 2, 1, null)", [MATCH_ID]);
   });
 
   const inviteCode = await scalar("select invite_code from public.pools limit 1");
+  const publicPoolId = await scalar("select id from public.pools limit 1");
   assert.match(inviteCode, /^[A-F0-9]{12}$/);
 
+  await asAnon(async () => {
+    assert.equal(
+      await scalar("select count(*)::integer from public.get_public_pools(null, 9, 0)"),
+      1,
+      "anonymous visitors can discover active public pools",
+    );
+    assert.equal(
+      await scalar(
+        "select count(*)::integer from public.get_public_pool_ranking($1, 25, 0)",
+        [publicPoolId],
+      ),
+      1,
+      "anonymous visitors can see public rankings",
+    );
+  });
+
   await asUser(USER_TWO, async () => {
+    await db.query("select public.accept_terms('2026-06-07')");
     await db.query("select public.join_pool($1)", [inviteCode]);
+    assert.equal(
+      await scalar("select member_count::integer from public.get_my_pools() where pool_id = $1", [
+        publicPoolId,
+      ]),
+      2,
+      "the private pool overview must aggregate member counts in one query",
+    );
+    await db.query("select public.create_pool('Bolão Arquivável', true)");
+    secondPoolId = await scalar("select id from public.pools where owner_id = $1", [USER_TWO]);
+    await db.query("select public.update_pool($1, 'Bolão Arquivável', true, true, 'encerrado pelo dono')", [
+      secondPoolId,
+    ]);
+    await assert.rejects(
+      db.query("select public.update_pool($1, 'Bolão Arquivável', true, false, 'tentativa de recuperar')", [
+        secondPoolId,
+      ]),
+      "only the master administrator can restore archived pools",
+    );
     await assert.rejects(
       db.query(
         "insert into public.predictions (user_id, match_id, home_score, away_score) values ($1, $2, 0, 0)",
@@ -253,8 +304,8 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     );
     assert.equal(
       await scalar("select count(*)::integer from public.profiles"),
-      2,
-      "profiles outside shared pools must stay private",
+      1,
+      "another pool member's full profile must stay private",
     );
     await assert.rejects(
       db.query("update public.profiles set is_admin = true where id = $1", [USER_TWO]),
@@ -267,6 +318,28 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       db.query("select public.finalize_match($1, 2, 1, null, 'cedo demais')", [MATCH_ID]),
       "finalization must be rejected before prediction lock",
     );
+  });
+
+  await asUser(USER_ONE, async () => {
+    await db.query("select public.update_pool($1, 'Bolão Recuperado', false, false, 'recuperação master')", [
+      secondPoolId,
+    ]);
+    await db.query("select public.master_update_user($1, 'Member', true, 'suspensão de teste')", [
+      USER_TWO,
+    ]);
+  });
+
+  await asUser(USER_TWO, async () => {
+    await assert.rejects(
+      db.query("select public.save_prediction($1, 1, 0, null)", [MATCH_ID]),
+      "disabled users must not save predictions",
+    );
+  });
+
+  await asUser(USER_ONE, async () => {
+    await db.query("select public.master_update_user($1, 'Member', false, 'restauração de teste')", [
+      USER_TWO,
+    ]);
   });
 
   await db.exec(`
@@ -390,8 +463,8 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     await db.query("select public.join_pool($1)", [inviteCode]);
     assert.equal(
       await scalar("select count(*)::integer from public.profiles"),
-      3,
-      "profiles become visible after sharing a pool",
+      1,
+      "sharing a pool must not expose full profile rows",
     );
   });
 
@@ -435,6 +508,22 @@ async function asUser(userId, operation) {
     await db.exec(`
       reset role;
       select set_config('app.test_uid', '', false);
+      select set_config('app.test_role', '', false);
+    `);
+  }
+}
+
+async function asAnon(operation) {
+  await db.exec(`
+    select set_config('app.test_uid', '', false);
+    select set_config('app.test_role', 'anon', false);
+    set role anon;
+  `);
+  try {
+    await operation();
+  } finally {
+    await db.exec(`
+      reset role;
       select set_config('app.test_role', '', false);
     `);
   }

@@ -6,13 +6,15 @@ import {
 import { HomeOverview } from "@/components/home-overview";
 import { MatchCard } from "@/components/match-card";
 import { NextMatchSummary } from "@/components/next-match-summary";
+import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
 import { getPoolsOverview } from "@/lib/data/pools";
 
 export default async function HomePage() {
-  const [matches, poolsOverview] = await Promise.all([
+  const [matches, poolsOverview, viewer] = await Promise.all([
     getMatches(),
     getPoolsOverview(),
+    getViewerState(),
   ]);
   const openMatches = matches.filter((match) => !match.locked);
   const upcomingMatches = (openMatches.length ? openMatches : matches).slice(0, 3);
@@ -72,7 +74,13 @@ export default async function HomePage() {
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
           {upcomingMatches.map((match) => (
-            <MatchCard key={match.id} match={match} compact />
+            <MatchCard
+              key={match.id}
+              match={match}
+              compact
+              isAuthenticated={viewer.isAuthenticated}
+              termsAccepted={viewer.termsAccepted}
+            />
           ))}
           {upcomingMatches.length === 0 && (
             <p className="card p-6 text-sm text-muted lg:col-span-3">

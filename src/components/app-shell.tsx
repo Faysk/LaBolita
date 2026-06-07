@@ -18,9 +18,9 @@ export async function AppShell({ children }: { children: ReactNode }) {
     data: { user },
   } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
   const { data: profile } = user
-    ? await supabase!
+      ? await supabase!
         .from("profiles")
-        .select("display_name, is_admin")
+        .select("display_name, is_admin, is_master_admin, terms_accepted_at, disabled_at")
         .eq("id", user.id)
         .single()
     : { data: null };
@@ -42,7 +42,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-xl px-3 py-2 text-sm font-bold text-muted transition hover:bg-surface-muted hover:text-brand"
+                className="interactive rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-muted hover:text-brand"
               >
                 {item.label}
               </Link>
@@ -53,7 +53,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
               <Link
                 href="/admin"
                 aria-label="Administração"
-                className="hidden rounded-xl p-2 text-muted transition hover:bg-surface-muted hover:text-brand md:block"
+                className="interactive hidden rounded-xl p-2 text-muted hover:bg-surface-muted hover:text-brand md:block"
               >
                 <Shield className="size-4" />
               </Link>
@@ -71,6 +71,23 @@ export async function AppShell({ children }: { children: ReactNode }) {
         <div className="border-b bg-accent/35">
           <p className="page-container py-2 text-center text-[11px] font-bold text-brand-strong">
             Modo demonstração: agenda parcial e dados salvos somente neste navegador.
+          </p>
+        </div>
+      )}
+      {!demoMode && user && !profile?.terms_accepted_at && (
+        <div className="border-b border-amber-200 bg-amber-50">
+          <p className="page-container py-2 text-center text-xs font-bold text-amber-800">
+            Confirme os termos para salvar palpites e participar de bolões.{" "}
+            <Link href="/aceitar-termos" className="underline">
+              Revisar e aceitar
+            </Link>
+          </p>
+        </div>
+      )}
+      {!demoMode && user && profile?.disabled_at && (
+        <div className="border-b border-red-200 bg-red-50">
+          <p className="page-container py-2 text-center text-xs font-bold text-red-800">
+            Esta conta está suspensa. Seus dados permanecem preservados.
           </p>
         </div>
       )}
@@ -99,7 +116,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
           <Link
             key={item.href}
             href={item.href}
-            className="flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-bold text-muted"
+            className="interactive flex flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10px] font-bold text-muted"
           >
             <item.icon className="size-4" />
             {item.label}

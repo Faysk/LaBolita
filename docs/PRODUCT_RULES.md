@@ -53,6 +53,14 @@ não existe na fase de grupos nem na disputa de terceiro lugar.
 - Correções de resultado recalculam o ranking e ficam registradas no histórico.
 - Cada usuário pode participar de até 100 bolões, criar até 20 e cada bolão
   aceita até 500 participantes para proteger a operação gratuita.
+- Visitantes podem descobrir bolões públicos em páginas de 9 resultados e ver
+  o ranking sem receber códigos de convite ou identificadores privados.
+- O dono pode editar, mudar a visibilidade, remover membros e arquivar o próprio
+  bolão. Arquivamento nunca apaga o histórico.
+- Somente o administrador master pode recuperar um bolão arquivado ou suspender
+  e reativar contas.
+- A primeira entrada exige aceite versionado dos Termos de Serviço e da Política
+  de Privacidade.
 
 ## Casos operacionais
 

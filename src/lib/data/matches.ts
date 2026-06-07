@@ -4,6 +4,7 @@ import type { DemoMatch, DemoTeam, MatchStage } from "@/lib/types";
 
 type DatabaseTeam = {
   id: string;
+  code: string;
   name: string;
   short_name: string;
   flag_emoji: string | null;
@@ -80,8 +81,8 @@ export async function getMatches(): Promise<DemoMatch[]> {
         live_away_score,
         provider_status,
         provider_updated_at,
-        home_team:teams!matches_home_team_id_tournament_id_fkey(id, name, short_name, flag_emoji),
-        away_team:teams!matches_away_team_id_tournament_id_fkey(id, name, short_name, flag_emoji)
+        home_team:teams!matches_home_team_id_tournament_id_fkey(id, code, name, short_name, flag_emoji),
+        away_team:teams!matches_away_team_id_tournament_id_fkey(id, code, name, short_name, flag_emoji)
       `,
     )
     .order("scheduled_at")
@@ -169,12 +170,13 @@ export async function getTeams(): Promise<DemoTeam[]> {
 
   const { data, error } = await supabase
     .from("teams")
-    .select("id, name, short_name, flag_emoji")
+    .select("id, code, name, short_name, flag_emoji")
     .order("name");
   if (error) return [];
 
   return ((data ?? []) as DatabaseTeam[]).map((team) => ({
     id: team.id,
+    code: team.code,
     name: team.name,
     shortName: team.short_name,
     flag: team.flag_emoji ?? "•",
@@ -206,12 +208,14 @@ function mapTeam(team: DatabaseTeam | null, fallback: string): DemoTeam {
   return team
     ? {
         id: team.id,
+        code: team.code,
         name: team.name,
         shortName: team.short_name,
         flag: team.flag_emoji ?? "•",
       }
     : {
         id: `unknown-${fallback.toLowerCase()}`,
+        code: undefined,
         name: fallback,
         shortName: fallback,
         flag: "•",

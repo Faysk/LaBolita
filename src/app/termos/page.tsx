@@ -26,10 +26,11 @@ export default function TermsPage() {
       <section>
         <h2>2. Conta e elegibilidade</h2>
         <p>
-          Você deve fornecer informações verdadeiras, proteger o acesso à sua
-          conta e responder pelas ações realizadas nela. Contas usadas para fraude,
-          abuso, automação indevida ou tentativa de comprometer o serviço podem ser
-          suspensas ou removidas.
+          Antes do primeiro acesso, você deve aceitar estes termos e a política de
+          privacidade. Você deve fornecer informações verdadeiras, proteger o acesso
+          à sua conta e responder pelas ações realizadas nela. Contas usadas para
+          fraude, abuso, automação indevida ou tentativa de comprometer o serviço
+          podem ser suspensas de forma reversível pela administração.
         </p>
       </section>
 
@@ -65,7 +66,18 @@ export default function TermsPage() {
       </section>
 
       <section>
-        <h2>6. Disponibilidade e alterações</h2>
+        <h2>6. Bolões públicos e administração</h2>
+        <p>
+          Ao tornar um bolão público, seu nome, organizador, quantidade de
+          participantes e ranking ficam visíveis também para visitantes. O dono
+          pode editar e arquivar o bolão; o arquivamento remove sua exibição sem
+          apagar definitivamente o histórico. A administração master pode auditar,
+          corrigir e recuperar bolões quando necessário.
+        </p>
+      </section>
+
+      <section>
+        <h2>7. Disponibilidade e alterações</h2>
         <p>
           Buscamos manter o serviço correto e disponível, mas podem ocorrer falhas,
           atrasos de provedores esportivos, manutenções ou indisponibilidades. O
@@ -75,7 +87,7 @@ export default function TermsPage() {
       </section>
 
       <section>
-        <h2>7. Responsabilidade</h2>
+        <h2>8. Responsabilidade</h2>
         <p>
           Na medida permitida pela lei, o LaBolita não responde por perdas indiretas,
           decisões tomadas com base em placares provisórios, acordos externos entre
@@ -85,7 +97,7 @@ export default function TermsPage() {
       </section>
 
       <section>
-        <h2>8. Privacidade, encerramento e legislação</h2>
+        <h2>9. Privacidade, encerramento e legislação</h2>
         <p>
           O tratamento de dados segue a{" "}
           <Link href="/privacidade">Política de Privacidade</Link>. Você pode pedir

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { AlertTriangle, CheckCircle2, Database, RefreshCw } from "lucide-react";
 import { AdminMatchQueue } from "@/components/admin-match-queue";
+import { MasterAdminConsole } from "@/components/master-admin-console";
 import { requireAdmin } from "@/lib/auth";
+import { getMasterOverview } from "@/lib/data/admin";
 import { getMatches, getResultsSyncState, getTeams } from "@/lib/data/matches";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
@@ -12,10 +14,11 @@ export const metadata: Metadata = {
 
 export default async function AdminPage() {
   await requireAdmin();
-  const [matches, teams, resultsSyncState] = await Promise.all([
+  const [matches, teams, resultsSyncState, masterOverview] = await Promise.all([
     getMatches(),
     getTeams(),
     getResultsSyncState(),
+    getMasterOverview(),
   ]);
   const databaseConfigured = hasSupabaseConfig();
   const resultsSyncConfigured = Boolean(
@@ -82,6 +85,8 @@ export default async function AdminPage() {
           );
         })}
       </section>
+
+      <MasterAdminConsole overview={masterOverview} />
 
       <section className="card mt-7 overflow-hidden">
         <div className="flex items-center gap-3 border-b p-5 md:p-6">

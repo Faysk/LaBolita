@@ -3,8 +3,36 @@
 ## Acesso
 
 O perfil administrador enxerga o atalho de escudo no cabeçalho e a opção
-**Administração** no menu da conta. A permissão vive em `profiles.is_admin` e
-deve ser concedida somente a pessoas responsáveis por resultados e agenda.
+**Administração** no menu da conta. A permissão `profiles.is_admin` controla
+resultados e agenda. Somente um perfil pode possuir `is_master_admin = true`;
+esse perfil também enxerga a administração global de usuários e bolões.
+
+## Administração master
+
+O bloco **Administração master** permite:
+
+- Buscar, renomear, tornar público, arquivar e recuperar qualquer bolão.
+- Ver participantes e remover membros, sempre com justificativa.
+- Corrigir nomes de usuários e suspender ou reativar contas sem apagar dados.
+- Consultar as ações recentes registradas em `admin_audit_logs`.
+- Ativar a exigência de aceite dos termos no banco depois que a interface nova
+  estiver publicada.
+
+Arquivar um bolão é uma exclusão reversível: ele sai da descoberta pública e
+deixa de aparecer para membros comuns, mas dados, ranking e histórico continuam
+preservados para recuperação pelo master.
+
+## Ordem segura do rollout de termos
+
+1. Aplicar as migrations com `npx supabase db push --linked`.
+2. Publicar a interface nova.
+3. Entrar novamente, aceitar os termos e abrir `/admin`.
+4. No bloco master, informar uma justificativa e clicar em
+   **Ativar após deploy**.
+5. Executar `npm run db:smoke:remote` e `npm run test:production`.
+
+A migration nasce com a exigência rígida desligada para não quebrar uma versão
+antiga do frontend durante o intervalo entre banco e deploy.
 
 ## Antes da fase de 32
 

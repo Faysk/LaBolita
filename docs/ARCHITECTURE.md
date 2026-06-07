@@ -9,6 +9,14 @@ ranking oficial. Essas operações ficam no PostgreSQL:
 - `finalize_match` versiona o resultado e recalcula todos os palpites.
 - RLS controla privacidade, participação em bolões e acesso administrativo.
 - `get_pool_ranking` aplica a data de entrada para impedir pontos retroativos.
+- `get_public_pools` e `get_public_pool_ranking` entregam somente dados seguros,
+  paginados e sem códigos de convite.
+- `get_my_pools` agrega os bolões do usuário em uma consulta; rankings adicionais
+  são carregados somente quando abertos.
+- Linhas completas de perfil ficam visíveis apenas para o próprio usuário e
+  para o administrador master; rankings expõem somente os dados necessários.
+- `update_pool` usa arquivamento reversível e registra alterações auditáveis.
+- `is_master_admin` separa operação de partidas do controle global exclusivo.
 
 O motor em `src/lib/scoring.ts` existe para feedback rápido na interface. Os
 testes TypeScript e pgTAP usam os mesmos casos para detectar divergências.
@@ -62,6 +70,9 @@ uma fonte oficial de agenda.
 | Endpoint de sincronização é chamado por terceiros | `CRON_SECRET` obrigatório |
 | Feed gratuito fica indisponível ou parcial | Fallback ESPN + validação das 104 partidas |
 | Participante errado entra no mata-mata | Atribuição administrativa auditada e bloqueada após palpites |
+| Visitante lista milhares de bolões | Descoberta pública paginada e limitada no banco |
+| Exclusão acidental de bolão ou conta | Arquivamento e suspensão reversíveis |
+| Frontend novo e migration entram em momentos diferentes | Exigência de termos ativada pelo master somente após o deploy |
 
 Antes do lançamento, alertas de erro, backup e restauração do Supabase devem ser
 testados em ambiente de homologação.

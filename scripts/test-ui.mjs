@@ -44,6 +44,9 @@ try {
   await page.goto(BASE_URL);
   await page.getByRole("heading", { name: "Seu palpite. Sua resenha. Sua taça." }).waitFor();
   await page.getByText("Modo demonstração: agenda parcial").waitFor();
+  await page.getByText("Bolão em destaque").waitFor();
+  await page.getByText("Família Faysk").first().waitFor();
+  await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/palpites`);
   const openingMatch = page.getByTestId("match-match-1");
@@ -91,6 +94,14 @@ try {
   assert.equal(await page.getByTestId("match-match-1").getByLabel("Gols de México").isDisabled(), true);
 
   await page.goto(`${BASE_URL}/boloes`);
+  await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
+  const selectedPoolCard = page.getByTestId("pool-family");
+  assert.notEqual(
+    await selectedPoolCard.evaluate((element) => getComputedStyle(element).backgroundColor),
+    "rgb(255, 255, 255)",
+    "the selected pool card must keep its contrasting background",
+  );
+  await selectedPoolCard.getByText("Família Faysk").waitFor();
   await page.getByTestId("ranking-current-user").getByText("131 pts").waitFor();
   await page.getByTestId("pool-friends").getByRole("button", { name: "Ver ranking" }).click();
   await page.getByTestId("pool-ranking").getByText("Resenha da Firma").waitFor();
@@ -222,4 +233,16 @@ async function findBrowser() {
   throw new Error(
     "Chrome/Chromium não encontrado. Defina PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.",
   );
+}
+
+async function waitForFlagFallbacks(page) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const brokenFlags = await page.locator('img[alt^="Bandeira de"]').evaluateAll((images) =>
+      images.filter((image) => image.naturalWidth === 0).length,
+    );
+    if (brokenFlags === 0) return;
+    await page.waitForTimeout(250);
+  }
+
+  assert.fail("flag images must either load or render their readable fallback");
 }

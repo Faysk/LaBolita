@@ -9,6 +9,7 @@ export type MatchStage =
 
 export type DemoTeam = {
   id: string;
+  code?: string;
   name: string;
   shortName: string;
   flag: string;
@@ -64,10 +65,14 @@ export type ScoreBreakdown = {
 export type PoolSummary = {
   id: string;
   name: string;
-  code: string;
+  code?: string;
   members: number;
   position: number;
   eligibleFrom?: string;
+  ownerName?: string;
+  isPublic?: boolean;
+  isOwner?: boolean;
+  isArchived?: boolean;
 };
 
 export type RankingEntry = {

@@ -67,7 +67,7 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
       </div>
       <section className="grid gap-4 md:grid-cols-2">
         {visibleMatches.map((match) => (
-          <MatchCard key={match.id} match={match} />
+          <MatchCard key={match.id} match={match} isAuthenticated termsAccepted />
         ))}
         {visibleMatches.length === 0 && (
           <p className="card p-6 text-sm text-muted md:col-span-2">

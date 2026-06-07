@@ -40,6 +40,13 @@ try {
     }
 
     if (!allowPendingDeploy) {
+      await page.goto(`${BASE_URL}/boloes`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
+      await page.goto(`${BASE_URL}/entrar`, { waitUntil: "domcontentloaded" });
+      await page.getByText("Li e aceito os Termos de Serviço").waitFor();
+    }
+
+    if (!allowPendingDeploy) {
       for (const path of ["/robots.txt", "/sitemap.xml"]) {
         const response = await page.goto(`${BASE_URL}${path}`, {
           waitUntil: "domcontentloaded",
@@ -74,6 +81,7 @@ try {
     const homeHtml = await home.text();
     assert.match(homeHtml, /México/);
     assert.doesNotMatch(homeHtml, /A agenda ainda não foi importada/);
+    assert.doesNotMatch(homeHtml, /O servidor recusou o palpite/);
   }
 
   const unauthorizedCron = await fetch(`${BASE_URL}/api/cron/results`);

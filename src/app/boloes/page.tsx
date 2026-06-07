@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
 import { PoolsWorkspace } from "@/components/pools-workspace";
-import { requireUser } from "@/lib/auth";
 import { getPoolsOverview } from "@/lib/data/pools";
 
 export const metadata: Metadata = {
   title: "Bolões",
-  robots: { index: false, follow: false },
+  description: "Descubra bolões públicos e acompanhe os rankings da Copa 2026.",
 };
 
-export default async function PoolsPage() {
-  await requireUser("/boloes");
-  const overview = await getPoolsOverview();
+export default async function PoolsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pagina?: string; busca?: string }>;
+}) {
+  const params = await searchParams;
+  const overview = await getPoolsOverview({
+    publicPage: Number(params.pagina ?? 1),
+    publicSearch: params.busca ?? "",
+    includePublic: true,
+  });
   return <PoolsWorkspace {...overview} />;
 }

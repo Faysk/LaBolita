@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Shield } from "lucide-react";
+import { LoaderCircle, LogOut, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -19,6 +19,7 @@ export function AccountMenu({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const initials = displayName
     .split(/\s+/)
@@ -58,6 +59,7 @@ export function AccountMenu({
   }
 
   async function signOut() {
+    setSigningOut(true);
     const supabase = createBrowserSupabaseClient();
     await supabase?.auth.signOut();
     setOpen(false);
@@ -74,7 +76,7 @@ export function AccountMenu({
         aria-haspopup="menu"
         aria-controls="account-menu"
         onClick={() => setOpen((value) => !value)}
-        className="flex size-9 items-center justify-center rounded-full bg-brand text-xs font-black text-white"
+        className="interactive flex size-9 items-center justify-center rounded-full bg-brand text-xs font-black text-white"
       >
         {initials || "LB"}
       </button>
@@ -89,7 +91,7 @@ export function AccountMenu({
             <Link
               href="/admin"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-muted"
+              className="interactive flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-muted"
             >
               <Shield className="size-4" /> Administração
             </Link>
@@ -98,9 +100,11 @@ export function AccountMenu({
             <button
               type="button"
               onClick={signOut}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-red-700 hover:bg-red-50"
+              disabled={signingOut}
+              aria-busy={signingOut}
+              className="interactive flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
             >
-              <LogOut className="size-4" /> Sair
+              {signingOut ? <LoaderCircle className="size-4 animate-spin" /> : <LogOut className="size-4" />} {signingOut ? "Saindo..." : "Sair"}
             </button>
           )}
         </div>

@@ -45,6 +45,12 @@ try {
     .update({ is_admin: true })
     .eq("id", userId);
   if (adminError) throw adminError;
+  const { count: masterCount, error: masterCountError } = await service
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("is_master_admin", true);
+  if (masterCountError) throw masterCountError;
+  assert.equal(masterCount, 1, "there must be exactly one master administrator");
 
   const session = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -59,6 +65,25 @@ try {
     password: secondPassword,
   });
   if (secondSignInError) throw secondSignInError;
+
+  const { error: acceptTermsError } = await session.rpc("accept_terms", {
+    p_version: "2026-06-07",
+  });
+  if (acceptTermsError) throw acceptTermsError;
+  const { error: secondAcceptTermsError } = await secondSession.rpc("accept_terms", {
+    p_version: "2026-06-07",
+  });
+  if (secondAcceptTermsError) throw secondAcceptTermsError;
+
+  const { data: directPublicPools, error: directPublicPoolsError } = await secondSession
+    .from("pools")
+    .select("id, invite_code");
+  if (directPublicPoolsError) throw directPublicPoolsError;
+  assert.equal(
+    directPublicPools.length,
+    0,
+    "public discovery must not expose raw pool rows or invite codes",
+  );
 
   const { data: firstMatch, error: matchError } = await service
     .from("matches")
@@ -79,7 +104,7 @@ try {
 
   const { data: pool, error: poolError } = await session.rpc("create_pool", {
     p_name: "Auditoria automática",
-    p_is_public: false,
+    p_is_public: true,
   });
   if (poolError) throw poolError;
 
@@ -87,10 +112,42 @@ try {
   poolId = value.id;
   assert.match(value.invite_code, /^[A-F0-9]{12}$/);
 
+  const publicClient = createClient(supabaseUrl, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: publicPools, error: publicPoolsError } = await publicClient.rpc(
+    "get_public_pools",
+    { p_search: "Auditoria", p_limit: 9, p_offset: 0 },
+  );
+  if (publicPoolsError) throw publicPoolsError;
+  assert.equal(publicPools.length, 1);
+  assert.equal("invite_code" in publicPools[0], false, "public discovery must not expose invites");
+
+  const { data: publicRanking, error: publicRankingError } = await publicClient.rpc(
+    "get_public_pool_ranking",
+    { p_pool_id: poolId, p_limit: 25, p_offset: 0 },
+  );
+  if (publicRankingError) throw publicRankingError;
+  assert.equal(publicRanking.length, 1);
+  assert.equal(publicRanking[0].user_id, null, "public rankings must not expose user ids");
+
   const { error: joinError } = await secondSession.rpc("join_pool", {
     p_invite_code: value.invite_code,
   });
   if (joinError) throw joinError;
+  const { data: myPools, error: myPoolsError } = await secondSession.rpc("get_my_pools");
+  if (myPoolsError) throw myPoolsError;
+  assert.equal(myPools.find((item) => item.pool_id === poolId)?.member_count, 2);
+
+  const { data: visibleProfiles, error: visibleProfilesError } = await secondSession
+    .from("profiles")
+    .select("id, terms_accepted_at, disabled_reason");
+  if (visibleProfilesError) throw visibleProfilesError;
+  assert.deepEqual(
+    visibleProfiles.map((profile) => profile.id),
+    [secondUserId],
+    "sharing a pool must not expose another participant's full profile",
+  );
 
   const { data: hiddenPredictions, error: hiddenError } = await secondSession
     .from("predictions")
@@ -114,6 +171,53 @@ try {
     .in("user_id", [userId, secondUserId]);
   if (memberError) throw memberError;
   assert.equal(count, 2);
+
+  const { error: archiveError } = await session.rpc("update_pool", {
+    p_pool_id: poolId,
+    p_name: "Auditoria automática",
+    p_is_public: true,
+    p_archived: true,
+    p_reason: "teste de arquivamento reversível",
+  });
+  if (archiveError) throw archiveError;
+  const { data: memberPoolsAfterArchive, error: memberPoolsAfterArchiveError } =
+    await secondSession.rpc("get_my_pools");
+  if (memberPoolsAfterArchiveError) throw memberPoolsAfterArchiveError;
+  assert.equal(
+    memberPoolsAfterArchive.some((item) => item.pool_id === poolId),
+    false,
+    "archived pools must disappear for ordinary members",
+  );
+  const { data: hiddenPublicPools, error: hiddenPublicPoolsError } = await publicClient.rpc(
+    "get_public_pools",
+    { p_search: "Auditoria", p_limit: 9, p_offset: 0 },
+  );
+  if (hiddenPublicPoolsError) throw hiddenPublicPoolsError;
+  assert.equal(hiddenPublicPools.length, 0, "archived pools must disappear from discovery");
+  const { error: ownerRestoreError } = await session.rpc("update_pool", {
+    p_pool_id: poolId,
+    p_name: "Auditoria automática",
+    p_is_public: true,
+    p_archived: false,
+    p_reason: "tentativa indevida de recuperação",
+  });
+  assert.ok(ownerRestoreError, "only the master administrator can restore pools");
+  const { error: masterRestoreError } = await service.rpc("update_pool", {
+    p_pool_id: poolId,
+    p_name: "Auditoria automática recuperada",
+    p_is_public: true,
+    p_archived: false,
+    p_reason: "recuperação master de auditoria",
+  });
+  if (masterRestoreError) throw masterRestoreError;
+
+  const { data: masterPools, error: masterPoolsError } = await service.rpc(
+    "master_list_pools",
+    { p_search: "Auditoria", p_limit: 100, p_offset: 0 },
+  );
+  if (masterPoolsError) throw masterPoolsError;
+  assert.ok(masterPools.some((item) => item.pool_id === poolId));
+
 
   const { data: ranking, error: rankingError } = await session.rpc("get_pool_ranking", {
     p_pool_id: poolId,
@@ -236,6 +340,7 @@ try {
 } finally {
   if (poolId) await service.from("pools").delete().eq("id", poolId);
   if (auditTournamentId) await service.from("tournaments").delete().eq("id", auditTournamentId);
+  if (poolId) await service.from("admin_audit_logs").delete().eq("entity_id", poolId);
   if (userId) await service.from("admin_audit_logs").delete().eq("actor_id", userId);
   if (secondUserId) await service.auth.admin.deleteUser(secondUserId);
   if (userId) await service.auth.admin.deleteUser(userId);

@@ -61,7 +61,7 @@ npx supabase db seed --linked
 
 ```sql
 update public.profiles
-set is_admin = true
+set is_admin = true, is_master_admin = true
 where id = 'UUID_DO_USUARIO';
 ```
 
@@ -126,6 +126,23 @@ npm run db:smoke:remote
 npm run results:smoke:remote
 npm run test:production
 ```
+
+## Publicar governança e aceite de termos
+
+A migration `202606070008_public_pools_master_admin_and_terms.sql` adiciona
+descoberta pública paginada, administração master, arquivamento reversível e
+aceite versionado dos termos. Aplique e publique nesta ordem:
+
+```bash
+npx supabase db push --linked
+# faça o commit/push para a Vercel publicar a interface
+npm run db:smoke:remote
+npm run test:production
+```
+
+Depois do deploy, entre novamente, aceite os termos e ative a exigência rígida
+no bloco **Administração master**. Ela começa desligada no banco para manter o
+frontend anterior funcional durante o rollout.
 
 ## Estrutura principal
 

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Check, Clock3, LoaderCircle, LockKeyhole, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import { calculateScore } from "@/lib/scoring";
+import { TeamFlag } from "@/components/team-flag";
 import {
   removeLocalPrediction,
   storeLocalPrediction,
@@ -11,6 +13,7 @@ import {
 } from "@/lib/local-state";
 import type { DemoMatch, ScorePrediction } from "@/lib/types";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { friendlyServerError } from "@/lib/user-errors";
 
 type EditablePrediction = {
   homeScore: number | "";
@@ -21,9 +24,13 @@ type EditablePrediction = {
 export function MatchCard({
   match,
   compact = false,
+  isAuthenticated = true,
+  termsAccepted = true,
 }: {
   match: DemoMatch;
   compact?: boolean;
+  isAuthenticated?: boolean;
+  termsAccepted?: boolean;
 }) {
   const storedPrediction = useLocalPrediction(match.id);
   const localResults = useLocalResults();
@@ -31,7 +38,10 @@ export function MatchCard({
   const usesSupabase = Boolean(supabase && isUuid(match.id));
   const [confirmedPrediction, setConfirmedPrediction] = useState(match.prediction ?? null);
   const [draft, setDraft] = useState<EditablePrediction | null>(null);
-  const [syncState, setSyncState] = useState<"idle" | "saving" | "error">("idle");
+  const [syncState, setSyncState] = useState<
+    "idle" | "saving" | "error" | "auth-required" | "terms-required"
+  >("idle");
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const currentPrediction = draft ??
     (usesSupabase ? confirmedPrediction : storedPrediction ?? match.prediction) ?? {
       homeScore: "",
@@ -90,8 +100,25 @@ export function MatchCard({
       return;
     }
 
+    if (!isAuthenticated) {
+      setDraft(next);
+      setSyncState("auth-required");
+      setSyncMessage("Entre na sua conta para salvar este palpite.");
+      navigator.vibrate?.([25, 30, 25]);
+      return;
+    }
+
+    if (!termsAccepted) {
+      setDraft(next);
+      setSyncState("terms-required");
+      setSyncMessage("Aceite os Termos de Serviço para salvar este palpite.");
+      navigator.vibrate?.([25, 30, 25]);
+      return;
+    }
+
     setDraft(next);
     setSyncState("saving");
+    setSyncMessage(null);
     const { error } = await supabase.rpc("save_prediction", {
       p_match_id: match.id,
       p_home_score: next.homeScore,
@@ -102,6 +129,10 @@ export function MatchCard({
     if (error) {
       removeLocalPrediction(match.id);
       setSyncState("error");
+      setSyncMessage(
+        friendlyServerError(error, "Não foi possível salvar o palpite. Revise e tente novamente."),
+      );
+      navigator.vibrate?.([25, 30, 25]);
       return;
     }
 
@@ -109,6 +140,8 @@ export function MatchCard({
     setConfirmedPrediction(next as ScorePrediction);
     setDraft(null);
     setSyncState("idle");
+    setSyncMessage(null);
+    navigator.vibrate?.(20);
   }
 
   return (
@@ -129,7 +162,7 @@ export function MatchCard({
           className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
             effectiveLocked
               ? "bg-surface-muted text-muted"
-              : syncState === "error"
+              : syncState === "error" || syncState === "auth-required" || syncState === "terms-required"
                 ? "bg-red-50 text-red-700"
                 : syncState === "saving"
                   ? "bg-blue-50 text-blue-700"
@@ -140,7 +173,7 @@ export function MatchCard({
         >
           {effectiveLocked ? (
             <LockKeyhole className="size-3" />
-          ) : syncState === "error" ? (
+          ) : syncState === "error" || syncState === "auth-required" || syncState === "terms-required" ? (
             <TriangleAlert className="size-3" />
           ) : syncState === "saving" ? (
             <LoaderCircle className="size-3 animate-spin" />
@@ -153,8 +186,12 @@ export function MatchCard({
             ? result
               ? "Finalizado"
               : "Bloqueado"
-            : syncState === "error"
-              ? "Erro"
+            : syncState === "auth-required"
+              ? "Entre para salvar"
+              : syncState === "terms-required"
+                ? "Aceite necessário"
+                : syncState === "error"
+                  ? "Erro"
               : syncState === "saving"
                 ? "Salvando"
                 : saved
@@ -225,9 +262,19 @@ export function MatchCard({
           </p>
         </div>
       )}
-      {syncState === "error" && (
-        <p className="mt-3 text-center text-xs font-bold text-red-700">
-          O servidor recusou o palpite. Revise e tente novamente.
+      {syncMessage && (
+        <p aria-live="polite" className="mt-3 text-center text-xs font-bold text-red-700">
+          {syncMessage}{" "}
+          {syncState === "auth-required" && (
+            <Link href="/entrar?next=%2Fpalpites" className="underline">
+              Entrar agora
+            </Link>
+          )}
+          {syncState === "terms-required" && (
+            <Link href="/aceitar-termos?next=%2Fpalpites" className="underline">
+              Aceitar agora
+            </Link>
+          )}
         </p>
       )}
     </article>
@@ -254,11 +301,9 @@ function Team({
   compact: boolean;
 }) {
   return (
-    <div className={`min-w-0 ${align === "right" ? "text-right" : "text-left"}`}>
-      <span className="text-2xl" role="img" aria-label={team.name}>
-        {team.flag}
-      </span>
-      <p className={`mt-1 truncate font-black tracking-tight ${compact ? "text-xs" : "text-sm"}`}>
+    <div className={`flex min-w-0 flex-col items-center ${align === "right" ? "md:items-end md:text-right" : "md:items-start md:text-left"}`}>
+      <TeamFlag team={team} size={compact ? "md" : "lg"} />
+      <p className={`mt-2 max-w-full truncate text-center font-black tracking-tight ${compact ? "text-xs" : "text-sm"}`}>
         {team.shortName}
       </p>
     </div>

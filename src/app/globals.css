@@ -42,6 +42,58 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+.interactive,
+button,
+a {
+  touch-action: manipulation;
+}
+
+.interactive {
+  transition:
+    transform 140ms ease,
+    opacity 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.interactive:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 80%, white);
+  outline-offset: 2px;
+}
+
+[aria-busy="true"] {
+  cursor: progress;
+}
+
+.skeleton {
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    var(--surface-muted) 20%,
+    color-mix(in srgb, var(--surface-muted) 55%, white) 50%,
+    var(--surface-muted) 80%
+  );
+  background-size: 220% 100%;
+}
+
+@keyframes skeleton-pulse {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
 ::selection {
   background: var(--accent);
   color: var(--brand-strong);
@@ -117,5 +169,13 @@ a {
 @media (max-width: 767px) {
   body {
     padding-bottom: 5.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .interactive,
+  .skeleton {
+    animation: none;
+    transition: none;
   }
 }
