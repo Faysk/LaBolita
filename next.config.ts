@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.LABOLITA_BUILD_DIR ?? ".next",
   async headers() {
     return [
       {

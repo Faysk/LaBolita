@@ -26,9 +26,7 @@ try {
       ...(allowPendingDeploy ? [] : ["/privacidade", "/termos"]),
     ];
     for (const path of pagePaths) {
-      const response = await page.goto(`${BASE_URL}${path}`, {
-        waitUntil: "domcontentloaded",
-      });
+      const response = await gotoProductionPage(page, path);
       assert.equal(response?.status(), 200, `${path} must respond successfully`);
       assert.equal(
         await page.evaluate(
@@ -40,17 +38,15 @@ try {
     }
 
     if (!allowPendingDeploy) {
-      await page.goto(`${BASE_URL}/boloes`, { waitUntil: "domcontentloaded" });
+      await gotoProductionPage(page, "/boloes");
       await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
-      await page.goto(`${BASE_URL}/entrar`, { waitUntil: "domcontentloaded" });
+      await gotoProductionPage(page, "/entrar");
       await page.getByText("Li e aceito os Termos de Serviço").waitFor();
     }
 
     if (!allowPendingDeploy) {
       for (const path of ["/robots.txt", "/sitemap.xml"]) {
-        const response = await page.goto(`${BASE_URL}${path}`, {
-          waitUntil: "domcontentloaded",
-        });
+        const response = await gotoProductionPage(page, path);
         assert.equal(response?.status(), 200, `${path} must respond successfully`);
       }
     }
@@ -93,6 +89,17 @@ try {
   console.log("Production smoke test passed");
 } finally {
   await browser.close();
+}
+
+async function gotoProductionPage(page, path) {
+  try {
+    return await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("net::ERR_ABORTED")) {
+      throw error;
+    }
+    return page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+  }
 }
 
 async function findBrowser() {

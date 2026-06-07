@@ -7,11 +7,17 @@ import { useState } from "react";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
-export function TermsAcceptancePanel({ nextPath }: { nextPath: string }) {
+export function TermsAcceptancePanel({
+  nextPath,
+  initialError = null,
+}: {
+  nextPath: string;
+  initialError?: string | null;
+}) {
   const router = useRouter();
   const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
 
   async function acceptTerms() {
     const supabase = createBrowserSupabaseClient();

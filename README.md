@@ -122,10 +122,15 @@ está em [docs/ADMIN_OPERATIONS.md](docs/ADMIN_OPERATIONS.md).
 Smoke tests que usam a infraestrutura real:
 
 ```bash
+npm run auth:smoke:remote
 npm run db:smoke:remote
 npm run results:smoke:remote
 npm run test:production
 ```
+
+Execute `auth:smoke:remote` antes de cada deploy que altere login, perfis ou
+termos. Ele é somente leitura e detecta provider Google desabilitado, migrations
+de autenticação ausentes e configuração inválida do administrador master.
 
 ## Publicar governança e aceite de termos
 

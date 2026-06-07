@@ -7,6 +7,7 @@ const result = spawnSync(
     cwd: process.cwd(),
     env: {
       ...process.env,
+      LABOLITA_BUILD_DIR: ".next-demo",
       NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
       NEXT_PUBLIC_SUPABASE_URL: "",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",

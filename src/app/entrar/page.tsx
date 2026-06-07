@@ -29,7 +29,9 @@ export default async function LoginPage({
         <LoginPanel nextPath={nextPath} />
         {params.erro && (
           <p className="mt-4 text-sm font-bold text-red-700">
-            Não foi possível concluir o login. Tente novamente.
+            {params.erro === "oauth"
+              ? "O Google não conseguiu concluir a autenticação. Tente novamente."
+              : "Não foi possível concluir o login. Tente novamente."}
           </p>
         )}
       </section>

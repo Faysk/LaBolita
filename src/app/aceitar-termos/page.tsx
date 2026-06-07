@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default async function AcceptTermsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; erro?: string }>;
 }) {
   const supabase = await createServerSupabaseClient();
   const {
@@ -33,7 +33,14 @@ export default async function AcceptTermsPage({
 
   return (
     <main className="page-container flex min-h-[calc(100vh-4rem)] items-center justify-center py-10">
-      <TermsAcceptancePanel nextPath={nextPath} />
+      <TermsAcceptancePanel
+        nextPath={nextPath}
+        initialError={
+          params.erro === "registro"
+            ? "Sua conta foi autenticada, mas ainda precisamos registrar o aceite dos termos. Confirme novamente abaixo."
+            : null
+        }
+      />
     </main>
   );
 }
