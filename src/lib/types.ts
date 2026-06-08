@@ -21,6 +21,7 @@ export type DemoMatch = {
   stageLabel: string;
   dateLabel: string;
   timeLabel: string;
+  scheduledAt?: string;
   venue: string;
   locked: boolean;
   homeTeam: DemoTeam;
@@ -74,6 +75,7 @@ export type PoolSummary = {
   isPublic?: boolean;
   isOwner?: boolean;
   isArchived?: boolean;
+  isMember?: boolean;
 };
 
 export type RankingEntry = {
@@ -85,4 +87,5 @@ export type RankingEntry = {
   correct: number;
   trend: string;
   isCurrentUser?: boolean;
+  avatarUrl?: string;
 };

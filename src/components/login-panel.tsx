@@ -1,26 +1,23 @@
 "use client";
 
 import { LoaderCircle, LogIn, Settings2 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
-import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export function LoginPanel({ nextPath = "/" }: { nextPath?: string }) {
   const [error, setError] = useState<string | null>(null);
-  const [accepted, setAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const supabase = createBrowserSupabaseClient();
 
   async function signInWithGoogle() {
-    if (!supabase || !accepted || busy) return;
+    if (!supabase || busy) return;
     setBusy(true);
     setError(null);
 
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}&terms=${CURRENT_TERMS_VERSION}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
       },
     });
 
@@ -45,29 +42,10 @@ export function LoginPanel({ nextPath = "/" }: { nextPath?: string }) {
 
   return (
     <div>
-      <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-2xl border bg-surface-muted p-4 text-sm leading-5 text-muted">
-        <input
-          type="checkbox"
-          checked={accepted}
-          onChange={(event) => setAccepted(event.target.checked)}
-          className="mt-0.5 size-4 accent-[var(--brand)]"
-        />
-        <span>
-          Li e aceito os{" "}
-          <Link href="/termos" className="font-bold text-brand underline">
-            Termos de Serviço
-          </Link>{" "}
-          e a{" "}
-          <Link href="/privacidade" className="font-bold text-brand underline">
-            Política de Privacidade
-          </Link>
-          .
-        </span>
-      </label>
       <button
         type="button"
         onClick={signInWithGoogle}
-        disabled={!accepted || busy}
+        disabled={busy}
         aria-busy={busy}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-50"
       >

@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { AppShell } from "@/components/app-shell";
+import "flag-icons/css/flag-icons.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://labolita.faysk.dev"),
+  applicationName: "LaBolita",
+  manifest: "/manifest.webmanifest",
   title: {
     default: "LaBolita",
     template: "%s | LaBolita",
@@ -23,6 +26,14 @@ export const metadata: Metadata = {
     title: "LaBolita",
     description: "O bolão da Copa para jogar com quem importa.",
   },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f7f1" },
+    { media: "(prefers-color-scheme: dark)", color: "#08140e" },
+  ],
 };
 
 export default function RootLayout({

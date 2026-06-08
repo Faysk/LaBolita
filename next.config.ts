@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
               "font-src 'self' data:",
               "form-action 'self'",
               "frame-ancestors 'none'",
-              "img-src 'self' data: blob:",
+              "img-src 'self' data: blob: https://*.googleusercontent.com",
               "object-src 'none'",
               "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",

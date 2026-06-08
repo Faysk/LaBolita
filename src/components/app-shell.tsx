@@ -10,6 +10,7 @@ import { Brand } from "@/components/brand";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient();
@@ -17,7 +18,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const { data: profile, error: profileError } = user
       ? await supabase!
         .from("profiles")
-        .select("display_name, is_admin, is_master_admin, terms_accepted_at, terms_version, disabled_at")
+        .select("display_name, avatar_url, is_admin, is_master_admin, terms_accepted_at, terms_version, disabled_at")
         .eq("id", user.id)
         .single()
     : { data: null, error: null };
@@ -43,6 +44,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
           <Brand />
           <DesktopNavigation />
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             {isAdmin && (
               <Link
                 href="/admin"
@@ -57,6 +59,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
               isAuthenticated={demoMode || Boolean(user)}
               isAdmin={isAdmin}
               isDemo={demoMode}
+              avatarUrl={profile?.avatar_url}
             />
           </div>
         </div>
@@ -88,7 +91,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
       <div id="main-content" tabIndex={-1}>
         {children}
       </div>
-      <footer className="mt-12 border-t bg-white/35 pb-24 pt-7 backdrop-blur-sm md:pb-8">
+      <footer className="app-footer mt-12 border-t pb-24 pt-7 backdrop-blur-sm md:pb-8">
         <div className="page-container flex flex-col gap-3 text-xs font-semibold text-muted sm:flex-row sm:items-center sm:justify-between">
           <p>LaBolita · bolão recreativo e independente.</p>
           <div className="flex flex-wrap gap-x-5 gap-y-2">

@@ -23,6 +23,7 @@ import {
 import type { DemoMatch, ScorePrediction } from "@/lib/types";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
+import { LocalMatchDateTime } from "@/components/local-match-date-time";
 
 type EditablePrediction = {
   homeScore: number | "";
@@ -179,9 +180,13 @@ export function MatchCard({
           <p className="text-[10px] font-extrabold uppercase tracking-[0.13em] text-brand">
             {match.stageLabel}
           </p>
-          <p className="mt-1 text-xs font-medium text-muted">
-            {match.dateLabel} • {match.timeLabel}
-          </p>
+          <LocalMatchDateTime
+            scheduledAt={match.scheduledAt}
+            fallbackDate={match.dateLabel}
+            fallbackTime={match.timeLabel}
+            includeZone
+            className="mt-1 block text-xs font-medium text-muted"
+          />
         </div>
         <span
           className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${

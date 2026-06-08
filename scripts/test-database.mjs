@@ -357,6 +357,11 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       null,
       "public rankings must not expose identity-provider avatars",
     );
+    assert.equal(
+      await scalar("select count(*)::integer from public.get_public_global_ranking(3)"),
+      1,
+      "anonymous visitors can see the global ranking aggregated from public pools",
+    );
   });
 
   await asUser(USER_TWO, async () => {
@@ -368,6 +373,14 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       ]),
       2,
       "the private pool overview must aggregate member counts in one query",
+    );
+    assert.equal(
+      await scalar(
+        "select avatar_url from public.get_pool_ranking($1) where display_name = 'Owner'",
+        [publicPoolId],
+      ),
+      "https://accounts.google.com/avatar/private-owner",
+      "members of the same pool can see profile avatars in its private ranking",
     );
     await db.query("select public.create_pool('Bolão Arquivável', true)");
     secondPoolId = await scalar("select id from public.pools where owner_id = $1", [USER_TWO]);

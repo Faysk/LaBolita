@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowRight, Clock3 } from "lucide-react";
 import { useLocalResults } from "@/lib/local-state";
 import type { DemoMatch } from "@/lib/types";
+import { LocalMatchDateTime } from "@/components/local-match-date-time";
 
 export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
   const results = useLocalResults();
@@ -20,7 +21,14 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
         <Clock3 className="size-4 text-accent" />
       </div>
       <p className="text-3xl font-black tracking-tight">
-        {nextMatch ? `${nextMatch.dateLabel} · ${nextMatch.timeLabel}` : "Em breve"}
+        {nextMatch ? (
+          <LocalMatchDateTime
+            scheduledAt={nextMatch.scheduledAt}
+            fallbackDate={nextMatch.dateLabel}
+            fallbackTime={nextMatch.timeLabel}
+            includeZone
+          />
+        ) : "Em breve"}
       </p>
       <p className="mt-1 text-sm text-white/65">
         {nextMatch

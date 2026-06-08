@@ -28,8 +28,9 @@ type PublicPoolRow = {
 
 type RankingRow = {
   rank_position: number;
-  user_id: string | null;
+  user_id?: string | null;
   display_name: string;
+  avatar_url?: string | null;
   total_points: number;
   exact_scores: number;
   correct_results: number;
@@ -42,6 +43,7 @@ export type PoolsOverview = {
   rankingName: string;
   rankingsByPool: Record<string, RankingEntry[]>;
   isAuthenticated: boolean;
+  currentUserId?: string;
   publicPage: number;
   publicPages: number;
   publicSearch: string;
@@ -104,7 +106,6 @@ export async function getPoolsOverview({
   );
   const privateIds = new Set(pools.map((pool) => pool.id));
   const publicPools = publicRows
-    .filter((pool) => !privateIds.has(pool.pool_id))
     .map(
       (pool) =>
         ({
@@ -115,6 +116,7 @@ export async function getPoolsOverview({
           position: 1,
           ownerName: pool.owner_name,
           isPublic: true,
+          isMember: privateIds.has(pool.pool_id),
         }) satisfies PoolSummary,
     );
   const rankingsByPool: Record<string, RankingEntry[]> = {};
@@ -152,10 +154,27 @@ export async function getPoolsOverview({
     rankingName: primaryPool?.name ?? "Bolões públicos",
     rankingsByPool,
     isAuthenticated: Boolean(user),
+    currentUserId: user?.id,
     publicPage: safePage,
     publicPages: Math.max(1, Math.ceil(totalPublic / PUBLIC_PAGE_SIZE)),
     publicSearch: cleanSearch,
   };
+}
+
+export async function getPublicGlobalRanking(): Promise<RankingEntry[]> {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) return demoRanking.slice(0, 3);
+
+  const { data, error } = await supabase.rpc("get_public_global_ranking", {
+    p_limit: 3,
+  });
+  if (error) {
+    throw new Error("Não foi possível carregar o ranking público geral.", {
+      cause: error,
+    });
+  }
+
+  return mapRanking((data ?? []) as RankingRow[]);
 }
 
 function demoOverview(): PoolsOverview {
@@ -166,6 +185,7 @@ function demoOverview(): PoolsOverview {
     rankingName: "Família Faysk",
     rankingsByPool: Object.fromEntries(demoPools.map((pool) => [pool.id, demoRanking])),
     isAuthenticated: true,
+    currentUserId: "demo-user",
     publicPage: 1,
     publicPages: 1,
     publicSearch: "",
@@ -182,6 +202,7 @@ function mapRanking(ranking: RankingRow[], currentUserId?: string): RankingEntry
     correct: Number(entry.correct_results),
     trend: "—",
     isCurrentUser: entry.user_id === currentUserId,
+    avatarUrl: entry.avatar_url ?? undefined,
   }));
 }
 

@@ -5,17 +5,20 @@ import { LoaderCircle, LogOut, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { UserAvatar } from "@/components/user-avatar";
 
 export function AccountMenu({
   displayName,
   isAuthenticated,
   isAdmin,
   isDemo,
+  avatarUrl,
 }: {
   displayName: string;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isDemo: boolean;
+  avatarUrl?: string | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -76,9 +79,14 @@ export function AccountMenu({
         aria-haspopup="menu"
         aria-controls="account-menu"
         onClick={() => setOpen((value) => !value)}
-        className="interactive flex size-9 items-center justify-center rounded-full bg-brand text-xs font-black text-white"
+        className="interactive rounded-full"
       >
-        {initials || "LB"}
+        <UserAvatar
+          name={displayName}
+          initials={initials || "LB"}
+          avatarUrl={avatarUrl}
+          className="size-9"
+        />
       </button>
       {open && (
         <div

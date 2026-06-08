@@ -6,7 +6,6 @@ import { safeRedirectPath } from "@/lib/urls";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const termsVersion = url.searchParams.get("terms");
   const nextPath = safeRedirectPath(url.searchParams.get("next"));
   const destination = new URL(nextPath, url.origin);
   const supabase = await createServerSupabaseClient();
@@ -24,19 +23,50 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/entrar?erro=oauth", url.origin));
   }
 
-  if (termsVersion !== CURRENT_TERMS_VERSION) {
-    return NextResponse.redirect(termsRedirect(url.origin, nextPath));
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    console.error("Authenticated user could not be loaded after OAuth", {
+      code: userError?.code,
+      message: userError?.message,
+    });
+    return NextResponse.redirect(new URL("/entrar?erro=oauth", url.origin));
   }
 
-  const { error: termsError } = await supabase.rpc("accept_terms", {
-    p_version: termsVersion,
-  });
-  if (termsError) {
-    console.error("Terms acceptance after OAuth failed", {
-      code: termsError.code,
-      message: termsError.message,
+  const avatarUrl = user.user_metadata?.avatar_url ?? user.user_metadata?.picture;
+  if (typeof avatarUrl === "string" && avatarUrl.startsWith("https://")) {
+    const { error: avatarError } = await supabase
+      .from("profiles")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", user.id);
+    if (avatarError) {
+      console.error("Profile avatar synchronization failed", {
+        code: avatarError.code,
+        message: avatarError.message,
+      });
+    }
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("terms_accepted_at, terms_version, disabled_at")
+    .eq("id", user.id)
+    .single();
+  if (profileError) {
+    console.error("Profile could not be loaded after OAuth", {
+      code: profileError.code,
+      message: profileError.message,
     });
     return NextResponse.redirect(termsRedirect(url.origin, nextPath, "registro"));
+  }
+
+  if (profile?.disabled_at) {
+    return NextResponse.redirect(new URL("/conta-suspensa", url.origin));
+  }
+  if (!profile?.terms_accepted_at || profile.terms_version !== CURRENT_TERMS_VERSION) {
+    return NextResponse.redirect(termsRedirect(url.origin, nextPath));
   }
 
   return NextResponse.redirect(destination);

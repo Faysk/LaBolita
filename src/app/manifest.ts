@@ -7,12 +7,12 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "O bolão da Copa para jogar com quem importa.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f4f7f0",
+    background_color: "#f3f7f1",
     theme_color: "#0d6938",
     lang: "pt-BR",
     icons: [
       { src: "/icon", sizes: "512x512", type: "image/png" },
-      { src: "/favicon.ico", sizes: "any", type: "image/x-icon" },
+      { src: "/apple-icon", sizes: "512x512", type: "image/png", purpose: "any" },
     ],
   };
 }

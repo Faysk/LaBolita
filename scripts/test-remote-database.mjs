@@ -238,6 +238,13 @@ try {
     null,
     "public rankings must not expose identity-provider avatars",
   );
+  const { data: publicGlobalRanking, error: publicGlobalRankingError } =
+    await publicClient.rpc("get_public_global_ranking", { p_limit: 3 });
+  if (publicGlobalRankingError) throw publicGlobalRankingError;
+  assert.ok(
+    publicGlobalRanking.some((entry) => entry.display_name === "Auditoria LaBolita"),
+    "anonymous visitors can see the overall ranking from public pools",
+  );
 
   const { error: joinError } = await secondSession.rpc("join_pool", {
     p_invite_code: value.invite_code,

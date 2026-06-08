@@ -139,6 +139,7 @@ export async function getMatches(): Promise<DemoMatch[]> {
           : STAGE_LABELS[match.stage],
       dateLabel: formatDate(match.scheduled_at),
       timeLabel: formatTime(match.scheduled_at),
+      scheduledAt: match.scheduled_at,
       venue: match.venue ?? "Local a definir",
       locked:
         !["scheduled", "postponed"].includes(match.status) ||

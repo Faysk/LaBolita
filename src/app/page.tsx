@@ -8,12 +8,13 @@ import { MatchCard } from "@/components/match-card";
 import { NextMatchSummary } from "@/components/next-match-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
-import { getPoolsOverview } from "@/lib/data/pools";
+import { getPoolsOverview, getPublicGlobalRanking } from "@/lib/data/pools";
 
 export default async function HomePage() {
-  const [matches, poolsOverview, viewer] = await Promise.all([
+  const [matches, poolsOverview, publicRanking, viewer] = await Promise.all([
     getMatches(),
     getPoolsOverview(),
+    getPublicGlobalRanking(),
     getViewerState(),
   ]);
   const openMatches = matches.filter((match) => !match.locked);
@@ -53,8 +54,8 @@ export default async function HomePage() {
       <HomeOverview
         matches={matches}
         pools={poolsOverview.pools}
-        ranking={poolsOverview.ranking}
-        rankingName={poolsOverview.rankingName}
+        ranking={publicRanking}
+        rankingName="Ranking público geral"
       />
 
       <section className="mt-10">

@@ -130,6 +130,13 @@ try {
 
   await page.goto(`${BASE_URL}/boloes`);
   await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
+  await page.getByRole("button", { name: "Usar tema escuro" }).click();
+  assert.equal(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+    "dark",
+    "the manual theme toggle must update the document theme",
+  );
+  await page.getByRole("button", { name: "Usar tema claro" }).click();
   const selectedPoolCard = page.getByTestId("pool-family");
   assert.notEqual(
     await selectedPoolCard.evaluate((element) => getComputedStyle(element).backgroundColor),
@@ -142,6 +149,12 @@ try {
   await page.getByTestId("pool-ranking").getByText("Resenha da Firma").waitFor();
   await page.getByRole("button", { name: "Criar bolão" }).click();
   const createForm = page.getByTestId("pool-form-create");
+  await createForm.getByLabel("Bandeira do bolão").selectOption("in");
+  assert.equal(
+    await createForm.locator('[data-country-code="in"] .fi-in').count(),
+    1,
+    "non-tournament country flags must render from the bundled flag set",
+  );
   await createForm.getByPlaceholder("Ex.: Família Faysk").fill("Bolão Automatizado");
   await createForm.getByRole("button", { name: "Criar agora" }).click();
   const createdPool = page.locator("article").filter({ hasText: "Bolão Automatizado" });
@@ -149,7 +162,12 @@ try {
   await page.getByTestId("pool-ranking").getByText("Bolão Automatizado").waitFor();
   await page.getByTestId("ranking-current-user").getByText("0 pts").waitFor();
   await selectedPoolCard.getByRole("button", { name: "Gerenciar Família Faysk" }).click();
-  await page.getByRole("dialog", { name: "Família Faysk" }).waitFor();
+  const managementDialog = page.getByRole("dialog", { name: "Família Faysk" });
+  await managementDialog.waitFor();
+  assert.ok(
+    Number.parseInt(await managementDialog.evaluate((element) => getComputedStyle(element.parentElement).zIndex), 10) > 50,
+    "the mobile management dialog must stay above bottom navigation",
+  );
   await page.keyboard.press("Escape");
   await page.getByRole("dialog", { name: "Família Faysk" }).waitFor({ state: "hidden" });
 
@@ -232,6 +250,14 @@ try {
   assert.match(
     await desktopPage.locator('meta[name="twitter:image"]').getAttribute("content"),
     /\/twitter-image/,
+  );
+  assert.match(
+    await desktopPage.locator('link[rel="icon"]').first().getAttribute("href"),
+    /\/icon/,
+  );
+  assert.equal(
+    await desktopPage.locator('link[rel="manifest"]').getAttribute("href"),
+    "/manifest.webmanifest",
   );
   assert.equal(homeResponse?.headers()["x-frame-options"], "DENY");
   assert.equal(homeResponse?.headers()["x-content-type-options"], "nosniff");

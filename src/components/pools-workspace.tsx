@@ -32,6 +32,7 @@ import {
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { PoolSummary, RankingEntry } from "@/lib/types";
 import { friendlyServerError } from "@/lib/user-errors";
+import { UserAvatar } from "@/components/user-avatar";
 
 type ManagedMember = {
   user_id: string;
@@ -47,6 +48,7 @@ export function PoolsWorkspace({
   rankingName,
   rankingsByPool,
   isAuthenticated,
+  currentUserId,
   publicPage,
   publicPages,
   publicSearch,
@@ -156,7 +158,7 @@ export function PoolsWorkspace({
     } else {
       setLoadedRankings((current) => ({
         ...current,
-        [pool.id]: mapRpcRanking(data),
+        [pool.id]: mapRpcRanking(data, currentUserId),
       }));
     }
     setRankingLoadingId(null);
@@ -398,9 +400,9 @@ function PublicPoolCard({
         <button type="button" onClick={onSelect} className="interactive rounded-xl bg-surface-muted px-3 py-2 text-xs font-black text-brand">
           Ver ranking
         </button>
-        <button type="button" disabled={joining} aria-busy={joining} onClick={onJoin} className="interactive flex items-center justify-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white disabled:opacity-60">
-          {joining ? <LoaderCircle className="size-3 animate-spin" /> : <Plus className="size-3" />}
-          {joining ? "Entrando..." : "Participar"}
+        <button type="button" disabled={joining || pool.isMember} aria-busy={joining} onClick={onJoin} className="interactive flex items-center justify-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white disabled:opacity-60">
+          {joining ? <LoaderCircle className="size-3 animate-spin" /> : pool.isMember ? <Check className="size-3" /> : <Plus className="size-3" />}
+          {joining ? "Entrando..." : pool.isMember ? "Participando" : "Participar"}
         </button>
       </div>
     </article>
@@ -562,10 +564,10 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand-strong/45 p-0 backdrop-blur-sm sm:items-center sm:p-5" onMouseDown={(event) => {
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-brand-strong/45 p-0 backdrop-blur-sm sm:items-center sm:p-5" onMouseDown={(event) => {
       if (event.target === event.currentTarget && !busy) onClose();
     }}>
-    <section role="dialog" aria-modal="true" aria-labelledby="pool-management-title" className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-b-none p-5 shadow-2xl sm:rounded-[1.5rem] md:p-6">
+    <section role="dialog" aria-modal="true" aria-labelledby="pool-management-title" className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-b-none p-5 pb-28 shadow-2xl sm:rounded-[1.5rem] sm:pb-5 md:p-6">
       <div className="flex items-start justify-between gap-4">
         <div><p className="eyebrow">Gestão do bolão</p><h2 id="pool-management-title" className="mt-1 text-xl font-black">{pool.name}</h2></div>
         <button type="button" aria-label="Fechar gestão" onClick={onClose} className="interactive rounded-xl p-2 text-muted"><X className="size-4" /></button>
@@ -656,7 +658,7 @@ function FlagPicker({ value, onChange }: { value: string; onChange: (value: stri
         >
           {COUNTRIES.map((country) => (
             <option key={country.code} value={country.code}>
-              {country.flag} {country.name}
+              {country.name}
             </option>
           ))}
         </select>
@@ -692,7 +694,7 @@ function normalizeRpcPool(data: unknown) {
   return value as { id: string; name: string; invite_code: string };
 }
 
-function mapRpcRanking(data: unknown): RankingEntry[] {
+function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {
   if (!Array.isArray(data)) return [];
   return data.map((entry) => {
     const row = entry as {
@@ -702,6 +704,7 @@ function mapRpcRanking(data: unknown): RankingEntry[] {
       exact_scores: number;
       correct_results: number;
       user_id: string | null;
+      avatar_url?: string | null;
     };
     return {
       position: Number(row.rank_position),
@@ -711,7 +714,8 @@ function mapRpcRanking(data: unknown): RankingEntry[] {
       exact: Number(row.exact_scores),
       correct: Number(row.correct_results),
       trend: "—",
-      isCurrentUser: Boolean(row.user_id),
+      isCurrentUser: row.user_id === currentUserId,
+      avatarUrl: row.avatar_url ?? undefined,
     };
   });
 }
@@ -728,7 +732,7 @@ function Ranking({ entries, name, memberCount, loading }: { entries: RankingEntr
         {!loading && entries.map((player) => (
           <div key={`${player.position}-${player.name}`} data-testid={player.isCurrentUser ? "ranking-current-user" : undefined} className={`grid grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${player.isCurrentUser ? "bg-accent/20" : ""}`}>
             <span className="text-center text-sm font-black text-muted">{player.position}</span>
-            <div className="flex min-w-0 items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-black text-white">{player.initials}</span><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name}</p><p className="text-xs text-muted md:hidden">{player.exact} cravadas</p></div></div>
+            <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name}</p><p className="text-xs text-muted md:hidden">{player.exact} cravadas</p></div></div>
             <span className="text-right text-sm font-black text-brand">{player.points} pts</span>
             <span className="hidden text-center text-sm text-muted md:block">{player.exact} exatos</span>
             <span className="hidden text-center text-sm text-muted md:block">{player.correct} resultados</span>

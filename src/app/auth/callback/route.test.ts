@@ -15,7 +15,7 @@ describe("OAuth callback", () => {
     mocks.createServerSupabaseClient.mockReset();
   });
 
-  it("redirects to the requested page after authentication and terms acceptance", async () => {
+  it("redirects returning users with current terms directly to the requested page", async () => {
     mocks.createServerSupabaseClient.mockResolvedValue(client());
 
     const response = await GET(callbackRequest());
@@ -23,9 +23,9 @@ describe("OAuth callback", () => {
     expect(response.headers.get("location")).toBe("https://labolita.test/palpites");
   });
 
-  it("keeps an authenticated user in the terms flow when acceptance registration fails", async () => {
+  it("keeps an authenticated user in the terms flow when the profile cannot be loaded", async () => {
     mocks.createServerSupabaseClient.mockResolvedValue(
-      client({ termsError: { code: "PGRST202", message: "function not found" } }),
+      client({ profileError: { code: "PGRST116", message: "profile not found" } }),
     );
 
     const response = await GET(callbackRequest());
@@ -35,11 +35,13 @@ describe("OAuth callback", () => {
     );
   });
 
-  it("requests terms acceptance when the callback has no current terms version", async () => {
-    mocks.createServerSupabaseClient.mockResolvedValue(client());
+  it("requests terms acceptance only when the stored acceptance is missing", async () => {
+    mocks.createServerSupabaseClient.mockResolvedValue(
+      client({ profile: { terms_accepted_at: null, terms_version: null, disabled_at: null } }),
+    );
 
     const response = await GET(
-      new Request("https://labolita.test/auth/callback?code=valid&next=%2Fpalpites"),
+      callbackRequest(),
     );
 
     expect(response.headers.get("location")).toBe(
@@ -56,25 +58,66 @@ describe("OAuth callback", () => {
 
     expect(response.headers.get("location")).toBe("https://labolita.test/entrar?erro=oauth");
   });
+
+  it("synchronizes the Google profile avatar without blocking login", async () => {
+    const supabase = client();
+    mocks.createServerSupabaseClient.mockResolvedValue(supabase);
+
+    const response = await GET(callbackRequest());
+
+    expect(response.headers.get("location")).toBe("https://labolita.test/palpites");
+    expect(supabase.from).toHaveBeenCalledWith("profiles");
+  });
 });
 
 function callbackRequest() {
   return new Request(
-    "https://labolita.test/auth/callback?code=valid&next=%2Fpalpites&terms=2026-06-07",
+    "https://labolita.test/auth/callback?code=valid&next=%2Fpalpites",
   );
 }
 
 function client({
   exchangeError = null,
-  termsError = null,
+  userError = null,
+  profileError = null,
+  profile = {
+    terms_accepted_at: "2026-06-07T10:00:00.000Z",
+    terms_version: "2026-06-07",
+    disabled_at: null,
+  },
 }: {
   exchangeError?: { code: string; message: string } | null;
-  termsError?: { code: string; message: string } | null;
+  userError?: { code: string; message: string } | null;
+  profileError?: { code: string; message: string } | null;
+  profile?: {
+    terms_accepted_at: string | null;
+    terms_version: string | null;
+    disabled_at: string | null;
+  };
 } = {}) {
+  const profileBuilder = {
+    update: vi.fn(() => profileBuilder),
+    select: vi.fn(() => profileBuilder),
+    eq: vi.fn(() => profileBuilder),
+    single: vi.fn().mockResolvedValue({ data: profile, error: profileError }),
+    then: (
+      resolve: (value: { data: null; error: null }) => unknown,
+    ) => resolve({ data: null, error: null }),
+  };
+
   return {
     auth: {
       exchangeCodeForSession: vi.fn().mockResolvedValue({ error: exchangeError }),
+      getUser: vi.fn().mockResolvedValue({
+        data: {
+          user: {
+            id: "user-1",
+            user_metadata: { avatar_url: "https://lh3.googleusercontent.com/avatar" },
+          },
+        },
+        error: userError,
+      }),
     },
-    rpc: vi.fn().mockResolvedValue({ error: termsError }),
+    from: vi.fn(() => profileBuilder),
   };
 }

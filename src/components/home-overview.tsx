@@ -6,6 +6,7 @@ import { StatCard } from "@/components/stat-card";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { UserAvatar } from "@/components/user-avatar";
 import type { DemoMatch, PoolSummary, RankingEntry } from "@/lib/types";
 
 export function HomeOverview({
@@ -116,9 +117,11 @@ export function HomeOverview({
                 <span className="w-5 text-center text-sm font-black text-muted">
                   {player.position}
                 </span>
-                <span className="flex size-10 items-center justify-center rounded-full bg-brand text-xs font-black text-white">
-                  {player.initials}
-                </span>
+                <UserAvatar
+                  name={player.name}
+                  initials={player.initials}
+                  avatarUrl={player.avatarUrl}
+                />
                 <span className="min-w-0 flex-1 truncate text-sm font-bold">
                   {player.name}
                 </span>
@@ -127,7 +130,7 @@ export function HomeOverview({
             ))}
             {visibleRanking.length === 0 && (
               <p className="rounded-2xl bg-surface-muted p-4 text-sm text-muted">
-                Crie um bolão para começar a classificação.
+                Os líderes dos bolões públicos aparecerão aqui.
               </p>
             )}
           </div>
