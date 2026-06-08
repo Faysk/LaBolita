@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createPublicSupabaseClient } from "@/lib/supabase/public";
 
 const REQUIRED_TEAMS = 48;
 const REQUIRED_MATCHES = 104;
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createPublicSupabaseClient();
 
   if (!supabase) {
-    return NextResponse.json({
+    return healthJson({
       status: "ok",
       app: "labolita",
       database: "demo",
@@ -27,13 +29,30 @@ export async function GET() {
     });
   }
 
-  const [teams, matches, providerMappedMatches, renderableMatch, tournaments, resultsSync] =
+  const { data: tournament, error: tournamentError } = await supabase
+    .from("tournaments")
+    .select("id")
+    .eq("is_active", true)
+    .single();
+
+  if (tournamentError) {
+    return degraded(tournamentError.code);
+  }
+
+  const [teams, matches, providerMappedMatches, renderableMatch, resultsSync] =
     await Promise.all([
-    supabase.from("teams").select("id", { count: "exact", head: true }),
-    supabase.from("matches").select("id", { count: "exact", head: true }),
+    supabase
+      .from("teams")
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournament.id),
     supabase
       .from("matches")
       .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournament.id),
+    supabase
+      .from("matches")
+      .select("id", { count: "exact", head: true })
+      .eq("tournament_id", tournament.id)
       .not("provider_match_id", "is", null),
     supabase
       .from("matches")
@@ -44,14 +63,11 @@ export async function GET() {
           away_team:teams!matches_away_team_id_tournament_id_fkey(id)
         `,
       )
+      .eq("tournament_id", tournament.id)
       .eq("stage", "group")
       .order("match_number")
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from("tournaments")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true),
     supabase.rpc("get_public_results_sync_status").maybeSingle(),
   ]);
   const databaseError =
@@ -59,21 +75,10 @@ export async function GET() {
     matches.error ??
     providerMappedMatches.error ??
     renderableMatch.error ??
-    tournaments.error ??
     resultsSync.error;
 
   if (databaseError) {
-    return NextResponse.json(
-      {
-        status: "degraded",
-        app: "labolita",
-        database: "unreachable",
-        launchReady: false,
-        errorCode: databaseError.code,
-        timestamp: new Date().toISOString(),
-      },
-      { status: 503 },
-    );
+    return degraded(databaseError.code);
   }
 
   const teamCount = teams.count ?? 0;
@@ -83,13 +88,12 @@ export async function GET() {
     renderableMatch.data?.home_team && renderableMatch.data?.away_team,
   );
   const launchReady =
-    (tournaments.count ?? 0) === 1 &&
     teamCount === REQUIRED_TEAMS &&
     matchCount === REQUIRED_MATCHES &&
     providerMappedCount === REQUIRED_MATCHES &&
     renderReady;
 
-  return NextResponse.json({
+  return healthJson({
     status: "ok",
     app: "labolita",
     database: "connected",
@@ -109,5 +113,26 @@ export async function GET() {
     ),
     resultsSync: resultsSync.data ?? { status: "unknown" },
     timestamp: new Date().toISOString(),
+  });
+}
+
+function degraded(errorCode: string) {
+  return healthJson(
+    {
+      status: "degraded",
+      app: "labolita",
+      database: "unreachable",
+      launchReady: false,
+      errorCode,
+      timestamp: new Date().toISOString(),
+    },
+    503,
+  );
+}
+
+function healthJson(body: object, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
   });
 }

@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 
-export async function createServerSupabaseClient() {
+export const createServerSupabaseClient = cache(async function createServerSupabaseClient() {
   const config = getSupabaseConfig();
   if (!config) return null;
 
@@ -24,4 +25,4 @@ export async function createServerSupabaseClient() {
       },
     },
   });
-}
+});

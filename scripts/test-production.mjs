@@ -41,7 +41,9 @@ try {
       await gotoProductionPage(page, "/boloes");
       await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
       await gotoProductionPage(page, "/entrar");
-      await page.getByText("Li e aceito os Termos de Serviço").waitFor();
+      await page.getByRole("button", { name: "Continuar com Google" }).waitFor();
+      await page.getByRole("link", { name: "Termos" }).waitFor();
+      await page.getByRole("link", { name: "Privacidade" }).waitFor();
     }
 
     if (!allowPendingDeploy) {
@@ -57,6 +59,7 @@ try {
 
   const response = await fetch(`${BASE_URL}/api/health`);
   assert.equal(response.status, 200);
+  assert.match(response.headers.get("cache-control") ?? "", /no-store/);
   const health = await response.json();
   assert.equal(health.database, "connected");
   assert.equal(health.launchReady, true);

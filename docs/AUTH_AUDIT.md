@@ -79,7 +79,7 @@ Evidências coletadas:
 
 - `npm run check`: aprovado.
 - `npm run build`: aprovado.
-- 37 testes locais aprovados, incluindo quatro casos específicos do callback.
+- 48 testes locais aprovados, incluindo cinco casos específicos do callback.
 - `npm run test:production:current -- --allow-unconfigured-sync`: aprovado.
 - `npm audit`: nenhuma vulnerabilidade encontrada.
 - `npm run auth:smoke:remote`: aprovado após aplicar a migration.

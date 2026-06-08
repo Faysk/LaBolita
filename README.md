@@ -118,6 +118,8 @@ pela ESPN. O procedimento completo está em
 
 O fluxo diário do painel, incluindo definição dos participantes do mata-mata,
 está em [docs/ADMIN_OPERATIONS.md](docs/ADMIN_OPERATIONS.md).
+Rate limiting, alertas, homologação e resposta a incidentes estão no
+[checklist de endurecimento operacional](docs/OPERATIONS_HARDENING.md).
 
 Smoke tests que usam a infraestrutura real:
 

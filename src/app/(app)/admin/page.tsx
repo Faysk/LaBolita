@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Database, RefreshCw } from "lucide-react";
 import { AdminMatchQueue } from "@/components/admin-match-queue";
 import { MasterAdminConsole } from "@/components/master-admin-console";
 import { requireAdmin } from "@/lib/auth";
-import { getMasterOverview } from "@/lib/data/admin";
+import { getMasterOverview, type MasterAdminTab } from "@/lib/data/admin";
 import { getMatches, getResultsSyncState, getTeams } from "@/lib/data/matches";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
@@ -12,13 +12,24 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireAdmin();
+  const params = await searchParams;
   const [matches, teams, resultsSyncState, masterOverview] = await Promise.all([
     getMatches(),
     getTeams(),
     getResultsSyncState(),
-    getMasterOverview(),
+    getMasterOverview({
+      activeTab: adminTab(params.aba),
+      poolPage: pageNumber(params.pagina_boloes),
+      poolSearch: scalar(params.busca_boloes),
+      userPage: pageNumber(params.pagina_usuarios),
+      userSearch: scalar(params.busca_usuarios),
+    }),
   ]);
   const databaseConfigured = hasSupabaseConfig();
   const resultsSyncConfigured = Boolean(
@@ -102,4 +113,18 @@ export default async function AdminPage() {
       </section>
     </main>
   );
+}
+
+function scalar(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function pageNumber(value: string | string[] | undefined) {
+  const parsed = Number.parseInt(scalar(value) ?? "", 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function adminTab(value: string | string[] | undefined): MasterAdminTab {
+  const tab = scalar(value);
+  return tab === "users" || tab === "audit" ? tab : "pools";
 }

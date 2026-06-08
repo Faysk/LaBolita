@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
+const isDevelopment = process.env.NODE_ENV === "development";
+
 const nextConfig: NextConfig = {
   distDir: process.env.LABOLITA_BUILD_DIR ?? ".next",
+  experimental: {
+    sri: {
+      algorithm: "sha256",
+    },
+  },
   async headers() {
     return [
       {
@@ -32,7 +39,7 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'none'",
               "img-src 'self' data: blob: https://*.googleusercontent.com",
               "object-src 'none'",
-              "script-src 'self' 'unsafe-inline'",
+              `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
               "style-src 'self' 'unsafe-inline'",
               "worker-src 'self' blob:",
             ].join("; "),

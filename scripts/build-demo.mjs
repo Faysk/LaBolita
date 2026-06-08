@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import "./prepare-next-build.mjs";
 
 const result = spawnSync(
   process.execPath,
