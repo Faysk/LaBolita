@@ -41,8 +41,9 @@ empate em resultado refinado.
 | Terceiro lugar | x2 |
 | Final | x5 |
 
-Acertar quem avança ou vence no mata-mata rende mais 3 pontos, sem
-multiplicador. O bônus não existe na fase de grupos.
+Acertar quem avança no mata-mata rende mais 3 pontos, sem multiplicador. O
+bônus não existe na fase de grupos nem na disputa de terceiro lugar, que define
+um vencedor mas não classifica ninguém para outra fase.
 
 ## Bolões e ranking
 

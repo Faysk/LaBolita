@@ -8,15 +8,12 @@ import {
 } from "@/components/app-navigation";
 import { Brand } from "@/components/brand";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
+import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-    error: userError,
-  } = (await supabase?.auth.getUser()) ?? { data: { user: null }, error: null };
-  if (userError) throw userError;
+  const user = supabase ? await getOptionalUser(supabase) : null;
   const { data: profile, error: profileError } = user
       ? await supabase!
         .from("profiles")

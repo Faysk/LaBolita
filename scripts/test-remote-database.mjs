@@ -20,6 +20,8 @@ const secondEmail = `labolita-audit-member-${Date.now()}@faysk.dev`;
 let userId;
 let secondUserId;
 let poolId;
+let ordinaryOwnerPoolId;
+let limitTestPoolId;
 let auditTournamentId;
 
 try {
@@ -75,6 +77,16 @@ try {
   });
   if (secondAcceptTermsError) throw secondAcceptTermsError;
 
+  const { data: adminSyncState, error: adminSyncStateError } = await session
+    .from("results_sync_state")
+    .select("status, error_message");
+  if (adminSyncStateError) throw adminSyncStateError;
+  assert.equal(
+    adminSyncState.length,
+    1,
+    "administrators must retain access to detailed synchronization diagnostics",
+  );
+
   const { data: directPublicPools, error: directPublicPoolsError } = await secondSession
     .from("pools")
     .select("id, invite_code");
@@ -84,6 +96,54 @@ try {
     0,
     "public discovery must not expose raw pool rows or invite codes",
   );
+  const { data: ordinaryOwnerPool, error: ordinaryOwnerPoolError } = await secondSession.rpc(
+    "create_pool_with_flag",
+    {
+      p_name: "Bolão comum de auditoria",
+      p_is_public: false,
+      p_flag_code: "br",
+    },
+  );
+  if (ordinaryOwnerPoolError) throw ordinaryOwnerPoolError;
+  ordinaryOwnerPoolId = (Array.isArray(ordinaryOwnerPool) ? ordinaryOwnerPool[0] : ordinaryOwnerPool).id;
+  const { error: ordinaryArchiveError } = await secondSession.rpc("update_pool", {
+    p_pool_id: ordinaryOwnerPoolId,
+    p_name: "Bolão comum de auditoria",
+    p_is_public: false,
+    p_archived: true,
+    p_reason: "teste de arquivamento pelo proprietário",
+  });
+  if (ordinaryArchiveError) throw ordinaryArchiveError;
+  const { error: ordinaryRestoreError } = await secondSession.rpc("update_pool", {
+    p_pool_id: ordinaryOwnerPoolId,
+    p_name: "Bolão comum de auditoria",
+    p_is_public: false,
+    p_archived: false,
+    p_reason: "tentativa indevida de recuperação",
+  });
+  assert.ok(ordinaryRestoreError, "ordinary pool owners cannot restore archived pools");
+
+  const archivedPools = Array.from({ length: 20 }, (_, index) => ({
+    owner_id: secondUserId,
+    name: `Bolão arquivado de auditoria ${index + 1}`,
+    invite_code: randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase(),
+    is_public: false,
+    archived_at: new Date().toISOString(),
+  }));
+  const { error: archivedPoolsError } = await service.from("pools").insert(archivedPools);
+  if (archivedPoolsError) throw archivedPoolsError;
+  const { data: limitTestPool, error: limitTestPoolError } = await secondSession.rpc(
+    "create_pool_with_flag",
+    {
+      p_name: "Bolão ativo após arquivados",
+      p_is_public: false,
+      p_flag_code: "br",
+    },
+  );
+  if (limitTestPoolError) throw limitTestPoolError;
+  limitTestPoolId = (
+    Array.isArray(limitTestPool) ? limitTestPool[0] : limitTestPool
+  ).id;
 
   const { data: firstMatch, error: matchError } = await service
     .from("matches")
@@ -93,6 +153,25 @@ try {
     .limit(1)
     .single();
   if (matchError) throw matchError;
+  const scoringTeamId = "00000000-0000-0000-0000-000000000001";
+  const { data: thirdPlaceScore, error: thirdPlaceScoreError } = await service.rpc(
+    "calculate_prediction_score",
+    {
+      p_prediction_home: 1,
+      p_prediction_away: 1,
+      p_result_home: 1,
+      p_result_away: 1,
+      p_stage: "third_place",
+      p_predicted_advancing_team_id: scoringTeamId,
+      p_result_advancing_team_id: scoringTeamId,
+    },
+  );
+  if (thirdPlaceScoreError) throw thirdPlaceScoreError;
+  assert.equal(
+    thirdPlaceScore[0]?.advancement_points,
+    0,
+    "third-place matches must not award advancement points",
+  );
 
   const { error: predictionError } = await session.rpc("save_prediction", {
     p_match_id: firstMatch.id,
@@ -117,6 +196,27 @@ try {
   const publicClient = createClient(supabaseUrl, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  const { data: rawProviderPayload, error: rawProviderPayloadError } = await publicClient
+    .from("matches")
+    .select("provider_payload")
+    .limit(1);
+  assert.ok(rawProviderPayloadError, "anonymous visitors cannot read raw provider payloads");
+  assert.equal(rawProviderPayload, null);
+  const { data: rawSyncState, error: rawSyncStateError } = await publicClient
+    .from("results_sync_state")
+    .select("error_message");
+  assert.ok(rawSyncStateError, "anonymous visitors cannot read internal sync errors");
+  assert.equal(rawSyncState, null);
+  const { data: publicSyncState, error: publicSyncStateError } = await publicClient.rpc(
+    "get_public_results_sync_status",
+  );
+  if (publicSyncStateError) throw publicSyncStateError;
+  assert.equal(publicSyncState.length, 1);
+  assert.equal(
+    "error_message" in publicSyncState[0],
+    false,
+    "the public synchronization status must not expose internal errors",
+  );
   const { data: publicPools, error: publicPoolsError } = await publicClient.rpc(
     "get_public_pools",
     { p_search: "Auditoria", p_limit: 9, p_offset: 0 },
@@ -133,6 +233,11 @@ try {
   if (publicRankingError) throw publicRankingError;
   assert.equal(publicRanking.length, 1);
   assert.equal(publicRanking[0].user_id, null, "public rankings must not expose user ids");
+  assert.equal(
+    publicRanking[0].avatar_url,
+    null,
+    "public rankings must not expose identity-provider avatars",
+  );
 
   const { error: joinError } = await secondSession.rpc("join_pool", {
     p_invite_code: value.invite_code,
@@ -218,22 +323,14 @@ try {
   );
   if (hiddenPublicPoolsError) throw hiddenPublicPoolsError;
   assert.equal(hiddenPublicPools.length, 0, "archived pools must disappear from discovery");
-  const { error: ownerRestoreError } = await session.rpc("update_pool", {
-    p_pool_id: poolId,
-    p_name: "Auditoria automática",
-    p_is_public: true,
-    p_archived: false,
-    p_reason: "tentativa indevida de recuperação",
-  });
-  assert.ok(ownerRestoreError, "only the master administrator can restore pools");
-  const { error: masterRestoreError } = await service.rpc("update_pool", {
+  const { error: adminRestoreError } = await session.rpc("update_pool", {
     p_pool_id: poolId,
     p_name: "Auditoria automática recuperada",
     p_is_public: true,
     p_archived: false,
-    p_reason: "recuperação master de auditoria",
+    p_reason: "recuperação por administrador promovido",
   });
-  if (masterRestoreError) throw masterRestoreError;
+  if (adminRestoreError) throw adminRestoreError;
 
   const { data: masterPools, error: masterPoolsError } = await service.rpc(
     "master_list_pools",
@@ -363,6 +460,9 @@ try {
   console.log("Remote database smoke test passed");
 } finally {
   if (poolId) await service.from("pools").delete().eq("id", poolId);
+  if (ordinaryOwnerPoolId) await service.from("pools").delete().eq("id", ordinaryOwnerPoolId);
+  if (limitTestPoolId) await service.from("pools").delete().eq("id", limitTestPoolId);
+  if (secondUserId) await service.from("pools").delete().eq("owner_id", secondUserId);
   if (auditTournamentId) await service.from("tournaments").delete().eq("id", auditTournamentId);
   if (poolId) await service.from("admin_audit_logs").delete().eq("entity_id", poolId);
   if (userId) await service.from("admin_audit_logs").delete().eq("actor_id", userId);

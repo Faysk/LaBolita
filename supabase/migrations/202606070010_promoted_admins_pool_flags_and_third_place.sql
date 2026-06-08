@@ -31,7 +31,7 @@ as $$
     public.match_stage_multiplier(p_stage) as multiplier,
     (base.base_points * public.match_stage_multiplier(p_stage))::smallint as match_points,
     case
-      when p_stage <> 'group'
+      when p_stage not in ('group', 'third_place')
         and p_predicted_advancing_team_id is not null
         and p_predicted_advancing_team_id = p_result_advancing_team_id
       then 3::smallint
@@ -40,7 +40,7 @@ as $$
     (
       base.base_points * public.match_stage_multiplier(p_stage)
       + case
-          when p_stage <> 'group'
+          when p_stage not in ('group', 'third_place')
             and p_predicted_advancing_team_id is not null
             and p_predicted_advancing_team_id = p_result_advancing_team_id
           then 3

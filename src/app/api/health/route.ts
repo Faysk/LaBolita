@@ -29,11 +29,11 @@ export async function GET() {
 
   const [teams, matches, providerMappedMatches, renderableMatch, tournaments, resultsSync] =
     await Promise.all([
-    supabase.from("teams").select("*", { count: "exact", head: true }),
-    supabase.from("matches").select("*", { count: "exact", head: true }),
+    supabase.from("teams").select("id", { count: "exact", head: true }),
+    supabase.from("matches").select("id", { count: "exact", head: true }),
     supabase
       .from("matches")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .not("provider_match_id", "is", null),
     supabase
       .from("matches")
@@ -50,15 +50,9 @@ export async function GET() {
       .maybeSingle(),
     supabase
       .from("tournaments")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .eq("is_active", true),
-    supabase
-      .from("results_sync_state")
-      .select(
-        "status, source, fallback_used, observations, matched, updated, final_candidates, ignored_regressions, last_attempt_at, last_success_at, error_message",
-      )
-      .eq("id", true)
-      .maybeSingle(),
+    supabase.rpc("get_public_results_sync_status").maybeSingle(),
   ]);
   const databaseError =
     teams.error ??

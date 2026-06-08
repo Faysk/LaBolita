@@ -1,6 +1,15 @@
 "use client";
 
-import { Check, LoaderCircle, UserRoundCog, X } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  Layers3,
+  LoaderCircle,
+  Search,
+  TriangleAlert,
+  UserRoundCog,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TeamFlag } from "@/components/team-flag";
@@ -17,16 +26,106 @@ export function AdminMatchQueue({
 }) {
   const results = useLocalResults();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<
+    "action" | "live" | "divergence" | "upcoming" | "finished" | "all"
+  >("action");
+  const [grouping, setGrouping] = useState<"stage" | "date">("stage");
+  const [search, setSearch] = useState("");
+  const statuses = matches.map((match) => ({
+    match,
+    effectiveResult: results[match.id] ?? match.result,
+    hasDivergence:
+      Boolean(results[match.id] ?? match.result) &&
+      Boolean(match.liveResult) &&
+      ((results[match.id] ?? match.result)!.homeScore !== match.liveResult!.homeScore ||
+        (results[match.id] ?? match.result)!.awayScore !== match.liveResult!.awayScore),
+    needsTeamAssignment:
+      isUuid(match.id) &&
+      match.stage !== "group" &&
+      (!isUuid(match.homeTeam.id) || !isUuid(match.awayTeam.id)),
+  }));
+  const needsAction = (item: (typeof statuses)[number]) =>
+    item.needsTeamAssignment ||
+    item.hasDivergence ||
+    (!item.effectiveResult && item.match.providerStatus === "finished");
+  const cleanSearch = search.trim().toLocaleLowerCase("pt-BR");
+  const visible = statuses.filter((item) => {
+    const matchesSearch =
+      !cleanSearch ||
+      `${item.match.homeTeam.name} ${item.match.awayTeam.name} ${item.match.stageLabel}`
+        .toLocaleLowerCase("pt-BR")
+        .includes(cleanSearch);
+    if (!matchesSearch) return false;
+    if (filter === "action") return needsAction(item);
+    if (filter === "live") return item.match.providerStatus === "live";
+    if (filter === "divergence") return item.hasDivergence;
+    if (filter === "finished") return Boolean(item.effectiveResult);
+    if (filter === "upcoming") {
+      return !item.effectiveResult && item.match.providerStatus !== "live" && !needsAction(item);
+    }
+    return true;
+  });
+  const grouped = groupAdminMatches(visible, grouping);
 
   return (
-    <div className="divide-y">
-      {matches.map((match) => {
-        const effectiveResult = results[match.id] ?? match.result;
-        const needsTeamAssignment =
-          isUuid(match.id) &&
-          match.stage !== "group" &&
-          (!isUuid(match.homeTeam.id) || !isUuid(match.awayTeam.id));
-        return (
+    <div>
+      <div className="border-b bg-surface-muted/55 p-4 md:p-5">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {([
+            ["action", "Precisam de ação", statuses.filter(needsAction).length],
+            ["live", "Ao vivo", statuses.filter((item) => item.match.providerStatus === "live").length],
+            ["divergence", "Divergências", statuses.filter((item) => item.hasDivergence).length],
+            ["upcoming", "Próximos", statuses.filter((item) => !item.effectiveResult && item.match.providerStatus !== "live" && !needsAction(item)).length],
+            ["finished", "Finalizados", statuses.filter((item) => item.effectiveResult).length],
+            ["all", "Todos", statuses.length],
+          ] as const).map(([value, label, count]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+              className={`interactive whitespace-nowrap rounded-xl px-3 py-2 text-xs font-black ${
+                filter === value ? "bg-brand text-white" : "border bg-white text-muted"
+              }`}
+            >
+              {label} · {count}
+            </button>
+          ))}
+        </div>
+        <label className="relative mt-2 block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar seleção, grupo ou fase"
+            className="w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand"
+          />
+        </label>
+        <div className="mt-3 flex justify-end gap-2">
+          <GroupingButton
+            active={grouping === "stage"}
+            onClick={() => setGrouping("stage")}
+            icon={Layers3}
+          >
+            Por grupo/fase
+          </GroupingButton>
+          <GroupingButton
+            active={grouping === "date"}
+            onClick={() => setGrouping("date")}
+            icon={CalendarDays}
+          >
+            Por data
+          </GroupingButton>
+        </div>
+      </div>
+      <div className="divide-y">
+        {grouped.map(([group, items]) => (
+          <section key={group}>
+            <div className="sticky top-[4.25rem] z-10 flex items-center justify-between border-b bg-white/95 px-5 py-3 backdrop-blur">
+              <h3 className="text-sm font-black text-brand">{group}</h3>
+              <span className="text-xs font-bold text-muted">{items.length} jogos</span>
+            </div>
+            {items.map(({ match, effectiveResult, needsTeamAssignment }) => (
           <div
             key={match.id}
             data-testid={`admin-match-${match.id}`}
@@ -63,6 +162,15 @@ export function AdminMatchQueue({
                     Participantes ainda não definidos
                   </p>
                 )}
+                {effectiveResult && match.liveResult &&
+                  (effectiveResult.homeScore !== match.liveResult.homeScore ||
+                    effectiveResult.awayScore !== match.liveResult.awayScore) && (
+                    <p className="mt-1 flex items-center gap-1 text-sm font-bold text-red-700">
+                      <TriangleAlert className="size-4" />
+                      Divergência com o provedor: {match.liveResult.homeScore} x{" "}
+                      {match.liveResult.awayScore}
+                    </p>
+                  )}
               </div>
               <button
                 type="button"
@@ -101,15 +209,54 @@ export function AdminMatchQueue({
                 />
               ))}
           </div>
-        );
-      })}
-      {matches.length === 0 && (
+            ))}
+          </section>
+        ))}
+      </div>
+      {visible.length === 0 && (
         <p className="p-6 text-center text-sm text-muted">
-          Nenhuma partida disponível. Importe a agenda oficial primeiro.
+          Nenhuma partida encontrada neste filtro.
         </p>
       )}
     </div>
   );
+}
+
+function GroupingButton({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Layers3;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`interactive flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black ${
+        active ? "bg-brand text-white" : "bg-white text-muted"
+      }`}
+    >
+      <Icon className="size-3.5" /> {children}
+    </button>
+  );
+}
+
+function groupAdminMatches<T extends { match: DemoMatch }>(
+  items: T[],
+  grouping: "stage" | "date",
+) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const label = grouping === "date" ? item.match.dateLabel : item.match.stageLabel;
+    groups.set(label, [...(groups.get(label) ?? []), item]);
+  }
+  return [...groups.entries()];
 }
 
 function TeamAssignmentForm({

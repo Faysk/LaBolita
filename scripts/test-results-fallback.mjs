@@ -34,6 +34,7 @@ try {
 
   const response = await fetch(`${BASE_URL}/api/cron/results`, {
     headers: { authorization: `Bearer ${secret}` },
+    signal: AbortSignal.timeout(30_000),
   });
   assert.equal(response.status, 200);
   const body = await response.json();
@@ -52,15 +53,17 @@ try {
 }
 
 async function waitForServer() {
+  let lastResponse = "no response";
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
       const response = await fetch(`${BASE_URL}/api/health`);
       if (response.ok) return;
-    } catch {
-      // O servidor ainda está subindo.
+      lastResponse = `${response.status}: ${await response.text()}`;
+    } catch (error) {
+      lastResponse = error instanceof Error ? error.message : String(error);
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
-  throw new Error("Next.js server did not become ready.");
+  throw new Error(`Next.js server did not become ready. Last health response: ${lastResponse}`);
 }

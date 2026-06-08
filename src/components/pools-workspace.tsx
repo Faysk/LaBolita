@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
@@ -500,7 +500,16 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
   const [reason, setReason] = useState("");
   const [members, setMembers] = useState<ManagedMember[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onClose();
+    }
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [busy, onClose]);
 
   async function loadMembers() {
     const supabase = createBrowserSupabaseClient();
@@ -553,9 +562,12 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
   }
 
   return (
-    <section className="card mt-6 p-5 md:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand-strong/45 p-0 backdrop-blur-sm sm:items-center sm:p-5" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !busy) onClose();
+    }}>
+    <section role="dialog" aria-modal="true" aria-labelledby="pool-management-title" className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-b-none p-5 shadow-2xl sm:rounded-[1.5rem] md:p-6">
       <div className="flex items-start justify-between gap-4">
-        <div><p className="eyebrow">Gestão do dono</p><h2 className="mt-1 text-xl font-black">{pool.name}</h2></div>
+        <div><p className="eyebrow">Gestão do bolão</p><h2 id="pool-management-title" className="mt-1 text-xl font-black">{pool.name}</h2></div>
         <button type="button" aria-label="Fechar gestão" onClick={onClose} className="interactive rounded-xl p-2 text-muted"><X className="size-4" /></button>
       </div>
       <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -575,7 +587,7 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
           {busy ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />} Salvar ajustes
         </button>
         {!pool.isArchived && (
-          <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(true)} className="interactive flex items-center gap-2 rounded-xl border bg-white px-4 py-3 text-sm font-black text-red-700 disabled:opacity-50">
+          <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => setConfirmArchive(true)} className="interactive flex items-center gap-2 rounded-xl border bg-white px-4 py-3 text-sm font-black text-red-700 disabled:opacity-50">
             <Archive className="size-4" /> Arquivar bolão
           </button>
         )}
@@ -583,6 +595,16 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
           <Users className="size-4" /> Ver participantes
         </button>
       </div>
+      {confirmArchive && (
+        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+          <p className="text-sm font-black text-red-800">Arquivar {pool.name}?</p>
+          <p className="mt-1 text-xs leading-5 text-red-700">Ele deixará de aparecer para participantes e na lista pública. O histórico será preservado.</p>
+          <div className="mt-3 flex gap-2">
+            <button type="button" disabled={busy} onClick={() => void update(true)} className="interactive rounded-xl bg-red-700 px-4 py-2 text-xs font-black text-white disabled:opacity-50">Confirmar arquivamento</button>
+            <button type="button" disabled={busy} onClick={() => setConfirmArchive(false)} className="interactive rounded-xl border bg-white px-4 py-2 text-xs font-black text-muted">Cancelar</button>
+          </div>
+        </div>
+      )}
       {members && (
         <div className="mt-5 divide-y rounded-2xl border">
           {members.map((member) => (
@@ -600,6 +622,7 @@ function PoolManagement({ pool, onClose }: { pool: PoolSummary; onClose: () => v
       {pool.isArchived && <p className="mt-4 flex items-center gap-2 text-sm font-bold text-amber-700"><ArchiveRestore className="size-4" /> A recuperação fica disponível no painel de administração global.</p>}
       {error && <p aria-live="polite" className="mt-3 text-sm font-bold text-red-700">{error}</p>}
     </section>
+    </div>
   );
 }
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
+import { readTextWithByteLimit } from "@/lib/bounded-response";
 import {
   assertDatabaseMappingComplete,
   normalizeEspnFeed,
@@ -12,6 +13,7 @@ const DEFAULT_BACKUP_FEED_URL =
   "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=200";
 const MAX_FEED_BYTES = 2_000_000;
 const EARLY_STATUS_TOLERANCE_MS = 15 * 60 * 1000;
+const DATABASE_REQUEST_TIMEOUT_MS = 10_000;
 
 type DatabaseMatch = {
   id: string;
@@ -172,10 +174,7 @@ async function fetchJson(url: string) {
   });
   if (!response.ok) throw new Error(`Results provider responded ${response.status}.`);
 
-  const body = await response.text();
-  if (body.length > MAX_FEED_BYTES) {
-    throw new Error(`Results provider response exceeded ${MAX_FEED_BYTES} bytes.`);
-  }
+  const body = await readTextWithByteLimit(response, MAX_FEED_BYTES);
 
   return JSON.parse(body) as unknown;
 }
@@ -189,8 +188,17 @@ function createServiceClient() {
 
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: fetchWithDatabaseTimeout },
   });
 }
+
+const fetchWithDatabaseTimeout: typeof fetch = (input, init) =>
+  fetch(input, {
+    ...init,
+    signal: init?.signal
+      ? AbortSignal.any([init.signal, AbortSignal.timeout(DATABASE_REQUEST_TIMEOUT_MS)])
+      : AbortSignal.timeout(DATABASE_REQUEST_TIMEOUT_MS),
+  });
 
 function isUnsafeEarlyStatus(match: DatabaseMatch, observation: ProviderObservation) {
   return (

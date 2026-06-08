@@ -175,7 +175,10 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       ('${USER_THREE}', 'late@example.com', '{"full_name":"Late Member"}');
 
     update public.profiles
-    set is_admin = true, is_master_admin = true
+    set
+      is_admin = true,
+      is_master_admin = true,
+      avatar_url = 'https://accounts.google.com/avatar/private-owner'
     where id = '${USER_ONE}';
 
     insert into public.matches (
@@ -268,6 +271,14 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       THIRD_PLACE_MATCH_ID,
       AWAY_TEAM_ID,
     ]);
+    assert.equal(
+      await scalar(
+        "select advancement_points::integer from public.calculate_prediction_score(1, 1, 1, 1, 'third_place', $1, $1)",
+        [AWAY_TEAM_ID],
+      ),
+      0,
+      "third-place matches have a winner but no advancement bonus",
+    );
     await db.query("select public.create_pool_with_flag('Bolão Teste', true, 'pt')");
     await db.query("select public.assign_match_teams($1, $2, $3, 'classificação oficial')", [
       UNRESOLVED_MATCH_ID,
@@ -305,6 +316,26 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   assert.equal(await scalar("select flag_code from public.pools where id = $1", [publicPoolId]), "pt");
 
   await asAnon(async () => {
+    await assert.rejects(
+      db.query("select provider_payload from public.matches"),
+      "anonymous visitors must not read raw provider payloads",
+    );
+    assert.equal(
+      await scalar("select count(*)::integer from public.matches"),
+      5,
+      "anonymous visitors must retain access to the public match schedule",
+    );
+    await assert.rejects(
+      db.query("select error_message from public.results_sync_state"),
+      "anonymous visitors must not read internal results synchronization errors",
+    );
+    const syncStatus = await db.query("select * from public.get_public_results_sync_status()");
+    assert.equal(syncStatus.rows.length, 1);
+    assert.equal(
+      "error_message" in syncStatus.rows[0],
+      false,
+      "the public synchronization status must not expose internal errors",
+    );
     assert.equal(
       await scalar("select count(*)::integer from public.get_public_pools(null, 9, 0)"),
       1,
@@ -317,6 +348,14 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       ),
       1,
       "anonymous visitors can see public rankings",
+    );
+    assert.equal(
+      await scalar(
+        "select avatar_url from public.get_public_pool_ranking($1, 25, 0) limit 1",
+        [publicPoolId],
+      ),
+      null,
+      "public rankings must not expose identity-provider avatars",
     );
   });
 
@@ -362,6 +401,20 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       db.query("update public.profiles set is_admin = true where id = $1", [USER_TWO]),
       "users must not be able to grant themselves administrator permission",
     );
+  });
+
+  await db.exec(`
+    insert into public.pools (owner_id, name, invite_code, is_public, archived_at)
+    select
+      '${USER_TWO}',
+      'Bolão arquivado ' || series,
+      upper(substr(md5('archived-' || series::text), 1, 12)),
+      false,
+      now()
+    from generate_series(1, 20) series;
+  `);
+  await asUser(USER_TWO, async () => {
+    await db.query("select public.create_pool('Bolão depois dos arquivados', false)");
   });
 
   await asUser(USER_ONE, async () => {

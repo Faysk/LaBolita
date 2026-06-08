@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
+import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function getViewerState() {
@@ -9,11 +10,7 @@ export async function getViewerState() {
     return { isAuthenticated: true, termsAccepted: true, isDisabled: false };
   }
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) throw userError;
+  const user = await getOptionalUser(supabase);
   if (!user) {
     return { isAuthenticated: false, termsAccepted: false, isDisabled: false };
   }
@@ -38,11 +35,7 @@ export async function requireUser(nextPath: string) {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return null;
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) throw userError;
+  const user = await getOptionalUser(supabase);
 
   if (!user) redirect(`/entrar?next=${encodeURIComponent(nextPath)}`);
   const { data: profile, error: profileError } = await supabase

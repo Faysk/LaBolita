@@ -1,5 +1,6 @@
 import "server-only";
 import { demoPools, demoRanking } from "@/lib/demo-data";
+import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { PoolSummary, RankingEntry } from "@/lib/types";
 
@@ -58,11 +59,7 @@ export async function getPoolsOverview({
   const supabase = await createServerSupabaseClient();
   if (!supabase) return demoOverview();
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) throw userError;
+  const user = await getOptionalUser(supabase);
   const safePage = Math.max(1, Math.trunc(publicPage) || 1);
   const cleanSearch = publicSearch.trim().slice(0, 60);
 

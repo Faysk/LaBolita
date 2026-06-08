@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, CircleDashed } from "lucide-react";
+import { CalendarDays, CheckCircle2, CircleDashed, Layers3 } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
 import type { DemoMatch } from "@/lib/types";
@@ -9,11 +9,15 @@ import type { DemoMatch } from "@/lib/types";
 const filters = [
   ["all", "Todos"],
   ["pending", "Pendentes"],
+  ["saved", "Salvos"],
   ["group", "Grupos"],
+  ["knockout", "Mata-mata"],
+  ["locked", "Bloqueados"],
 ] as const;
 
 export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
   const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
+  const [grouping, setGrouping] = useState<"stage" | "date">("stage");
   const predictions = useLocalPredictions(matches);
   const results = useLocalResults();
   const isComplete = (match: DemoMatch) =>
@@ -32,14 +36,20 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
         !results[match.id]
       );
     }
+    if (filter === "saved") return isComplete(match);
     if (filter === "group") return match.stage === "group";
+    if (filter === "knockout") return match.stage !== "group";
+    if (filter === "locked") {
+      return match.locked || Boolean(match.result) || Boolean(results[match.id]);
+    }
     return true;
   });
+  const groups = groupMatches(visibleMatches, grouping);
 
   return (
     <>
       <section className="mb-6 grid gap-3 md:grid-cols-[1fr_auto]">
-        <div className="card flex gap-2 overflow-x-auto p-2">
+        <div className="card flex gap-2 overflow-x-auto p-2" aria-label="Filtros de palpites">
           {filters.map(([value, label]) => (
             <button
               key={value}
@@ -65,16 +75,70 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
         <CheckCircle2 className="size-4 text-brand" />
         Revise o placar e toque em salvar. Assim nenhuma digitação parcial vira palpite.
       </div>
-      <section className="grid gap-4 md:grid-cols-2">
-        {visibleMatches.map((match) => (
-          <MatchCard key={match.id} match={match} isAuthenticated termsAccepted />
+      <div className="mb-5 flex justify-end gap-2">
+        <ViewButton active={grouping === "stage"} onClick={() => setGrouping("stage")} icon={Layers3}>
+          Por fase
+        </ViewButton>
+        <ViewButton active={grouping === "date"} onClick={() => setGrouping("date")} icon={CalendarDays}>
+          Por data
+        </ViewButton>
+      </div>
+      <div className="grid gap-7">
+        {groups.map(([label, groupedMatches]) => (
+          <section key={label}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-black tracking-tight">{label}</h2>
+              <span className="rounded-full bg-surface-muted px-3 py-1 text-xs font-bold text-muted">
+                {groupedMatches.length} jogos
+              </span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {groupedMatches.map((match) => (
+                <MatchCard key={match.id} match={match} isAuthenticated termsAccepted />
+              ))}
+            </div>
+          </section>
         ))}
         {visibleMatches.length === 0 && (
-          <p className="card p-6 text-sm text-muted md:col-span-2">
+          <p className="card p-6 text-sm text-muted">
             Nenhuma partida encontrada neste filtro.
           </p>
         )}
-      </section>
+      </div>
     </>
   );
+}
+
+function ViewButton({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Layers3;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`interactive flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black ${
+        active ? "bg-brand text-white" : "bg-white text-muted"
+      }`}
+    >
+      <Icon className="size-3.5" /> {children}
+    </button>
+  );
+}
+
+function groupMatches(matches: DemoMatch[], grouping: "stage" | "date") {
+  const groups = new Map<string, DemoMatch[]>();
+  for (const match of matches) {
+    const label = grouping === "date" ? match.dateLabel : match.stageLabel;
+    groups.set(label, [...(groups.get(label) ?? []), match]);
+  }
+  return [...groups.entries()];
 }

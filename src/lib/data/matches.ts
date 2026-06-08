@@ -1,5 +1,6 @@
 import "server-only";
 import { demoMatches } from "@/lib/demo-data";
+import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { DemoMatch, DemoTeam, MatchStage } from "@/lib/types";
 
@@ -107,11 +108,7 @@ export async function getMatches(): Promise<DemoMatch[]> {
   }
   if (!matches?.length) return [];
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) throw userError;
+  const user = await getOptionalUser(supabase);
   let predictions: DatabasePrediction[] = [];
 
   if (user) {

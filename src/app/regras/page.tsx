@@ -101,7 +101,8 @@ export default function RulesPage() {
               <p className="text-sm leading-6 text-white/75">
                 No mata-mata, acertar quem avança rende mais{" "}
                 <strong className="text-white">3 pontos</strong>, sem
-                multiplicador.
+                multiplicador. A disputa de terceiro lugar define um vencedor,
+                mas não concede esse bônus.
               </p>
             </div>
           </div>

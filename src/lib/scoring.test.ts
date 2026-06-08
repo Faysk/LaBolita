@@ -49,14 +49,14 @@ describe("calculateScore", () => {
     });
   });
 
-  it("awards the winner bonus in the third-place match", () => {
+  it("does not award advancement points in the third-place match", () => {
     expect(
       calculateScore(
         { homeScore: 2, awayScore: 1, advancingTeamId: "brazil" },
         { homeScore: 2, awayScore: 1, advancingTeamId: "brazil" },
         "third_place",
       ).advancementPoints,
-    ).toBe(3);
+    ).toBe(0);
   });
 
   it.each([

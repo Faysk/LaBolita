@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { access } from "node:fs/promises";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { chromium } from "playwright-core";
 
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const executablePath = await findBrowser();
+buildDemo();
 const server = spawn(
   process.execPath,
   ["node_modules/next/dist/bin/next", "start", "-p", String(PORT)],
@@ -52,6 +53,13 @@ try {
   await page.goto(`${BASE_URL}/palpites`);
   await page.getByRole("heading", { name: "Seus palpites" }).waitFor();
   await waitForFlagFallbacks(page);
+  await page.getByRole("button", { name: "Mata-mata" }).click();
+  await page.getByTestId("match-match-9").waitFor();
+  assert.equal(await page.getByTestId("match-match-1").count(), 0);
+  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("button", { name: "Por data" }).click();
+  assert.equal(await page.getByRole("button", { name: "Por data" }).getAttribute("aria-pressed"), "true");
+  await page.getByRole("button", { name: "Por fase" }).click();
   assert.equal(
     await page.locator('[data-testid="team-flag"] img').evaluateAll((images) =>
       images.every((image) => new URL(image.src).origin === window.location.origin),
@@ -88,6 +96,11 @@ try {
   );
 
   await page.goto(`${BASE_URL}/admin`);
+  await page.getByRole("button", { name: /^Todos ·/ }).click();
+  await page.getByRole("button", { name: "Por data" }).click();
+  assert.equal(await page.getByRole("button", { name: "Por data" }).getAttribute("aria-pressed"), "true");
+  await page.getByRole("button", { name: "Por grupo/fase" }).click();
+  await page.getByRole("button", { name: /^Divergências ·/ }).waitFor();
   const adminOpeningMatch = page.getByTestId("admin-match-match-1");
   await adminOpeningMatch.getByRole("button", { name: "Informar resultado" }).click();
   await adminOpeningMatch.getByRole("spinbutton", { name: "México" }).fill("2");
@@ -135,8 +148,13 @@ try {
   await createdPool.getByRole("button", { name: "Ver ranking" }).click();
   await page.getByTestId("pool-ranking").getByText("Bolão Automatizado").waitFor();
   await page.getByTestId("ranking-current-user").getByText("0 pts").waitFor();
+  await selectedPoolCard.getByRole("button", { name: "Gerenciar Família Faysk" }).click();
+  await page.getByRole("dialog", { name: "Família Faysk" }).waitFor();
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog", { name: "Família Faysk" }).waitFor({ state: "hidden" });
 
   await page.goto(`${BASE_URL}/admin`);
+  await page.getByRole("button", { name: /^Todos ·/ }).click();
   const correctionMatch = page.getByTestId("admin-match-match-1");
   await correctionMatch.getByRole("button", { name: "Corrigir resultado" }).click();
   await correctionMatch.getByRole("spinbutton", { name: "México" }).fill("3");
@@ -187,6 +205,10 @@ try {
     "/termos",
     "/robots.txt",
     "/sitemap.xml",
+    "/icon",
+    "/apple-icon",
+    "/opengraph-image",
+    "/twitter-image",
   ]) {
     const response = await desktopPage.goto(`${BASE_URL}${path}`);
     assert.equal(response?.status(), 200, `${path} must respond successfully`);
@@ -199,6 +221,18 @@ try {
     );
   }
   const homeResponse = await desktopPage.goto(BASE_URL);
+  assert.equal(
+    await desktopPage.locator('link[rel="canonical"]').getAttribute("href"),
+    "https://labolita.faysk.dev",
+  );
+  assert.match(
+    await desktopPage.locator('meta[property="og:image"]').getAttribute("content"),
+    /\/opengraph-image/,
+  );
+  assert.match(
+    await desktopPage.locator('meta[name="twitter:image"]').getAttribute("content"),
+    /\/twitter-image/,
+  );
   assert.equal(homeResponse?.headers()["x-frame-options"], "DENY");
   assert.equal(homeResponse?.headers()["x-content-type-options"], "nosniff");
   assert.equal(homeResponse?.headers()["cross-origin-resource-policy"], "same-origin");
@@ -232,6 +266,23 @@ async function waitForServer() {
   }
 
   throw new Error("Next.js server did not become ready.");
+}
+
+function buildDemo() {
+  const result = spawnSync(
+    process.execPath,
+    ["scripts/build-demo.mjs"],
+    {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: "inherit",
+      windowsHide: true,
+    },
+  );
+
+  if (result.status !== 0) {
+    throw new Error("Não foi possível gerar o build de demonstração para o teste UI.");
+  }
 }
 
 async function findBrowser() {

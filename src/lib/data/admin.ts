@@ -1,4 +1,5 @@
 import "server-only";
+import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type MasterPool = {
@@ -82,11 +83,7 @@ export async function getMasterOverview(): Promise<MasterOverview> {
     };
   }
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError) throw userError;
+  const user = await getOptionalUser(supabase);
   if (!user) {
     return {
       isGlobalAdmin: false,
