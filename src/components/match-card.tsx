@@ -63,6 +63,10 @@ export function MatchCard({
   const { homeScore, awayScore } = currentPrediction;
   const result = usesSupabase ? match.result : localResults[match.id] ?? match.result;
   const effectiveLocked = match.locked || Boolean(result);
+  const loginRequired = usesSupabase && !isAuthenticated && !effectiveLocked;
+  const termsRequired = usesSupabase && isAuthenticated && !termsAccepted && !effectiveLocked;
+  const inputDisabled =
+    effectiveLocked || syncState === "saving" || loginRequired || termsRequired;
   const saved =
     draft === null &&
     Boolean(persistedPrediction);
@@ -220,7 +224,7 @@ export function MatchCard({
         >
           {effectiveLocked ? (
             <LockKeyhole className="size-3" />
-          ) : syncState === "error" || syncState === "auth-required" || syncState === "terms-required" ? (
+          ) : loginRequired || termsRequired || syncState === "error" || syncState === "auth-required" || syncState === "terms-required" ? (
             <TriangleAlert className="size-3" />
           ) : syncState === "saving" ? (
             <LoaderCircle className="size-3 animate-spin" />
@@ -233,9 +237,9 @@ export function MatchCard({
             ? result
               ? "Finalizado"
               : "Bloqueado"
-            : syncState === "auth-required"
+            : loginRequired || syncState === "auth-required"
               ? "Entre para salvar"
-              : syncState === "terms-required"
+              : termsRequired || syncState === "terms-required"
                 ? "Aceite necessário"
                 : syncState === "error"
                   ? "Erro"
@@ -254,14 +258,14 @@ export function MatchCard({
         <div className="flex items-center gap-2">
           <ScoreInput
             value={homeScore}
-            disabled={effectiveLocked || syncState === "saving"}
+            disabled={inputDisabled}
             label={`Gols de ${match.homeTeam.name}`}
             onChange={(value) => updatePrediction("home", value)}
           />
           <span className="text-xs font-black text-muted">×</span>
           <ScoreInput
             value={awayScore}
-            disabled={effectiveLocked || syncState === "saving"}
+            disabled={inputDisabled}
             label={`Gols de ${match.awayTeam.name}`}
             onChange={(value) => updatePrediction("away", value)}
           />
@@ -272,7 +276,7 @@ export function MatchCard({
         <label className="mt-4 block text-xs font-bold text-muted">
           {match.stage === "third_place" ? "Quem vence?" : "Quem avança?"}
           <select
-            disabled={effectiveLocked || syncState === "saving"}
+            disabled={inputDisabled}
             value={currentPrediction.advancingTeamId ?? ""}
             onChange={(event) => updateAdvancingTeam(event.target.value)}
             className="mt-1 w-full rounded-xl border bg-surface-muted px-3 py-2.5 text-sm font-bold text-foreground outline-none focus:border-brand focus:bg-white disabled:cursor-not-allowed"
@@ -292,7 +296,7 @@ export function MatchCard({
           )}
         </label>
       )}
-      {!effectiveLocked && (!saved || dirty) && (
+      {!loginRequired && !termsRequired && !effectiveLocked && (!saved || dirty) && (
         <div className="mt-4 flex items-center gap-2">
           {dirty && (
             <button
@@ -318,6 +322,25 @@ export function MatchCard({
             )}
             {persistedPrediction ? "Salvar alterações" : "Salvar palpite"}
           </button>
+        </div>
+      )}
+      {(loginRequired || termsRequired) && (
+        <div className="mt-4 rounded-2xl border bg-surface-muted p-3 text-center text-xs font-bold text-muted">
+          {loginRequired ? (
+            <>
+              Entre para registrar palpites, ver pendências reais e competir nos bolões.{" "}
+              <Link href="/entrar?next=%2Fpalpites" className="text-brand underline">
+                Entrar agora
+              </Link>
+            </>
+          ) : (
+            <>
+              Aceite os termos para salvar palpites.{" "}
+              <Link href="/aceitar-termos?next=%2Fpalpites" className="text-brand underline">
+                Aceitar agora
+              </Link>
+            </>
+          )}
         </div>
       )}
       {!compact && (
@@ -404,9 +427,11 @@ function Team({
   compact: boolean;
 }) {
   return (
-    <div className={`flex min-w-0 flex-col items-center ${align === "right" ? "md:items-end md:text-right" : "md:items-start md:text-left"}`}>
-      <TeamFlag team={team} size={compact ? "md" : "lg"} />
-      <p className={`mt-2 line-clamp-2 min-h-8 max-w-full text-center font-black leading-4 tracking-tight ${compact ? "text-xs" : "text-sm"}`}>
+    <div className={`flex min-w-0 flex-col items-center justify-start text-center ${align === "right" ? "md:items-end md:text-right" : "md:items-start md:text-left"}`}>
+      <span className="flex h-11 items-center justify-center">
+        <TeamFlag team={team} size={compact ? "md" : "lg"} />
+      </span>
+      <p className={`mt-2 line-clamp-2 flex min-h-8 max-w-full items-start justify-center text-center font-black leading-4 tracking-tight md:justify-start ${compact ? "text-xs" : "text-sm"}`}>
         {team.shortName}
       </p>
     </div>

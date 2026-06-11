@@ -33,6 +33,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { PoolSummary, RankingEntry } from "@/lib/types";
 import { friendlyServerError } from "@/lib/user-errors";
 import { UserAvatar } from "@/components/user-avatar";
+import { rankingLabel } from "@/lib/ranking-display";
 
 type ManagedMember = {
   user_id: string;
@@ -814,11 +815,10 @@ function Ranking({
 }
 
 function rankingPositionLabel(player: RankingEntry, entries: RankingEntry[], provisional: boolean) {
-  const position = provisional ? player.provisionalPosition ?? player.position : player.position;
-  const tied = entries.filter((entry) =>
-    (provisional ? entry.provisionalPosition ?? entry.position : entry.position) === position
-  ).length > 1;
-  return `${provisional ? "~" : ""}${position}${tied ? "=" : ""}`;
+  return rankingLabel(player, entries, {
+    provisional,
+    tiedSuffix: "=",
+  });
 }
 
 function pluralize(value: number, singular: string, plural: string) {

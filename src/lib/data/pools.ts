@@ -52,6 +52,11 @@ export type PoolsOverview = {
   publicSearch: string;
 };
 
+export type PublicPoolHighlight = PoolSummary & {
+  totalPoints: number;
+  topPlayers: RankingEntry[];
+};
+
 export async function getPoolsOverview({
   publicPage = 1,
   publicSearch = "",
@@ -179,6 +184,83 @@ export async function getPublicGlobalRanking(): Promise<RankingEntry[]> {
   }
 
   return mapRanking((data ?? []) as RankingRow[], user?.id);
+}
+
+export async function getPublicPoolHighlights(limit = 3): Promise<PublicPoolHighlight[]> {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) {
+    const totalPoints = demoRanking.reduce((total, player) => total + player.points, 0);
+    return demoPools.slice(0, limit).map((pool) => ({
+      ...pool,
+      isPublic: true,
+      totalPoints,
+      topPlayers: demoRanking.slice(0, 3),
+    }));
+  }
+
+  const user = await getOptionalUser(supabase);
+  const { data: publicData, error: publicError } = await supabase.rpc("get_public_pools", {
+    p_search: null,
+    p_limit: 12,
+    p_offset: 0,
+  });
+  if (publicError) {
+    console.error("Could not load public pool highlights", publicError);
+    return [];
+  }
+
+  const highlights = await Promise.all(
+    ((publicData ?? []) as PublicPoolRow[]).map(async (pool) => {
+      const { data, error } = await supabase.rpc("get_public_pool_ranking", {
+        p_pool_id: pool.pool_id,
+        p_limit: 100,
+        p_offset: 0,
+      });
+      if (error) {
+        console.error("Could not load public pool highlight ranking", {
+          poolId: pool.pool_id,
+          code: error.code,
+          message: error.message,
+        });
+        return {
+          id: pool.pool_id,
+          name: pool.pool_name,
+          flagCode: pool.flag_code,
+          members: Number(pool.member_count),
+          position: 1,
+          ownerName: pool.owner_name,
+          isPublic: true,
+          totalPoints: 0,
+          topPlayers: [],
+        } satisfies PublicPoolHighlight;
+      }
+
+      const ranking = mapRanking((data ?? []) as RankingRow[], user?.id);
+      return {
+        id: pool.pool_id,
+        name: pool.pool_name,
+        flagCode: pool.flag_code,
+        members: Number(pool.member_count),
+        position: 1,
+        ownerName: pool.owner_name,
+        isPublic: true,
+        totalPoints: ranking.reduce(
+          (total, player) => total + (player.provisionalPoints ?? player.points),
+          0,
+        ),
+        topPlayers: ranking.slice(0, 3),
+      } satisfies PublicPoolHighlight;
+    }),
+  );
+
+  return highlights
+    .sort(
+      (left, right) =>
+        right.totalPoints - left.totalPoints ||
+        right.members - left.members ||
+        left.name.localeCompare(right.name, "pt-BR"),
+    )
+    .slice(0, limit);
 }
 
 function demoOverview(): PoolsOverview {

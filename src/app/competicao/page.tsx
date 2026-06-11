@@ -7,8 +7,14 @@ export const metadata: Metadata = {
   description: "Classificação dos grupos e chave eliminatória da Copa 2026.",
 };
 
-export default async function CompetitionPage() {
+export default async function CompetitionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ aba?: string }>;
+}) {
+  const params = await searchParams;
   const matches = await getMatches();
+  const view = params.aba === "eliminatorias" ? "knockout" : "groups";
 
   return (
     <main className="page-container py-7 md:py-10">
@@ -19,7 +25,7 @@ export default async function CompetitionPage() {
           Veja a classificação dos grupos e o caminho até a final. Placares ao vivo aparecem como provisórios até a confirmação.
         </p>
       </div>
-      <CompetitionOverview matches={matches} />
+      <CompetitionOverview matches={matches} view={view} />
     </main>
   );
 }

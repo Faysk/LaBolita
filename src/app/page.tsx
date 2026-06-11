@@ -9,14 +9,19 @@ import { MatchCard } from "@/components/match-card";
 import { NextMatchSummary } from "@/components/next-match-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
-import { getPoolsOverview, getPublicGlobalRanking } from "@/lib/data/pools";
+import {
+  getPoolsOverview,
+  getPublicGlobalRanking,
+  getPublicPoolHighlights,
+} from "@/lib/data/pools";
 import { isLiveMatch, prioritizeHomeMatches } from "@/lib/match-display";
 
 export default async function HomePage() {
-  const [matches, poolsOverview, publicRanking, viewer] = await Promise.all([
+  const [matches, poolsOverview, publicRanking, publicPoolHighlights, viewer] = await Promise.all([
     getMatches(),
     getPoolsOverview(),
     getPublicGlobalRanking(),
+    getPublicPoolHighlights(),
     getViewerState(),
   ]);
   const highlightedMatches = prioritizeHomeMatches(matches).slice(0, 3);
@@ -103,6 +108,8 @@ export default async function HomePage() {
         globalRanking={publicRanking}
         primaryPoolRanking={poolsOverview.ranking}
         primaryPoolName={poolsOverview.rankingName}
+        publicPoolHighlights={publicPoolHighlights}
+        isAuthenticated={viewer.isAuthenticated}
       />
 
     </main>

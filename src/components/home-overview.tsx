@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Crown, Trophy, Users } from "lucide-react";
+import { CountryFlag } from "@/components/country-flag";
 import { StatCard } from "@/components/stat-card";
 import { calculateDemoRanking } from "@/lib/demo-engine";
+import type { PublicPoolHighlight } from "@/lib/data/pools";
 import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
+import { rankingLabel } from "@/lib/ranking-display";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { UserAvatar } from "@/components/user-avatar";
 import type { DemoMatch, PoolSummary, RankingEntry } from "@/lib/types";
@@ -15,12 +18,16 @@ export function HomeOverview({
   globalRanking,
   primaryPoolRanking,
   primaryPoolName,
+  publicPoolHighlights,
+  isAuthenticated,
 }: {
   matches: DemoMatch[];
   pools: PoolSummary[];
   globalRanking: RankingEntry[];
   primaryPoolRanking: RankingEntry[];
   primaryPoolName: string;
+  publicPoolHighlights: PublicPoolHighlight[];
+  isAuthenticated: boolean;
 }) {
   const localPredictions = useLocalPredictions(matches);
   const localResults = useLocalResults();
@@ -41,7 +48,10 @@ export function HomeOverview({
     (match) => !match.prediction && !localPredictions[match.id],
   ).length;
   const currentPlayer = visibleGlobalRanking.find((player) => player.isCurrentUser);
-  const leader = visibleGlobalRanking[0];
+  const recordHolder = visibleGlobalRanking.reduce<RankingEntry | null>(
+    (best, player) => (!best || player.exact > best.exact ? player : best),
+    null,
+  );
   const poolPlayer = visiblePoolRanking.find((player) => player.isCurrentUser);
   const poolLeader = visiblePoolRanking[0];
   const poolHasLivePoints = visiblePoolRanking.some(
@@ -57,6 +67,7 @@ export function HomeOverview({
     (total, pool) => total + Math.max(0, pool.members - 1),
     0,
   );
+  const canShowPersonalStats = !usesSupabase || isAuthenticated;
 
   return (
     <>
@@ -64,27 +75,34 @@ export function HomeOverview({
         <StatCard
           icon={Trophy}
           label="Sua posição geral"
-          value={currentPlayer && rankingStarted ? rankLabel(currentPlayer, visibleGlobalRanking) : "—"}
-          detail={rankingStarted ? "Ranking público geral" : "Classificação não iniciada"}
+          value={
+            canShowPersonalStats && currentPlayer && rankingStarted
+              ? rankingLabel(currentPlayer, visibleGlobalRanking)
+              : "Entrar"
+          }
+          detail={canShowPersonalStats ? "Ranking público geral" : "Login necessário"}
+          href={canShowPersonalStats ? undefined : "/entrar?next=%2F"}
           accent
         />
         <StatCard
           icon={CheckCircle2}
-          label="Palpites realizados"
-          value={`${savedPredictions}/${matches.length}`}
-          detail={`${pendingPredictions} pendentes abertos`}
+          label={canShowPersonalStats ? "Palpites realizados" : "Palpites pendentes"}
+          value={canShowPersonalStats ? `${savedPredictions}/${matches.length}` : "—"}
+          detail={canShowPersonalStats ? `${pendingPredictions} pendentes abertos` : "Entre para calcular"}
+          href={canShowPersonalStats ? undefined : "/entrar?next=%2Fpalpites"}
         />
         <StatCard
           icon={Crown}
-          label="Cravadas"
-          value={String(currentPlayer?.exact ?? 0)}
-          detail={leader ? `Recorde geral: ${pluralize(leader.exact, "cravada", "cravadas")}` : "Ranking vazio"}
+          label="Recorde geral"
+          value={recordHolder ? pluralize(recordHolder.exact, "cravada", "cravadas") : "—"}
+          detail={recordHolder ? `Melhor marca: ${recordHolder.name}` : "Ranking vazio"}
         />
         <StatCard
           icon={Users}
           label="Seus bolões"
-          value={String(pools.length)}
-          detail={`${opponents} adversários`}
+          value={canShowPersonalStats ? String(pools.length) : "Entrar"}
+          detail={canShowPersonalStats ? `${opponents} adversários` : "Login necessário"}
+          href={canShowPersonalStats ? undefined : "/entrar?next=%2Fboloes"}
         />
       </section>
 
@@ -92,36 +110,68 @@ export function HomeOverview({
         <div className="card card-dark overflow-hidden p-6 text-white">
           <p className="eyebrow !text-accent">Bolão em destaque</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight">
-            {primaryPoolName || primaryPool?.name || "Seu primeiro bolão"}
+            {canShowPersonalStats
+              ? primaryPoolName || primaryPool?.name || "Seu primeiro bolão"
+              : "Bolões públicos"}
           </h2>
           <p className="mt-2 text-sm leading-6 text-white/65">
-            Sua situação no grupo, sem misturar com o ranking geral.
+            {canShowPersonalStats
+              ? "Sua situação no grupo, sem misturar com o ranking geral."
+              : "Top 3 por soma de pontos dos participantes."}
           </p>
-          <div className="mt-8 flex items-end justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-white/50">
-                Sua posição
-              </p>
-              <p className="mt-1 font-bold">
-                {poolPlayer
-                  ? poolHasLivePoints
-                    ? `~${poolPlayer.provisionalPosition ?? poolPlayer.position}º provisório`
-                    : rankLabel(poolPlayer, visiblePoolRanking)
-                  : "A definir"}
-              </p>
-              {poolLeader && poolPlayer && poolLeader.points > poolPlayer.points && (
-                <p className="mt-1 text-xs text-white/60">
-                  {poolLeader.points - poolPlayer.points} pts atrás de {poolLeader.name}
+          {canShowPersonalStats ? (
+            <div className="mt-8 flex items-end justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-white/50">
+                  Sua posição
+                </p>
+                <p className="mt-1 font-bold">
+                  {poolPlayer
+                    ? poolHasLivePoints
+                      ? rankingLabel(poolPlayer, visiblePoolRanking, { provisional: true })
+                      : rankingLabel(poolPlayer, visiblePoolRanking)
+                    : "A definir"}
+                </p>
+                {poolLeader && poolPlayer && poolLeader.points > poolPlayer.points && (
+                  <p className="mt-1 text-xs text-white/60">
+                    {poolLeader.points - poolPlayer.points} pts atrás de {poolLeader.name}
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-black text-accent">
+                  {poolHasLivePoints ? poolPlayer?.provisionalPoints ?? poolPlayer?.points ?? 0 : poolPlayer?.points ?? 0}
+                </p>
+                <p className="text-xs text-white/50">{poolHasLivePoints ? "pontos provisórios" : "pontos"}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-2">
+              {publicPoolHighlights.map((pool, index) => (
+                <div key={pool.id} className="rounded-2xl border border-white/15 bg-white/10 p-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-accent">{index + 1}º</span>
+                    <CountryFlag code={pool.flagCode} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black">{pool.name}</p>
+                      <p className="text-[11px] text-white/55">{pool.members} jogadores</p>
+                    </div>
+                    <span className="text-sm font-black text-accent">{pool.totalPoints} pts</span>
+                  </div>
+                  {pool.topPlayers.length > 0 && (
+                    <p className="mt-2 truncate text-[11px] text-white/55">
+                      Top: {pool.topPlayers.map((player) => player.name).join(", ")}
+                    </p>
+                  )}
+                </div>
+              ))}
+              {publicPoolHighlights.length === 0 && (
+                <p className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-white/65">
+                  Entre ou descubra um bolão público para acompanhar a disputa.
                 </p>
               )}
             </div>
-            <div className="text-right">
-              <p className="text-3xl font-black text-accent">
-                {poolHasLivePoints ? poolPlayer?.provisionalPoints ?? poolPlayer?.points ?? 0 : poolPlayer?.points ?? 0}
-              </p>
-              <p className="text-xs text-white/50">{poolHasLivePoints ? "pontos provisórios" : "pontos"}</p>
-            </div>
-          </div>
+          )}
           <Link
             href="/boloes"
             className="mt-5 flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold"
@@ -146,7 +196,7 @@ export function HomeOverview({
                 className="flex items-center gap-3 rounded-2xl bg-surface-muted p-3"
               >
                 <span className="w-5 text-center text-sm font-black text-muted">
-                  {rankLabel(player, visibleGlobalRanking)}
+                  {rankingLabel(player, visibleGlobalRanking)}
                 </span>
                 <UserAvatar
                   name={player.name}
@@ -169,11 +219,6 @@ export function HomeOverview({
       </section>
     </>
   );
-}
-
-function rankLabel(player: RankingEntry, entries: RankingEntry[]) {
-  const tied = entries.filter((entry) => entry.position === player.position).length > 1;
-  return `${player.position}º${tied ? " emp." : ""}`;
 }
 
 function pluralize(value: number, singular: string, plural: string) {

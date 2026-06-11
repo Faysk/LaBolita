@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 
+const isDevelopment = process.env.NODE_ENV === "development";
+const scriptSrc = [
+  "script-src 'self' 'unsafe-inline'",
+  isDevelopment ? "'unsafe-eval'" : "",
+].filter(Boolean).join(" ");
+
 const nextConfig: NextConfig = {
   distDir: process.env.LABOLITA_BUILD_DIR ?? ".next",
   async headers() {
@@ -32,7 +38,7 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'none'",
               "img-src 'self' data: blob: https://*.googleusercontent.com",
               "object-src 'none'",
-              "script-src 'self' 'unsafe-inline'",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline'",
               "worker-src 'self' blob:",
             ].join("; "),

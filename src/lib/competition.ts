@@ -58,6 +58,58 @@ export function groupKnockoutMatches(matches: DemoMatch[]) {
   });
 }
 
+export function findTeamById(matches: DemoMatch[], teamId: string) {
+  return uniqueTeams(matches).find((team) => team.id === teamId) ?? null;
+}
+
+export function uniqueTeams(matches: DemoMatch[]) {
+  return Array.from(
+    new Map(
+      matches
+        .flatMap((match) => [match.homeTeam, match.awayTeam])
+        .filter((team) => !team.id.startsWith("unknown-"))
+        .map((team) => [team.id, team]),
+    ).values(),
+  ).sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+}
+
+export function matchesForTeam(matches: DemoMatch[], teamId: string) {
+  return matches
+    .filter((match) => match.homeTeam.id === teamId || match.awayTeam.id === teamId)
+    .sort(compareMatchSchedule);
+}
+
+export function nextMatchForTeam(matches: DemoMatch[], teamId: string) {
+  const now = Date.now();
+  return (
+    matchesForTeam(matches, teamId).find((match) => {
+      if (match.result) return false;
+      if (!match.scheduledAt) return true;
+      return new Date(match.scheduledAt).getTime() >= now;
+    }) ?? null
+  );
+}
+
+export function standingForTeam(matches: DemoMatch[], teamId: string) {
+  for (const [group, standings] of buildGroupStandings(matches)) {
+    const standing = standings.find((entry) => entry.team.id === teamId);
+    if (standing) return { group, standing };
+  }
+  return null;
+}
+
+export function opponentForTeam(match: DemoMatch, teamId: string) {
+  if (match.homeTeam.id === teamId) return match.awayTeam;
+  if (match.awayTeam.id === teamId) return match.homeTeam;
+  return null;
+}
+
+function compareMatchSchedule(left: DemoMatch, right: DemoMatch) {
+  const leftTime = left.scheduledAt ? new Date(left.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER;
+  const rightTime = right.scheduledAt ? new Date(right.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER;
+  return leftTime - rightTime || left.stageLabel.localeCompare(right.stageLabel, "pt-BR");
+}
+
 function groupName(match: DemoMatch) {
   return match.stageLabel.replace(/^Grupo\s+/i, "").trim() || "A definir";
 }

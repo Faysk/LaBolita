@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildGroupStandings } from "@/lib/competition";
+import {
+  buildGroupStandings,
+  matchesForTeam,
+  nextMatchForTeam,
+  standingForTeam,
+} from "@/lib/competition";
 import type { DemoMatch, DemoTeam } from "@/lib/types";
 
 const alpha: DemoTeam = { id: "alpha", name: "Alpha", shortName: "Alpha", flag: "A" };
@@ -36,5 +41,47 @@ describe("buildGroupStandings", () => {
     ]);
     expect(standings.every((entry) => entry.provisional)).toBe(true);
     expect(standings.every((entry) => entry.points === 1)).toBe(true);
+  });
+});
+
+describe("team helpers", () => {
+  it("finds team matches ordered by schedule", () => {
+    const later = {
+      ...groupMatch(undefined),
+      id: "later",
+      scheduledAt: "2026-06-20T20:00:00Z",
+    };
+    const earlier = {
+      ...groupMatch(undefined),
+      id: "earlier",
+      scheduledAt: "2026-06-12T20:00:00Z",
+    };
+
+    expect(matchesForTeam([later, earlier], alpha.id).map((match) => match.id)).toEqual([
+      "earlier",
+      "later",
+    ]);
+  });
+
+  it("returns the current group standing for a team", () => {
+    const result = standingForTeam([groupMatch({ homeScore: 2, awayScore: 0 })], alpha.id);
+
+    expect(result?.group).toBe("A");
+    expect(result?.standing.points).toBe(3);
+  });
+
+  it("ignores finished games when looking for the next match", () => {
+    const finished = {
+      ...groupMatch({ homeScore: 1, awayScore: 0 }),
+      id: "finished",
+      scheduledAt: "2026-06-11T20:00:00Z",
+    };
+    const upcoming = {
+      ...groupMatch(undefined),
+      id: "upcoming",
+      scheduledAt: "2999-06-12T20:00:00Z",
+    };
+
+    expect(nextMatchForTeam([finished, upcoming], alpha.id)?.id).toBe("upcoming");
   });
 });
