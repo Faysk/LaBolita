@@ -118,6 +118,7 @@ try {
   await adminFinalMatch.getByText("Resultado informado: 1 x 1").waitFor();
 
   await page.goto(`${BASE_URL}/palpites`);
+  await page.getByRole("button", { name: "Todos" }).click();
   await page
     .getByTestId("match-match-1")
     .getByText("Seu palpite rendeu 10 pontos")
@@ -182,6 +183,7 @@ try {
   await correctionMatch.getByText("Resultado informado: 3 x 0").waitFor();
 
   await page.goto(`${BASE_URL}/palpites`);
+  await page.getByRole("button", { name: "Todos" }).click();
   await page.getByTestId("match-match-1").getByText("Seu palpite rendeu 5 pontos").waitFor();
 
   await page.goto(`${BASE_URL}/boloes`);

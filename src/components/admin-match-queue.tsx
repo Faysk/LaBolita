@@ -28,8 +28,8 @@ export function AdminMatchQueue({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<
     "action" | "live" | "divergence" | "upcoming" | "finished" | "all"
-  >("action");
-  const [grouping, setGrouping] = useState<"stage" | "date">("stage");
+  >(() => matches.some((match) => match.providerStatus === "live") ? "live" : "action");
+  const [grouping, setGrouping] = useState<"stage" | "date">("date");
   const [search, setSearch] = useState("");
   const statuses = matches.map((match) => ({
     match,
@@ -72,8 +72,10 @@ export function AdminMatchQueue({
       <div className="border-b bg-surface-muted/55 p-4 md:p-5">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {([
+            ...(statuses.some((item) => item.match.providerStatus === "live")
+              ? [["live", "Ao vivo", statuses.filter((item) => item.match.providerStatus === "live").length] as const]
+              : []),
             ["action", "Precisam de ação", statuses.filter(needsAction).length],
-            ["live", "Ao vivo", statuses.filter((item) => item.match.providerStatus === "live").length],
             ["divergence", "Divergências", statuses.filter((item) => item.hasDivergence).length],
             ["upcoming", "Próximos", statuses.filter((item) => !item.effectiveResult && item.match.providerStatus !== "live" && !needsAction(item)).length],
             ["finished", "Finalizados", statuses.filter((item) => item.effectiveResult).length],
@@ -103,18 +105,18 @@ export function AdminMatchQueue({
         </label>
         <div className="mt-3 flex justify-end gap-2">
           <GroupingButton
-            active={grouping === "stage"}
-            onClick={() => setGrouping("stage")}
-            icon={Layers3}
-          >
-            Por grupo/fase
-          </GroupingButton>
-          <GroupingButton
             active={grouping === "date"}
             onClick={() => setGrouping("date")}
             icon={CalendarDays}
           >
             Por data
+          </GroupingButton>
+          <GroupingButton
+            active={grouping === "stage"}
+            onClick={() => setGrouping("stage")}
+            icon={Layers3}
+          >
+            Por grupo/fase
           </GroupingButton>
         </div>
       </div>
@@ -401,6 +403,31 @@ function ResultForm({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scoreWinner =
+    homeScore !== "" && awayScore !== "" && Number(homeScore) !== Number(awayScore)
+      ? Number(homeScore) > Number(awayScore)
+        ? match.homeTeam.id
+        : match.awayTeam.id
+      : null;
+  const advancingSelectionValid =
+    match.stage === "group" || !scoreWinner || advancingTeamId === scoreWinner;
+
+  function updateScore(side: "home" | "away", value: string) {
+    const nextHome = side === "home" ? value : homeScore;
+    const nextAway = side === "away" ? value : awayScore;
+    setHomeScore(nextHome);
+    setAwayScore(nextAway);
+    if (
+      match.stage !== "group" &&
+      nextHome !== "" &&
+      nextAway !== "" &&
+      Number(nextHome) !== Number(nextAway)
+    ) {
+      setAdvancingTeamId(
+        Number(nextHome) > Number(nextAway) ? match.homeTeam.id : match.awayTeam.id,
+      );
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -443,8 +470,8 @@ function ResultForm({
       onSubmit={submit}
       className="mt-4 flex flex-col gap-3 rounded-2xl bg-surface-muted p-4 sm:flex-row sm:items-end"
     >
-      <ScoreField label={match.homeTeam.shortName} value={homeScore} onChange={setHomeScore} />
-      <ScoreField label={match.awayTeam.shortName} value={awayScore} onChange={setAwayScore} />
+      <ScoreField label={match.homeTeam.shortName} value={homeScore} onChange={(value) => updateScore("home", value)} />
+      <ScoreField label={match.awayTeam.shortName} value={awayScore} onChange={(value) => updateScore("away", value)} />
       {match.stage !== "group" && (
         <label className="text-xs font-bold text-muted">
           {match.stage === "third_place" ? "Quem venceu" : "Quem avançou"}
@@ -458,6 +485,9 @@ function ResultForm({
             <option value={match.homeTeam.id}>{match.homeTeam.shortName}</option>
             <option value={match.awayTeam.id}>{match.awayTeam.shortName}</option>
           </select>
+          <span className="mt-1.5 block max-w-52 text-[10px] font-medium leading-4">
+            Placar após prorrogação, sem somar cobranças. Em empate, informe quem venceu nos pênaltis.
+          </span>
         </label>
       )}
       <label className="min-w-0 flex-1 text-xs font-bold text-muted">
@@ -474,7 +504,7 @@ function ResultForm({
       </label>
       <button
         type="submit"
-        disabled={busy}
+        disabled={busy || !advancingSelectionValid}
         aria-busy={busy}
         className="interactive flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60"
       >
@@ -482,6 +512,11 @@ function ResultForm({
         {busy ? "Calculando..." : "Finalizar e pontuar"}
       </button>
       {error && <p className="text-sm font-medium text-red-700">{error}</p>}
+      {!advancingSelectionValid && (
+        <p className="status-danger rounded-xl border px-3 py-2 text-xs font-bold">
+          O vencedor selecionado contradiz o placar informado.
+        </p>
+      )}
     </form>
   );
 }

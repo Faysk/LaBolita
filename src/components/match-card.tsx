@@ -69,12 +69,22 @@ export function MatchCard({
   const dirty = draft !== null;
   const requiresAdvancingTeam =
     match.stage !== "group";
+  const advancingSelectionValid =
+    !requiresAdvancingTeam ||
+    !isCompletePrediction(currentPrediction) ||
+    currentPrediction.homeScore === currentPrediction.awayScore ||
+    currentPrediction.advancingTeamId === scoreWinnerId(match, currentPrediction);
   const complete =
     isCompletePrediction(currentPrediction) &&
-    (!requiresAdvancingTeam || Boolean(currentPrediction.advancingTeamId));
+    (!requiresAdvancingTeam || Boolean(currentPrediction.advancingTeamId)) &&
+    advancingSelectionValid;
   const score =
     result && isCompletePrediction(currentPrediction)
       ? calculateScore(currentPrediction, result, match.stage)
+      : null;
+  const provisionalScore =
+    !result && match.liveResult && isCompletePrediction(currentPrediction)
+      ? calculateScore(currentPrediction, match.liveResult, match.stage)
       : null;
 
   function updatePrediction(side: "home" | "away", rawValue: string) {
@@ -88,6 +98,13 @@ export function MatchCard({
       homeScore: side === "home" ? value : homeScore,
       awayScore: side === "away" ? value : awayScore,
     };
+    if (
+      requiresAdvancingTeam &&
+      isCompletePrediction(next) &&
+      next.homeScore !== next.awayScore
+    ) {
+      next.advancingTeamId = scoreWinnerId(match, next);
+    }
     setDraft(next);
     setSyncState("idle");
     setSyncMessage(null);
@@ -173,7 +190,7 @@ export function MatchCard({
   return (
     <article
       data-testid={`match-${match.id}`}
-      className={`card match-card p-5 ${effectiveLocked ? "opacity-80" : ""}`}
+      className={`card match-card p-5 ${effectiveLocked ? "match-card-locked" : ""}`}
     >
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -191,14 +208,14 @@ export function MatchCard({
         <span
           className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
             effectiveLocked
-              ? "bg-surface-muted text-muted"
+              ? "status-neutral"
               : syncState === "error" || syncState === "auth-required" || syncState === "terms-required"
-                ? "bg-red-50 text-red-700"
+                ? "status-danger"
                 : syncState === "saving"
-                  ? "bg-blue-50 text-blue-700"
+                  ? "status-info"
                 : saved
-                  ? "bg-emerald-50 text-brand"
-                : "bg-amber-50 text-amber-700"
+                  ? "status-success"
+                : "status-warning"
           }`}
         >
           {effectiveLocked ? (
@@ -264,9 +281,18 @@ export function MatchCard({
             <option value={match.homeTeam.id}>{match.homeTeam.name}</option>
             <option value={match.awayTeam.id}>{match.awayTeam.name}</option>
           </select>
+          <span className="mt-1.5 block text-[11px] font-medium leading-4 text-muted">
+            Informe o placar ao fim da prorrogação, sem incluir cobranças de pênaltis.
+            Em caso de empate, escolha o vencedor da disputa.
+          </span>
+          {!advancingSelectionValid && (
+            <span className="status-danger mt-2 block rounded-xl border px-3 py-2 text-[11px] font-bold">
+              O classificado precisa ser a seleção vencedora do placar informado.
+            </span>
+          )}
         </label>
       )}
-      {!effectiveLocked && (
+      {!effectiveLocked && (!saved || dirty) && (
         <div className="mt-4 flex items-center gap-2">
           {dirty && (
             <button
@@ -317,15 +343,20 @@ export function MatchCard({
         </div>
       )}
       {!result && match.liveResult && (
-        <div className="mt-4 rounded-2xl border border-brand/20 bg-emerald-50 p-3 text-center text-xs">
+        <div className="status-live mt-4 rounded-2xl border p-3 text-center text-xs">
           <p className="font-black text-foreground">
             {match.providerStatus === "finished"
               ? "Placar aguardando confirmação"
               : "Placar ao vivo"}
             : {match.liveResult.homeScore} × {match.liveResult.awayScore}
           </p>
-          <p className="mt-1 font-semibold text-muted">
-            O ranking só muda após confirmação administrativa.
+          {provisionalScore && (
+            <p className="mt-1 font-black">
+              Neste momento: {provisionalScore.totalPoints} pontos provisórios
+            </p>
+          )}
+          <p className="mt-1 font-semibold">
+            A classificação oficial muda após a confirmação do resultado.
           </p>
         </div>
       )}
@@ -358,6 +389,11 @@ function isCompletePrediction(prediction: EditablePrediction): prediction is Sco
   return prediction.homeScore !== "" && prediction.awayScore !== "";
 }
 
+function scoreWinnerId(match: DemoMatch, score: ScorePrediction) {
+  if (score.homeScore === score.awayScore) return null;
+  return score.homeScore > score.awayScore ? match.homeTeam.id : match.awayTeam.id;
+}
+
 function Team({
   team,
   align,
@@ -370,7 +406,7 @@ function Team({
   return (
     <div className={`flex min-w-0 flex-col items-center ${align === "right" ? "md:items-end md:text-right" : "md:items-start md:text-left"}`}>
       <TeamFlag team={team} size={compact ? "md" : "lg"} />
-      <p className={`mt-2 max-w-full truncate text-center font-black tracking-tight ${compact ? "text-xs" : "text-sm"}`}>
+      <p className={`mt-2 line-clamp-2 min-h-8 max-w-full text-center font-black leading-4 tracking-tight ${compact ? "text-xs" : "text-sm"}`}>
         {team.shortName}
       </p>
     </div>
@@ -390,7 +426,7 @@ function ScoreInput({
 }) {
   return (
     <input
-      className="score-input size-11 rounded-xl border bg-surface-muted text-center text-lg font-black outline-none transition focus:border-brand focus:bg-white disabled:cursor-not-allowed md:size-12"
+      className="score-input size-11 rounded-xl border bg-surface-muted text-center text-lg font-black outline-none transition focus:border-brand focus:bg-surface disabled:cursor-not-allowed md:size-12"
       type="number"
       min="0"
       max="30"

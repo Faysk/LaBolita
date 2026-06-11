@@ -16,11 +16,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient();
   const user = supabase ? await getOptionalUser(supabase) : null;
   const { data: profile, error: profileError } = user
-      ? await supabase!
-        .from("profiles")
-        .select("display_name, avatar_url, is_admin, is_master_admin, terms_accepted_at, terms_version, disabled_at")
-        .eq("id", user.id)
-        .single()
+      ? await loadProfileForShell(supabase!, user.id)
     : { data: null, error: null };
   if (profileError) throw profileError;
   const demoMode = !supabase;
@@ -60,6 +56,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
               isAdmin={isAdmin}
               isDemo={demoMode}
               avatarUrl={profile?.avatar_url}
+              showAvatarPublicly={Boolean(profile?.show_avatar_publicly)}
             />
           </div>
         </div>
@@ -112,5 +109,41 @@ export async function AppShell({ children }: { children: ReactNode }) {
       </footer>
       <MobileNavigation />
     </>
+  );
+}
+
+async function loadProfileForShell(
+  supabase: NonNullable<Awaited<ReturnType<typeof createServerSupabaseClient>>>,
+  userId: string,
+) {
+  const baseColumns =
+    "display_name, avatar_url, is_admin, is_master_admin, terms_accepted_at, terms_version, disabled_at";
+  const result = await supabase
+    .from("profiles")
+    .select(`${baseColumns}, show_avatar_publicly`)
+    .eq("id", userId)
+    .single();
+
+  if (!result.error || !isMissingPublicAvatarColumn(result.error)) return result;
+
+  const fallback = await supabase
+    .from("profiles")
+    .select(baseColumns)
+    .eq("id", userId)
+    .single();
+
+  return {
+    ...fallback,
+    data: fallback.data
+      ? { ...fallback.data, show_avatar_publicly: false }
+      : fallback.data,
+  };
+}
+
+function isMissingPublicAvatarColumn(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    /show_avatar_publicly/i.test(error.message ?? "")
   );
 }

@@ -27,7 +27,6 @@ const ranking: RankingEntry[] = [
     points: 100,
     exact: 1,
     correct: 1,
-    trend: "—",
   },
   {
     position: 2,
@@ -36,7 +35,6 @@ const ranking: RankingEntry[] = [
     points: 60,
     exact: 1,
     correct: 1,
-    trend: "—",
     isCurrentUser: true,
   },
 ];

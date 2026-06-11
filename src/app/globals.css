@@ -11,6 +11,19 @@
   --brand-strong: #064526;
   --accent: #dfff65;
   --muted: #617269;
+  --brand-contrast: #ffffff;
+  --success-bg: #e7f8ed;
+  --success-fg: #08713c;
+  --success-line: #9cd9b4;
+  --warning-bg: #fff4d6;
+  --warning-fg: #8a4b08;
+  --warning-line: #efc46f;
+  --danger-bg: #fde8e8;
+  --danger-fg: #a52222;
+  --danger-line: #e7a2a2;
+  --info-bg: #e8f1ff;
+  --info-fg: #174b91;
+  --info-line: #9bbbe8;
   --shadow-color: 21 61 37;
 }
 
@@ -25,7 +38,54 @@
   --brand-strong: #0a4c2b;
   --accent: #dfff65;
   --muted: #a4b7ac;
+  --brand-contrast: #062f1b;
+  --success-bg: #123b26;
+  --success-fg: #8cf0af;
+  --success-line: #286342;
+  --warning-bg: #3c2c13;
+  --warning-fg: #ffd58a;
+  --warning-line: #775829;
+  --danger-bg: #3e1d20;
+  --danger-fg: #ffadb3;
+  --danger-line: #784047;
+  --info-bg: #172f4a;
+  --info-fg: #a9d0ff;
+  --info-line: #365a80;
   --shadow-color: 0 0 0;
+}
+
+:root[data-theme="dark"] .text-red-700,
+:root[data-theme="dark"] .text-red-800 {
+  color: var(--danger-fg);
+}
+
+:root[data-theme="dark"] .text-amber-600,
+:root[data-theme="dark"] .text-amber-700,
+:root[data-theme="dark"] .text-amber-800 {
+  color: var(--warning-fg);
+}
+
+:root[data-theme="dark"] .text-blue-800 {
+  color: var(--info-fg);
+}
+
+:root[data-theme="dark"] .bg-red-50,
+:root[data-theme="dark"] .bg-red-100 {
+  background-color: var(--danger-bg);
+}
+
+:root[data-theme="dark"] .bg-amber-50,
+:root[data-theme="dark"] .bg-amber-100 {
+  background-color: var(--warning-bg);
+}
+
+:root[data-theme="dark"] .bg-blue-100 {
+  background-color: var(--info-bg);
+}
+
+:root[data-theme="dark"] .bg-emerald-50,
+:root[data-theme="dark"] .bg-emerald-100 {
+  background-color: var(--success-bg);
 }
 
 @theme inline {
@@ -84,6 +144,51 @@ a {
 
 .interactive:active:not(:disabled) {
   transform: scale(0.975);
+}
+
+.bg-brand.text-white {
+  color: var(--brand-contrast);
+}
+
+.status-neutral,
+.status-success,
+.status-warning,
+.status-danger,
+.status-info,
+.status-live {
+  border-color: var(--line);
+  background: var(--surface-muted);
+  color: var(--muted);
+}
+
+.status-success {
+  border-color: var(--success-line);
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+
+.status-warning {
+  border-color: var(--warning-line);
+  background: var(--warning-bg);
+  color: var(--warning-fg);
+}
+
+.status-danger {
+  border-color: var(--danger-line);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.status-info {
+  border-color: var(--info-line);
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+
+.status-live {
+  border-color: var(--success-line);
+  background: color-mix(in srgb, var(--success-bg) 80%, var(--surface));
+  color: var(--success-fg);
 }
 
 button:focus-visible,
@@ -240,6 +345,14 @@ option {
   opacity: 0.65;
 }
 
+.match-card-locked {
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-muted));
+}
+
+.match-card-locked::before {
+  opacity: 0.32;
+}
+
 .eyebrow {
   color: var(--brand);
   font-size: 0.72rem;
@@ -252,6 +365,11 @@ option {
   appearance: textfield;
   border-color: color-mix(in srgb, var(--line) 82%, var(--brand));
   box-shadow: inset 0 1px 2px rgba(var(--shadow-color) / 0.04);
+}
+
+.score-input:focus {
+  background: var(--surface);
+  color: var(--foreground);
 }
 
 input,
@@ -338,7 +456,54 @@ textarea:focus {
     --brand-strong: #0a4c2b;
     --accent: #dfff65;
     --muted: #a4b7ac;
+    --brand-contrast: #062f1b;
+    --success-bg: #123b26;
+    --success-fg: #8cf0af;
+    --success-line: #286342;
+    --warning-bg: #3c2c13;
+    --warning-fg: #ffd58a;
+    --warning-line: #775829;
+    --danger-bg: #3e1d20;
+    --danger-fg: #ffadb3;
+    --danger-line: #784047;
+    --info-bg: #172f4a;
+    --info-fg: #a9d0ff;
+    --info-line: #365a80;
     --shadow-color: 0 0 0;
+  }
+
+  :root:not([data-theme]) .text-red-700,
+  :root:not([data-theme]) .text-red-800 {
+    color: var(--danger-fg);
+  }
+
+  :root:not([data-theme]) .text-amber-600,
+  :root:not([data-theme]) .text-amber-700,
+  :root:not([data-theme]) .text-amber-800 {
+    color: var(--warning-fg);
+  }
+
+  :root:not([data-theme]) .text-blue-800 {
+    color: var(--info-fg);
+  }
+
+  :root:not([data-theme]) .bg-red-50,
+  :root:not([data-theme]) .bg-red-100 {
+    background-color: var(--danger-bg);
+  }
+
+  :root:not([data-theme]) .bg-amber-50,
+  :root:not([data-theme]) .bg-amber-100 {
+    background-color: var(--warning-bg);
+  }
+
+  :root:not([data-theme]) .bg-blue-100 {
+    background-color: var(--info-bg);
+  }
+
+  :root:not([data-theme]) .bg-emerald-50,
+  :root:not([data-theme]) .bg-emerald-100 {
+    background-color: var(--success-bg);
   }
 }
 

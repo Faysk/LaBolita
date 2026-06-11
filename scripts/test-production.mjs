@@ -21,6 +21,7 @@ try {
       "/",
       "/palpites",
       "/boloes",
+      "/competicao",
       "/regras",
       "/entrar",
       ...(allowPendingDeploy ? [] : ["/privacidade", "/termos"]),
@@ -41,7 +42,7 @@ try {
       await gotoProductionPage(page, "/boloes");
       await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
       await gotoProductionPage(page, "/entrar");
-      await page.getByText("Li e aceito os Termos de Serviço").waitFor();
+      await page.getByRole("button", { name: "Continuar com Google" }).waitFor();
     }
 
     if (!allowPendingDeploy) {

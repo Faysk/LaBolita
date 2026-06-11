@@ -12,28 +12,46 @@ import type { DemoMatch, PoolSummary, RankingEntry } from "@/lib/types";
 export function HomeOverview({
   matches,
   pools,
-  ranking,
-  rankingName,
+  globalRanking,
+  primaryPoolRanking,
+  primaryPoolName,
 }: {
   matches: DemoMatch[];
   pools: PoolSummary[];
-  ranking: RankingEntry[];
-  rankingName: string;
+  globalRanking: RankingEntry[];
+  primaryPoolRanking: RankingEntry[];
+  primaryPoolName: string;
 }) {
   const localPredictions = useLocalPredictions(matches);
   const localResults = useLocalResults();
   const usesSupabase = Boolean(createBrowserSupabaseClient());
-  const visibleRanking = usesSupabase
-    ? ranking
-    : calculateDemoRanking(ranking, matches, localPredictions, localResults);
+  const visibleGlobalRanking = usesSupabase
+    ? globalRanking
+    : calculateDemoRanking(globalRanking, matches, localPredictions, localResults);
+  const visiblePoolRanking = usesSupabase
+    ? primaryPoolRanking
+    : calculateDemoRanking(primaryPoolRanking, matches, localPredictions, localResults);
   const openMatches = matches.filter(
     (match) => !match.locked && !match.result && !localResults[match.id],
   );
-  const completedPredictions = openMatches.filter(
+  const savedPredictions = matches.filter(
     (match) => match.prediction || localPredictions[match.id],
   ).length;
-  const currentPlayer = visibleRanking.find((player) => player.isCurrentUser);
-  const leader = visibleRanking[0];
+  const pendingPredictions = openMatches.filter(
+    (match) => !match.prediction && !localPredictions[match.id],
+  ).length;
+  const currentPlayer = visibleGlobalRanking.find((player) => player.isCurrentUser);
+  const leader = visibleGlobalRanking[0];
+  const poolPlayer = visiblePoolRanking.find((player) => player.isCurrentUser);
+  const poolLeader = visiblePoolRanking[0];
+  const poolHasLivePoints = visiblePoolRanking.some(
+    (player) =>
+      player.provisionalPoints !== undefined &&
+      player.provisionalPoints !== player.points,
+  );
+  const rankingStarted = visibleGlobalRanking.some(
+    (player) => player.points > 0 || player.exact > 0 || player.correct > 0,
+  );
   const primaryPool = pools[0];
   const opponents = pools.reduce(
     (total, pool) => total + Math.max(0, pool.members - 1),
@@ -45,22 +63,22 @@ export function HomeOverview({
       <section className="mt-5 grid grid-cols-2 gap-3 md:mt-7 md:grid-cols-4">
         <StatCard
           icon={Trophy}
-          label="Sua posição"
-          value={currentPlayer ? `${currentPlayer.position}º` : "—"}
-          detail={rankingName}
+          label="Sua posição geral"
+          value={currentPlayer && rankingStarted ? rankLabel(currentPlayer, visibleGlobalRanking) : "—"}
+          detail={rankingStarted ? "Ranking público geral" : "Classificação não iniciada"}
           accent
         />
         <StatCard
           icon={CheckCircle2}
-          label="Palpites feitos"
-          value={`${completedPredictions}/${openMatches.length}`}
-          detail={`${openMatches.length - completedPredictions} pendentes`}
+          label="Palpites realizados"
+          value={`${savedPredictions}/${matches.length}`}
+          detail={`${pendingPredictions} pendentes abertos`}
         />
         <StatCard
           icon={Crown}
           label="Cravadas"
           value={String(currentPlayer?.exact ?? 0)}
-          detail={leader ? `Líder: ${leader.exact}` : "Ranking vazio"}
+          detail={leader ? `Recorde geral: ${pluralize(leader.exact, "cravada", "cravadas")}` : "Ranking vazio"}
         />
         <StatCard
           icon={Users}
@@ -74,21 +92,34 @@ export function HomeOverview({
         <div className="card card-dark overflow-hidden p-6 text-white">
           <p className="eyebrow !text-accent">Bolão em destaque</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight">
-            {primaryPool?.name ?? "Seu primeiro bolão"}
+            {primaryPoolName || primaryPool?.name || "Seu primeiro bolão"}
           </h2>
           <p className="mt-2 text-sm leading-6 text-white/65">
-            Acompanhe cada partida pontuada e a movimentação do ranking.
+            Sua situação no grupo, sem misturar com o ranking geral.
           </p>
           <div className="mt-8 flex items-end justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-white/50">
-                Líder
+                Sua posição
               </p>
-              <p className="mt-1 font-bold">{leader?.name ?? "A definir"}</p>
+              <p className="mt-1 font-bold">
+                {poolPlayer
+                  ? poolHasLivePoints
+                    ? `~${poolPlayer.provisionalPosition ?? poolPlayer.position}º provisório`
+                    : rankLabel(poolPlayer, visiblePoolRanking)
+                  : "A definir"}
+              </p>
+              {poolLeader && poolPlayer && poolLeader.points > poolPlayer.points && (
+                <p className="mt-1 text-xs text-white/60">
+                  {poolLeader.points - poolPlayer.points} pts atrás de {poolLeader.name}
+                </p>
+              )}
             </div>
             <div className="text-right">
-              <p className="text-3xl font-black text-accent">{leader?.points ?? 0}</p>
-              <p className="text-xs text-white/50">pontos</p>
+              <p className="text-3xl font-black text-accent">
+                {poolHasLivePoints ? poolPlayer?.provisionalPoints ?? poolPlayer?.points ?? 0 : poolPlayer?.points ?? 0}
+              </p>
+              <p className="text-xs text-white/50">{poolHasLivePoints ? "pontos provisórios" : "pontos"}</p>
             </div>
           </div>
           <Link
@@ -108,14 +139,14 @@ export function HomeOverview({
             <Trophy className="size-6 text-brand" />
           </div>
           <div className="mt-5 space-y-3">
-            {visibleRanking.slice(0, 3).map((player) => (
+            {visibleGlobalRanking.slice(0, 3).map((player) => (
               <div
                 key={player.name}
                 data-testid={player.isCurrentUser ? "home-ranking-current-user" : undefined}
                 className="flex items-center gap-3 rounded-2xl bg-surface-muted p-3"
               >
                 <span className="w-5 text-center text-sm font-black text-muted">
-                  {player.position}
+                  {rankLabel(player, visibleGlobalRanking)}
                 </span>
                 <UserAvatar
                   name={player.name}
@@ -128,7 +159,7 @@ export function HomeOverview({
                 <span className="text-sm font-black text-brand">{player.points} pts</span>
               </div>
             ))}
-            {visibleRanking.length === 0 && (
+            {visibleGlobalRanking.length === 0 && (
               <p className="rounded-2xl bg-surface-muted p-4 text-sm text-muted">
                 Os líderes dos bolões públicos aparecerão aqui.
               </p>
@@ -138,4 +169,13 @@ export function HomeOverview({
       </section>
     </>
   );
+}
+
+function rankLabel(player: RankingEntry, entries: RankingEntry[]) {
+  const tied = entries.filter((entry) => entry.position === player.position).length > 1;
+  return `${player.position}º${tied ? " emp." : ""}`;
+}
+
+function pluralize(value: number, singular: string, plural: string) {
+  return `${value} ${value === 1 ? singular : plural}`;
 }

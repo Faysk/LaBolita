@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LoaderCircle, LogOut, Shield } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, LogOut, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -13,16 +13,20 @@ export function AccountMenu({
   isAdmin,
   isDemo,
   avatarUrl,
+  showAvatarPublicly,
 }: {
   displayName: string;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isDemo: boolean;
   avatarUrl?: string | null;
+  showAvatarPublicly: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [updatingPrivacy, setUpdatingPrivacy] = useState(false);
+  const [publicAvatar, setPublicAvatar] = useState(showAvatarPublicly);
   const containerRef = useRef<HTMLDivElement>(null);
   const initials = displayName
     .split(/\s+/)
@@ -70,6 +74,27 @@ export function AccountMenu({
     router.refresh();
   }
 
+  async function togglePublicAvatar() {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || updatingPrivacy) return;
+    setUpdatingPrivacy(true);
+    const nextValue = !publicAvatar;
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) {
+      setUpdatingPrivacy(false);
+      return;
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ show_avatar_publicly: nextValue })
+      .eq("id", authData.user.id);
+    if (!error) {
+      setPublicAvatar(nextValue);
+      router.refresh();
+    }
+    setUpdatingPrivacy(false);
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -103,6 +128,23 @@ export function AccountMenu({
             >
               <Shield className="size-4" /> Administração
             </Link>
+          )}
+          {!isDemo && avatarUrl && (
+            <button
+              type="button"
+              onClick={togglePublicAvatar}
+              disabled={updatingPrivacy}
+              className="interactive flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-bold text-muted hover:bg-surface-muted disabled:opacity-50"
+            >
+              {updatingPrivacy ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : publicAvatar ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
+              {publicAvatar ? "Ocultar foto pública" : "Exibir foto pública"}
+            </button>
           )}
           {!isDemo && (
             <button

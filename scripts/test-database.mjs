@@ -10,6 +10,7 @@ const KNOCKOUT_MATCH_ID = "20260000-0000-0000-0002-000000000002";
 const UNRESOLVED_MATCH_ID = "20260000-0000-0000-0002-000000000003";
 const FOLLOWUP_MATCH_ID = "20260000-0000-0000-0002-000000000004";
 const THIRD_PLACE_MATCH_ID = "20260000-0000-0000-0002-000000000005";
+const AUTO_FINALIZE_MATCH_ID = "20260000-0000-0000-0002-000000000006";
 const HOME_TEAM_ID = "20260000-0000-0000-0001-000000000001";
 const AWAY_TEAM_ID = "20260000-0000-0000-0001-000000000002";
 
@@ -181,11 +182,18 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       avatar_url = 'https://accounts.google.com/avatar/private-owner'
     where id = '${USER_ONE}';
 
+    update public.matches
+    set
+      scheduled_at = now() + interval '1 day',
+      prediction_lock_at = now() + interval '1 day'
+    where id = '${MATCH_ID}';
+
     insert into public.matches (
       id,
       tournament_id,
       match_number,
       stage,
+      group_name,
       home_team_id,
       away_team_id,
       scheduled_at,
@@ -197,6 +205,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       '20260000-0000-0000-0000-000000000001',
       2,
       'final',
+      null,
       '${HOME_TEAM_ID}',
       '${AWAY_TEAM_ID}',
       now() + interval '2 days',
@@ -209,6 +218,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       'round_of_32',
       null,
       null,
+      null,
       now() + interval '3 days',
       now() + interval '3 days',
       'Estádio Teste'
@@ -219,6 +229,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       'round_of_16',
       null,
       null,
+      null,
       now() + interval '4 days',
       now() + interval '4 days',
       'Estádio Teste'
@@ -227,10 +238,22 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       '20260000-0000-0000-0000-000000000001',
       5,
       'third_place',
+      null,
       '${HOME_TEAM_ID}',
       '${AWAY_TEAM_ID}',
       now() + interval '5 days',
       now() + interval '5 days',
+      'Estádio Teste'
+    ), (
+      '${AUTO_FINALIZE_MATCH_ID}',
+      '20260000-0000-0000-0000-000000000001',
+      6,
+      'group',
+      'L',
+      '${HOME_TEAM_ID}',
+      '${AWAY_TEAM_ID}',
+      now() + interval '6 days',
+      now() + interval '6 days',
       'Estádio Teste'
     );
 
@@ -259,6 +282,13 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       db.query("select public.save_prediction($1, 1, 1, null)", [KNOCKOUT_MATCH_ID]),
       "knockout predictions must require an advancing team",
     );
+    await assert.rejects(
+      db.query("select public.save_prediction($1, 2, 1, $2)", [
+        KNOCKOUT_MATCH_ID,
+        AWAY_TEAM_ID,
+      ]),
+      "a knockout prediction must not select the losing team as advancing",
+    );
     await db.query("select public.save_prediction($1, 1, 1, $2)", [
       KNOCKOUT_MATCH_ID,
       HOME_TEAM_ID,
@@ -280,12 +310,48 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       "third-place matches have a winner but no advancement bonus",
     );
     await db.query("select public.create_pool_with_flag('Bolão Teste', true, 'pt')");
+    assert.equal(
+      await scalar("select count(*)::integer from public.get_public_pools(null, 9, 0)"),
+      0,
+      "public discovery must exclude pools the current user already joined",
+    );
     await db.query("select public.assign_match_teams($1, $2, $3, 'classificação oficial')", [
       UNRESOLVED_MATCH_ID,
       HOME_TEAM_ID,
       AWAY_TEAM_ID,
     ]);
   });
+
+  await db.exec(`
+    update public.matches
+    set
+      scheduled_at = now() - interval '2 hours',
+      prediction_lock_at = now() - interval '2 hours',
+      provider_status = 'finished',
+      live_home_score = 1,
+      live_away_score = 0,
+      provider_updated_at = now() - interval '11 minutes'
+    where id = '${AUTO_FINALIZE_MATCH_ID}';
+  `);
+  await asUser(USER_ONE, async () => {
+    await assert.rejects(
+      db.query("select public.finalize_provider_group_matches(10)"),
+      "only the service role may automatically finalize provider results",
+    );
+  });
+  await asService(async () => {
+    assert.equal(
+      await scalar("select public.finalize_provider_group_matches(10)"),
+      1,
+      "finished group matches must auto-finalize after the safety window",
+    );
+  });
+  assert.equal(
+    await scalar("select home_score::integer from public.matches where id = $1", [
+      AUTO_FINALIZE_MATCH_ID,
+    ]),
+    1,
+  );
 
   await db.exec(
     "update public.app_settings set current_terms_version = '2026-06-08' where id",
@@ -322,7 +388,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     );
     assert.equal(
       await scalar("select count(*)::integer from public.matches"),
-      5,
+      6,
       "anonymous visitors must retain access to the public match schedule",
     );
     await assert.rejects(
@@ -367,6 +433,11 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   await asUser(USER_TWO, async () => {
     await db.query("select public.accept_terms('2026-06-07')");
     await db.query("select public.join_pool($1)", [inviteCode]);
+    assert.equal(
+      await scalar("select count(*)::integer from public.get_public_pools(null, 9, 0)"),
+      0,
+      "joining a public pool must remove it from discovery",
+    );
     assert.equal(
       await scalar("select member_count::integer from public.get_my_pools() where pool_id = $1", [
         publicPoolId,
@@ -523,6 +594,30 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     where user_id in ('${USER_ONE}', '${USER_TWO}');
   `);
 
+  await db.exec(`
+    update public.matches
+    set
+      provider_status = 'live',
+      live_home_score = 2,
+      live_away_score = 1,
+      provider_updated_at = now()
+    where id = '${MATCH_ID}';
+  `);
+  await asUser(USER_ONE, async () => {
+    assert.equal(
+      await scalar(
+        "select provisional_points::integer from public.get_pool_ranking((select id from public.pools limit 1)) where display_name = 'Owner'",
+      ),
+      10,
+      "pool rankings must expose clearly separate provisional live points",
+    );
+  });
+  await db.exec(`
+    update public.matches
+    set provider_status = null, live_home_score = null, live_away_score = null
+    where id = '${MATCH_ID}';
+  `);
+
   await asUser(USER_TWO, async () => {
     await assert.rejects(
       db.query("select public.save_prediction($1, 0, 0, null)", [MATCH_ID]),
@@ -599,6 +694,13 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     await db.query(
       "select public.update_match_schedule($1, now() - interval '1 hour', now() - interval '1 hour', 'scheduled', 'teste de progressão', false)",
       [UNRESOLVED_MATCH_ID],
+    );
+    await assert.rejects(
+      db.query(
+        "select public.finalize_match($1, 2, 1, $2, 'vencedor contraditório')",
+        [UNRESOLVED_MATCH_ID, AWAY_TEAM_ID],
+      ),
+      "a knockout result must not select the losing team as advancing",
     );
     await db.query(
       "select public.finalize_match($1, 1, 1, $2, 'resultado mata-mata')",
