@@ -52,7 +52,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
         </p>
         <TermsEnforcementControl enabled={overview.termsEnforcementEnabled} />
       </div>
-      <div className="p-5 md:p-6">
+      <div className="bg-surface/35 p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-2 overflow-x-auto">
             <TabButton active={tab === "pools"} onClick={() => navigate("pools")} icon={Archive}>Bolões</TabButton>
@@ -69,9 +69,9 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
             >
               <label className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar no servidor" className="w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar no servidor" className="w-full rounded-xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
               </label>
-              <button type="submit" className="interactive rounded-xl bg-brand px-4 text-xs font-black text-white">Buscar</button>
+              <button type="submit" className="interactive rounded-xl bg-brand px-4 text-xs font-black text-white shadow-sm">Buscar</button>
             </form>
           )}
         </div>
@@ -91,7 +91,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
               type="button"
               disabled={!overview.hasPreviousPage}
               onClick={() => navigate(tab, overview.page - 1, overview.search)}
-              className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-brand disabled:opacity-40"
+              className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"
             >
               <ChevronLeft className="size-4" /> Anterior
             </button>
@@ -100,7 +100,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
               type="button"
               disabled={!overview.hasNextPage}
               onClick={() => navigate(tab, overview.page + 1, overview.search)}
-              className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-brand disabled:opacity-40"
+              className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"
             >
               Próxima <ChevronRight className="size-4" />
             </button>
@@ -151,7 +151,7 @@ function TermsEnforcementControl({ enabled }: { enabled: boolean }) {
 
 function TabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: typeof Archive; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className={`interactive flex whitespace-nowrap items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black ${active ? "bg-brand text-white" : "bg-surface-muted text-muted"}`}>
+    <button type="button" onClick={onClick} className={`interactive flex whitespace-nowrap items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black ${active ? "bg-brand text-white shadow-sm" : "border bg-surface text-muted hover:text-foreground"}`}>
       <Icon className="size-4" /> {children}
     </button>
   );
@@ -223,35 +223,35 @@ function MasterPoolCard({ pool }: { pool: MasterPool }) {
   }
 
   return (
-    <article className="rounded-2xl border bg-surface-muted p-4">
+    <article className="rounded-2xl border bg-surface-muted/80 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 gap-3"><CountryFlag code={flagCode} size="sm" /><div><p className="font-black">{pool.poolName}</p><p className="mt-1 text-xs text-muted">Dono: {pool.ownerName} · {pool.memberCount} jogadores · {pool.inviteCode}</p></div></div>
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${pool.archivedAt ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-brand"}`}>{pool.archivedAt ? "Arquivado" : "Ativo"}</span>
       </div>
       <div className="mt-4 grid gap-2">
-        <input value={name} minLength={3} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${pool.poolName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
-        <select value={flagCode} onChange={(event) => setFlagCode(event.target.value)} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand">
+        <input value={name} minLength={3} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${pool.poolName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+        <select value={flagCode} onChange={(event) => setFlagCode(event.target.value)} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none focus:border-brand">
           {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country.flag} {country.name}</option>)}
         </select>
         <label className="flex items-center gap-2 text-xs font-bold text-muted"><input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="size-4 accent-[var(--brand)]" /> Listar publicamente</label>
-        <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${pool.poolName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+        <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${pool.poolName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(pool.archivedAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar</button>
-        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!pool.archivedAt)} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-40">{pool.archivedAt ? <ArchiveRestore className="size-3" /> : <Archive className="size-3" />} {pool.archivedAt ? "Recuperar" : "Arquivar"}</button>
-        <button type="button" disabled={busy} onClick={loadMembers} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-brand disabled:opacity-40"><Users className="size-3" /> Participantes</button>
+        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(pool.archivedAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white shadow-sm disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar</button>
+        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!pool.archivedAt)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-danger-fg hover:border-danger-line hover:bg-danger-bg disabled:opacity-40">{pool.archivedAt ? <ArchiveRestore className="size-3" /> : <Archive className="size-3" />} {pool.archivedAt ? "Recuperar" : "Arquivar"}</button>
+        <button type="button" disabled={busy} onClick={loadMembers} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"><Users className="size-3" /> Participantes</button>
       </div>
       {members && (
-        <div className="mt-3 divide-y rounded-xl border bg-white">
+        <div className="mt-3 divide-y rounded-xl border bg-surface">
           {members.map((member) => (
             <div key={member.user_id} className="flex items-center gap-2 px-3 py-2">
               <span className="min-w-0 flex-1 truncate text-xs font-bold">{member.display_name} · {member.role}</span>
-              {member.role !== "owner" && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => removeMember(member.user_id)} className="interactive rounded-lg px-2 py-1 text-[10px] font-black text-red-700 disabled:opacity-40">Remover</button>}
+              {member.role !== "owner" && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => removeMember(member.user_id)} className="interactive rounded-lg px-2 py-1 text-[10px] font-black text-danger-fg hover:bg-danger-bg disabled:opacity-40">Remover</button>}
             </div>
           ))}
         </div>
       )}
-      {error && <p aria-live="polite" className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+      {error && <p aria-live="polite" className="mt-2 rounded-xl bg-danger-bg px-3 py-2 text-xs font-bold text-danger-fg">{error}</p>}
     </article>
   );
 }
@@ -303,22 +303,22 @@ function MasterUserCard({ user }: { user: MasterUser }) {
   }
 
   return (
-    <article className="rounded-2xl border bg-surface-muted p-4">
+    <article className="rounded-2xl border bg-surface-muted/80 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="truncate font-black">{user.displayName}</p><p className="mt-1 truncate text-xs text-muted">{user.email} · {user.poolsOwned} bolões</p></div>
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${user.isMasterAdmin ? "bg-accent text-brand-strong" : user.disabledAt ? "bg-red-100 text-red-800" : user.isAdmin ? "bg-blue-100 text-blue-800" : "bg-emerald-100 text-brand"}`}>{user.isMasterAdmin ? "Master principal" : user.disabledAt ? "Suspenso" : user.isAdmin ? "Admin" : "Ativo"}</span>
       </div>
       <p className="mt-2 text-xs text-muted">{user.termsAcceptedAt ? "Termos aceitos" : "Termos pendentes"}</p>
       <div className="mt-4 grid gap-2">
-        <input value={name} minLength={2} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${user.displayName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
-        <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${user.displayName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+        <input value={name} minLength={2} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${user.displayName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+        <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${user.displayName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(user.disabledAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar nome</button>
-        {!user.isMasterAdmin && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!user.disabledAt)} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-40"><UserRoundCog className="size-3" /> {user.disabledAt ? "Reativar conta" : "Suspender conta"}</button>}
-        {!user.isMasterAdmin && <button type="button" disabled={busy || Boolean(user.disabledAt) || reason.trim().length < 3} onClick={updateAdminAccess} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-blue-800 disabled:opacity-40"><ShieldPlus className="size-3" /> {user.isAdmin ? "Remover admin" : "Promover admin"}</button>}
+        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(user.disabledAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white shadow-sm disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar nome</button>
+        {!user.isMasterAdmin && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!user.disabledAt)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-danger-fg hover:border-danger-line hover:bg-danger-bg disabled:opacity-40"><UserRoundCog className="size-3" /> {user.disabledAt ? "Reativar conta" : "Suspender conta"}</button>}
+        {!user.isMasterAdmin && <button type="button" disabled={busy || Boolean(user.disabledAt) || reason.trim().length < 3} onClick={updateAdminAccess} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-info-fg hover:border-info-line hover:bg-info-bg disabled:opacity-40"><ShieldPlus className="size-3" /> {user.isAdmin ? "Remover admin" : "Promover admin"}</button>}
       </div>
-      {error && <p aria-live="polite" className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+      {error && <p aria-live="polite" className="mt-2 rounded-xl bg-danger-bg px-3 py-2 text-xs font-bold text-danger-fg">{error}</p>}
     </article>
   );
 }

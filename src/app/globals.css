@@ -98,6 +98,18 @@
   --color-brand-strong: var(--brand-strong);
   --color-accent: var(--accent);
   --color-muted: var(--muted);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-success-line: var(--success-line);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-line: var(--warning-line);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-fg: var(--danger-fg);
+  --color-danger-line: var(--danger-line);
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+  --color-info-line: var(--info-line);
   --font-sans: "Segoe UI", Arial, Helvetica, sans-serif;
   --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
 }
