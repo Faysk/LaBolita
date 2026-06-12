@@ -35,7 +35,7 @@ assert.notEqual(
 
 const { error: profileColumnsError } = await service
   .from("profiles")
-  .select("id, is_master_admin, terms_accepted_at, terms_version, disabled_at")
+  .select("id, is_master_admin, terms_accepted_at, terms_version, disabled_at, theme_preference, time_preference_mode, time_zone, time_offset_minutes")
   .limit(1);
 if (profileColumnsError) throw profileColumnsError;
 

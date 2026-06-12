@@ -3,6 +3,8 @@ import {
   formatGmtOffset,
   formatPreferredDateTime,
   GMT_OFFSET_OPTIONS,
+  normalizeThemePreference,
+  normalizeTimePreference,
 } from "@/lib/user-preferences";
 
 describe("user preferences", () => {
@@ -45,5 +47,20 @@ describe("user preferences", () => {
       label: "GMT+1 (Lisboa / Londres)",
     });
     expect(GMT_OFFSET_OPTIONS.every((option) => option.value % 60 === 0)).toBe(true);
+  });
+
+  it("normalizes persisted preferences defensively", () => {
+    expect(normalizeThemePreference("dark")).toBe("dark");
+    expect(normalizeThemePreference("neon")).toBeNull();
+    expect(normalizeTimePreference("auto", null, null)).toEqual({ mode: "auto" });
+    expect(normalizeTimePreference("zone", "Europe/Lisbon", null)).toEqual({
+      mode: "zone",
+      timeZone: "Europe/Lisbon",
+    });
+    expect(normalizeTimePreference("offset", null, 60)).toEqual({
+      mode: "offset",
+      offsetMinutes: 60,
+    });
+    expect(normalizeTimePreference("offset", null, 90)).toBeNull();
   });
 });

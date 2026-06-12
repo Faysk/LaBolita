@@ -1,56 +1,32 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-
-export type ThemePreference = "system" | "light" | "dark";
-export type EffectiveTheme = "light" | "dark";
-
-export type TimePreference =
-  | { mode: "auto" }
-  | { mode: "zone"; timeZone: string }
-  | { mode: "offset"; offsetMinutes: number };
-
-export const TIME_ZONE_OPTIONS = [
-  { value: "America/Sao_Paulo", label: "São Paulo / Buenos Aires" },
-  { value: "Europe/Lisbon", label: "Lisboa" },
-  { value: "Europe/London", label: "Londres" },
-  { value: "America/Mexico_City", label: "México - Cidade do México" },
-  { value: "America/New_York", label: "EUA - Nova York" },
-  { value: "America/Los_Angeles", label: "EUA - Los Angeles" },
-  { value: "UTC", label: "UTC" },
-] as const;
-
-const OFFSET_CITY_LABELS: Record<number, string> = {
-  [-8 * 60]: "Los Angeles",
-  [-6 * 60]: "Cidade do México",
-  [-5 * 60]: "Nova York",
-  [-3 * 60]: "São Paulo / Buenos Aires",
-  0: "UTC",
-  [1 * 60]: "Lisboa / Londres",
-  [2 * 60]: "Madri / Berlim",
-  [3 * 60]: "Doha / Riade",
-  [4 * 60]: "Dubai",
-  [9 * 60]: "Tóquio",
-  [10 * 60]: "Sydney",
-};
-
-export const GMT_OFFSET_OPTIONS = Array.from(
-  { length: 14 - -12 + 1 },
-  (_, index) => {
-    const value = (-12 + index) * 60;
-    const cityLabel = OFFSET_CITY_LABELS[value];
-    return {
-      value,
-      label: cityLabel ? `${formatGmtOffset(value)} (${cityLabel})` : formatGmtOffset(value),
-    };
-  },
-);
+import {
+  AUTO_TIME_PREFERENCE,
+  formatGmtOffset,
+  isValidTimeZone,
+  normalizeThemePreference,
+  normalizeTimePreference,
+  type EffectiveTheme,
+  type ThemePreference,
+  type TimePreference,
+} from "@/lib/user-preference-values";
+export {
+  AUTO_TIME_PREFERENCE,
+  formatGmtOffset,
+  GMT_OFFSET_OPTIONS,
+  normalizeThemePreference,
+  normalizeTimePreference,
+  TIME_ZONE_OPTIONS,
+  type EffectiveTheme,
+  type ThemePreference,
+  type TimePreference,
+} from "@/lib/user-preference-values";
 
 const THEME_KEY = "labolita-theme";
 const TIME_KEY = "labolita-time-preference";
 const CHANGE_EVENT = "labolita-preferences-change";
 const THEME_CHANGE_EVENT = "labolita-theme-change";
-const AUTO_TIME_PREFERENCE: TimePreference = { mode: "auto" };
 let cachedTimePreferenceRaw: string | null | undefined;
 let cachedTimePreference: TimePreference = AUTO_TIME_PREFERENCE;
 
@@ -89,7 +65,7 @@ export function useTimePreference() {
 export function getThemePreference(): ThemePreference {
   if (typeof window === "undefined") return "system";
   const stored = localStorage.getItem(THEME_KEY);
-  return stored === "light" || stored === "dark" ? stored : "system";
+  return normalizeThemePreference(stored) ?? "system";
 }
 
 export function setThemePreference(preference: ThemePreference) {
@@ -131,23 +107,16 @@ export function getTimePreference(): TimePreference {
 function parseTimePreference(rawValue: string | null): TimePreference {
   if (!rawValue) return AUTO_TIME_PREFERENCE;
   try {
-    const parsed = JSON.parse(rawValue) as Partial<TimePreference>;
-    if (parsed.mode === "zone" && typeof parsed.timeZone === "string") {
-      return isValidTimeZone(parsed.timeZone)
-        ? { mode: "zone", timeZone: parsed.timeZone }
-        : AUTO_TIME_PREFERENCE;
-    }
-    if (parsed.mode === "offset" && typeof parsed.offsetMinutes === "number") {
-      const offsetMinutes = Math.trunc(parsed.offsetMinutes);
-      return isValidOffset(offsetMinutes)
-        ? { mode: "offset", offsetMinutes }
-        : AUTO_TIME_PREFERENCE;
-    }
+    const parsed = JSON.parse(rawValue) as {
+      mode?: unknown;
+      timeZone?: unknown;
+      offsetMinutes?: unknown;
+    };
+    return normalizeTimePreference(parsed.mode, parsed.timeZone, parsed.offsetMinutes)
+      ?? AUTO_TIME_PREFERENCE;
   } catch {
     return AUTO_TIME_PREFERENCE;
   }
-
-  return AUTO_TIME_PREFERENCE;
 }
 
 export function setTimePreference(preference: TimePreference) {
@@ -181,14 +150,6 @@ export function formatPreferredDateTime(
         : Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   return timeZone ? formatWithTimeZone(date, includeZone, timeZone) : null;
-}
-
-export function formatGmtOffset(offsetMinutes: number) {
-  const sign = offsetMinutes >= 0 ? "+" : "-";
-  const absoluteMinutes = Math.abs(offsetMinutes);
-  const hours = Math.floor(absoluteMinutes / 60);
-  const minutes = absoluteMinutes % 60;
-  return `GMT${sign}${hours}${minutes ? `:${String(minutes).padStart(2, "0")}` : ""}`;
 }
 
 export function detectCurrentOffsetMinutes() {
@@ -261,22 +222,4 @@ function partsToLabel(parts: Intl.DateTimeFormatPart[], includeZone: boolean) {
     parts.find((part) => part.type === type)?.value.replace(".", "") ?? "";
   const zone = includeZone ? value("timeZoneName") : "";
   return `${value("day")} ${value("month")} · ${value("hour")}:${value("minute")}${zone ? ` · ${zone}` : ""}`;
-}
-
-function isValidTimeZone(timeZone: string) {
-  try {
-    new Intl.DateTimeFormat("pt-BR", { timeZone }).format(new Date());
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function isValidOffset(offsetMinutes: number) {
-  return (
-    Number.isInteger(offsetMinutes) &&
-    offsetMinutes >= -12 * 60 &&
-    offsetMinutes <= 14 * 60 &&
-    offsetMinutes % 60 === 0
-  );
 }
