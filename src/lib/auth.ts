@@ -19,7 +19,7 @@ export async function getViewerState() {
     .from("profiles")
     .select("terms_accepted_at, terms_version, disabled_at")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
   if (profileError) throw profileError;
 
   return {

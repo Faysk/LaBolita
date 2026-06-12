@@ -23,7 +23,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
   const { data: profile, error: profileError } = user
       ? await loadProfileForShell(supabase!, user.id)
     : { data: null, error: null };
-  if (profileError) throw profileError;
+  if (profileError && !isMissingProfileRow(profileError)) throw profileError;
   const demoMode = !supabase;
   const isAdmin = demoMode || Boolean(profile?.is_admin);
   const termsAccepted =
@@ -137,7 +137,7 @@ async function loadProfileForShell(
     .from("profiles")
     .select(`${baseColumns}, ${optionalColumns}`)
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (!result.error || !isMissingOptionalProfileColumn(result.error)) return result;
 
@@ -145,7 +145,7 @@ async function loadProfileForShell(
     .from("profiles")
     .select(`${baseColumns}, show_avatar_publicly`)
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (!fallback.error || !isMissingOptionalProfileColumn(fallback.error)) {
     return {
@@ -166,7 +166,7 @@ async function loadProfileForShell(
     .from("profiles")
     .select(baseColumns)
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   return {
     ...minimalFallback,
@@ -188,5 +188,12 @@ function isMissingOptionalProfileColumn(error: { code?: string; message?: string
     error.code === "42703" ||
     error.code === "PGRST204" ||
     /show_avatar_publicly|theme_preference|time_preference/i.test(error.message ?? "")
+  );
+}
+
+function isMissingProfileRow(error: { code?: string; message?: string }) {
+  return (
+    error.code === "PGRST116" ||
+    /the result contains 0 rows|json object requested/i.test(error.message ?? "")
   );
 }
