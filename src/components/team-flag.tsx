@@ -36,7 +36,7 @@ export function TeamFlag({
         <img
           src={source}
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-contain"
           onError={() => setFailedSource(source)}
         />
       ) : (
