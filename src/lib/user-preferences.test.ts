@@ -32,9 +32,18 @@ describe("user preferences", () => {
     ).toBe("12 jun · 16:00 · GMT-3");
   });
 
-  it("offers all quarter-hour GMT offsets from -12 to +14", () => {
+  it("offers hourly GMT offsets from -12 to +14", () => {
     expect(GMT_OFFSET_OPTIONS[0]).toEqual({ value: -720, label: "GMT-12" });
     expect(GMT_OFFSET_OPTIONS.at(-1)).toEqual({ value: 840, label: "GMT+14" });
-    expect(GMT_OFFSET_OPTIONS).toContainEqual({ value: 345, label: "GMT+5:45" });
+    expect(GMT_OFFSET_OPTIONS).toHaveLength(27);
+    expect(GMT_OFFSET_OPTIONS).toContainEqual({
+      value: -180,
+      label: "GMT-3 (São Paulo / Buenos Aires)",
+    });
+    expect(GMT_OFFSET_OPTIONS).toContainEqual({
+      value: 60,
+      label: "GMT+1 (Lisboa / Londres)",
+    });
+    expect(GMT_OFFSET_OPTIONS.every((option) => option.value % 60 === 0)).toBe(true);
   });
 });

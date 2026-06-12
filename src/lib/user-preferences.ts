@@ -11,20 +11,38 @@ export type TimePreference =
   | { mode: "offset"; offsetMinutes: number };
 
 export const TIME_ZONE_OPTIONS = [
-  { value: "America/Sao_Paulo", label: "Brasil - São Paulo" },
-  { value: "Europe/Lisbon", label: "Portugal - Lisboa" },
-  { value: "Europe/London", label: "Reino Unido - Londres" },
+  { value: "America/Sao_Paulo", label: "São Paulo / Buenos Aires" },
+  { value: "Europe/Lisbon", label: "Lisboa" },
+  { value: "Europe/London", label: "Londres" },
   { value: "America/Mexico_City", label: "México - Cidade do México" },
   { value: "America/New_York", label: "EUA - Nova York" },
   { value: "America/Los_Angeles", label: "EUA - Los Angeles" },
   { value: "UTC", label: "UTC" },
 ] as const;
 
+const OFFSET_CITY_LABELS: Record<number, string> = {
+  [-8 * 60]: "Los Angeles",
+  [-6 * 60]: "Cidade do México",
+  [-5 * 60]: "Nova York",
+  [-3 * 60]: "São Paulo / Buenos Aires",
+  0: "UTC",
+  [1 * 60]: "Lisboa / Londres",
+  [2 * 60]: "Madri / Berlim",
+  [3 * 60]: "Doha / Riade",
+  [4 * 60]: "Dubai",
+  [9 * 60]: "Tóquio",
+  [10 * 60]: "Sydney",
+};
+
 export const GMT_OFFSET_OPTIONS = Array.from(
-  { length: (14 * 60 - -12 * 60) / 15 + 1 },
+  { length: 14 - -12 + 1 },
   (_, index) => {
-    const value = -12 * 60 + index * 15;
-    return { value, label: formatGmtOffset(value) };
+    const value = (-12 + index) * 60;
+    const cityLabel = OFFSET_CITY_LABELS[value];
+    return {
+      value,
+      label: cityLabel ? `${formatGmtOffset(value)} (${cityLabel})` : formatGmtOffset(value),
+    };
   },
 );
 
@@ -259,6 +277,6 @@ function isValidOffset(offsetMinutes: number) {
     Number.isInteger(offsetMinutes) &&
     offsetMinutes >= -12 * 60 &&
     offsetMinutes <= 14 * 60 &&
-    offsetMinutes % 15 === 0
+    offsetMinutes % 60 === 0
   );
 }

@@ -2,18 +2,37 @@ import assert from "node:assert/strict";
 import { access } from "node:fs/promises";
 import { chromium } from "playwright-core";
 
-const BASE_URL = process.env.PRODUCTION_URL ?? "https://labolita.faysk.dev";
+const BASE_URL = process.env.SMOKE_URL ?? process.env.PRODUCTION_URL ?? "https://labolita.faysk.dev";
+const smokeLabel = process.env.SMOKE_LABEL ?? "Production";
 const allowPendingDeploy = process.argv.includes("--allow-pending-deploy");
 const allowUnconfiguredSync = process.argv.includes("--allow-unconfigured-sync");
+const allowProtectedPreview = process.argv.includes("--allow-protected-preview");
 const executablePath = await findBrowser();
 const browser = await chromium.launch({ executablePath, headless: true });
+const bypassSecret =
+  process.env.SMOKE_BYPASS_SECRET ?? process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+const smokeHeaders = bypassSecret
+  ? {
+      "x-vercel-protection-bypass": bypassSecret,
+      "x-vercel-set-bypass-cookie": "true",
+    }
+  : {};
 
 try {
+  const preflight = await fetch(BASE_URL, { headers: smokeHeaders });
+  if (preflight.status === 401 && allowProtectedPreview) {
+    console.log(
+      `${smokeLabel} smoke skipped: ${BASE_URL} is protected. Configure SMOKE_BYPASS_SECRET to test it from automation.`,
+    );
+  } else {
   for (const viewport of [
     { width: 390, height: 844 },
     { width: 1440, height: 900 },
   ]) {
     const page = await browser.newPage({ viewport });
+    if (Object.keys(smokeHeaders).length > 0) {
+      await page.setExtraHTTPHeaders(smokeHeaders);
+    }
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
 
@@ -56,7 +75,7 @@ try {
     await page.close();
   }
 
-  const response = await fetch(`${BASE_URL}/api/health`);
+  const response = await fetch(`${BASE_URL}/api/health`, { headers: smokeHeaders });
   assert.equal(response.status, 200);
   const health = await response.json();
   assert.equal(health.database, "connected");
@@ -71,7 +90,7 @@ try {
     assert.equal(health.resultsSync.matched, 104);
   }
 
-  const home = await fetch(BASE_URL);
+  const home = await fetch(BASE_URL, { headers: smokeHeaders });
   assert.equal(home.headers.get("x-frame-options"), "DENY");
   assert.equal(home.headers.get("x-content-type-options"), "nosniff");
   if (!allowPendingDeploy) {
@@ -81,13 +100,14 @@ try {
     assert.doesNotMatch(homeHtml, /O servidor recusou o palpite/);
   }
 
-  const unauthorizedCron = await fetch(`${BASE_URL}/api/cron/results`);
+  const unauthorizedCron = await fetch(`${BASE_URL}/api/cron/results`, { headers: smokeHeaders });
   assert.equal(unauthorizedCron.status, 401);
   if (!allowPendingDeploy) {
     assert.match(unauthorizedCron.headers.get("cache-control") ?? "", /no-store/);
   }
 
-  console.log("Production smoke test passed");
+  console.log(`${smokeLabel} smoke test passed`);
+  }
 } finally {
   await browser.close();
 }

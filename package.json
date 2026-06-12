@@ -14,6 +14,8 @@
     "test:ui": "node scripts/test-ui.mjs",
     "test:production": "node scripts/test-production.mjs",
     "test:production:current": "node scripts/test-production.mjs --allow-pending-deploy",
+    "test:homolog": "node scripts/test-homolog.mjs",
+    "test:homolog:current": "node scripts/test-homolog.mjs --allow-pending-deploy",
     "auth:smoke:remote": "node --env-file=.env.local scripts/test-auth-config.mjs",
     "test:watch": "vitest",
     "db:start": "supabase start",
