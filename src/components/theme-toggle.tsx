@@ -1,25 +1,16 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
-import { useEffect, useSyncExternalStore } from "react";
-
-type Theme = "light" | "dark";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useThemePreference } from "@/lib/user-preferences";
 
 export function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribe, getTheme, () => "light");
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-  }, [theme]);
+  const { preference, effectiveTheme, setPreference } = useThemePreference();
 
   function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    localStorage.setItem("labolita-theme", nextTheme);
-    document.documentElement.dataset.theme = nextTheme;
-    window.dispatchEvent(new Event("labolita-theme-change"));
+    setPreference(effectiveTheme === "dark" ? "light" : "dark");
   }
 
-  const nextLabel = theme === "dark" ? "Usar tema claro" : "Usar tema escuro";
+  const nextLabel = effectiveTheme === "dark" ? "Usar tema claro" : "Usar tema escuro";
 
   return (
     <button
@@ -29,25 +20,13 @@ export function ThemeToggle() {
       title={nextLabel}
       className="interactive rounded-xl p-2 text-muted hover:bg-surface-muted hover:text-brand"
     >
-      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {preference === "system" ? (
+        <Monitor className="size-4" />
+      ) : effectiveTheme === "dark" ? (
+        <Sun className="size-4" />
+      ) : (
+        <Moon className="size-4" />
+      )}
     </button>
   );
-}
-
-function getTheme(): Theme {
-  const stored = localStorage.getItem("labolita-theme");
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function subscribe(onChange: () => void) {
-  const media = window.matchMedia("(prefers-color-scheme: dark)");
-  media.addEventListener("change", onChange);
-  window.addEventListener("storage", onChange);
-  window.addEventListener("labolita-theme-change", onChange);
-  return () => {
-    media.removeEventListener("change", onChange);
-    window.removeEventListener("storage", onChange);
-    window.removeEventListener("labolita-theme-change", onChange);
-  };
 }

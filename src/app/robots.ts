@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: ["/", "/boloes", "/regras", "/privacidade", "/termos"],
-      disallow: ["/admin", "/api/", "/auth/", "/aceitar-termos", "/conta-suspensa", "/entrar", "/palpites"],
+      disallow: ["/admin", "/api/", "/auth/", "/aceitar-termos", "/conta", "/conta-suspensa", "/entrar", "/palpites"],
     },
     sitemap: "https://labolita.faysk.dev/sitemap.xml",
   };
