@@ -48,10 +48,14 @@ export function HomeOverview({
     (match) => !match.prediction && !localPredictions[match.id],
   ).length;
   const currentPlayer = visibleGlobalRanking.find((player) => player.isCurrentUser);
-  const recordHolder = visibleGlobalRanking.reduce<RankingEntry | null>(
-    (best, player) => (!best || player.exact > best.exact ? player : best),
-    null,
+  const maxExact = visibleGlobalRanking.reduce(
+    (best, player) => Math.max(best, player.exact),
+    0,
   );
+  const recordLeaders = maxExact > 0
+    ? visibleGlobalRanking.filter((player) => player.exact === maxExact)
+    : [];
+  const recordHolder = recordLeaders[0] ?? null;
   const poolPlayer = visiblePoolRanking.find((player) => player.isCurrentUser);
   const poolLeader = visiblePoolRanking[0];
   const poolHasLivePoints = visiblePoolRanking.some(
@@ -95,7 +99,14 @@ export function HomeOverview({
           icon={Crown}
           label="Recorde geral"
           value={recordHolder ? pluralize(recordHolder.exact, "cravada", "cravadas") : "—"}
-          detail={recordHolder ? `Melhor marca: ${recordHolder.name}` : "Ranking vazio"}
+          detail={
+            recordHolder
+              ? recordLeaders.length > 1
+                ? `${recordLeaders.length} empatados`
+                : "Melhor marca"
+              : "Ranking vazio"
+          }
+          person={recordHolder}
         />
         <StatCard
           icon={Users}

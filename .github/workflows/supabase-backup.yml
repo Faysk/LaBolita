@@ -1,0 +1,64 @@
+name: Supabase Backups
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 2,10,18 * * *"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  backup:
+    name: Dump production database
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Create backup stamp
+        id: stamp
+        shell: bash
+        run: echo "value=$(date -u +'%Y%m%dT%H%M%SZ')" >> "$GITHUB_OUTPUT"
+
+      - name: Dump roles, schema, data and migration history
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          STAMP: ${{ steps.stamp.outputs.value }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_DB_URL:-}" ]; then
+            echo "SUPABASE_DB_URL secret is required."
+            exit 1
+          fi
+
+          BACKUP_DIR="backups/$STAMP"
+          mkdir -p "$BACKUP_DIR"
+
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/01_roles.sql" --role-only
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/02_schema.sql"
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/03_data.sql" --use-copy --data-only -x "storage.buckets_vectors" -x "storage.vector_indexes"
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/04_migration_history_schema.sql" --schema supabase_migrations
+          npx supabase db dump --db-url "$SUPABASE_DB_URL" -f "$BACKUP_DIR/05_migration_history_data.sql" --use-copy --data-only --schema supabase_migrations
+
+          tar -czf "labolita-supabase-$STAMP.tar.gz" -C backups "$STAMP"
+
+      - name: Upload encrypted-at-rest backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: labolita-supabase-${{ steps.stamp.outputs.value }}
+          path: labolita-supabase-${{ steps.stamp.outputs.value }}.tar.gz
+          if-no-files-found: error
+          retention-days: 7

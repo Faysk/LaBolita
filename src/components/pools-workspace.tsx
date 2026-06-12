@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
+import { PoolFlag } from "@/components/pool-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
 import { COUNTRIES } from "@/lib/countries";
@@ -369,9 +370,12 @@ function PoolCard({
   onManage?: () => void;
 }) {
   return (
-    <article data-testid={`pool-${pool.id}`} className={`card p-5 ${selected ? "card-dark text-white" : ""}`}>
-      <div className="flex items-start justify-between">
-        <CountryFlag code={pool.flagCode} size={selected ? "lg" : "md"} />
+    <article data-testid={`pool-${pool.id}`} className={`card relative overflow-hidden p-5 ${selected ? "card-dark text-white" : ""}`}>
+      <div className="pointer-events-none absolute -right-10 -top-10 opacity-25 blur-sm">
+        <PoolFlag code={pool.flagCode} size="xl" />
+      </div>
+      <div className="relative flex items-start justify-between">
+        <PoolFlag code={pool.flagCode} size={selected ? "lg" : "md"} />
         <div className="flex items-center gap-2">
           {pool.isPublic && <Globe2 className="size-4 opacity-60" aria-label="Bolão público" />}
           {onManage && (
@@ -381,7 +385,7 @@ function PoolCard({
           )}
         </div>
       </div>
-      <h3 className="mt-6 text-xl font-black tracking-tight">{pool.name}</h3>
+      <h3 className="relative mt-6 text-xl font-black tracking-tight">{pool.name}</h3>
       <p className={`mt-2 flex items-center gap-1 text-sm ${selected ? "text-white/60" : "text-muted"}`}>
         <Users className="size-4" /> {pool.members} jogadores
       </p>
@@ -417,12 +421,15 @@ function PublicPoolCard({
   onJoin: () => void;
 }) {
   return (
-    <article className={`card p-5 ${selected ? "ring-2 ring-brand" : ""}`}>
-      <div className="flex items-center justify-between">
-        <CountryFlag code={pool.flagCode} />
+    <article className={`card relative overflow-hidden p-5 ${selected ? "ring-2 ring-brand" : ""}`}>
+      <div className="pointer-events-none absolute -right-8 -top-8 opacity-20 blur-sm">
+        <PoolFlag code={pool.flagCode} size="xl" />
+      </div>
+      <div className="relative flex items-center justify-between">
+        <PoolFlag code={pool.flagCode} size="lg" />
         <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-black text-brand-strong">Público</span>
       </div>
-      <h3 className="mt-5 text-xl font-black tracking-tight">{pool.name}</h3>
+      <h3 className="relative mt-5 text-xl font-black tracking-tight">{pool.name}</h3>
       <p className="mt-2 text-sm text-muted">Por {pool.ownerName ?? "organizador"} · {pool.members} jogadores</p>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <button type="button" onClick={onSelect} className="interactive rounded-xl bg-surface-muted px-3 py-2 text-xs font-black text-brand">
