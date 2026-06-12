@@ -332,11 +332,7 @@ option {
 }
 
 .pool-flag {
-  border-color: color-mix(in srgb, var(--pool-secondary) 38%, var(--line));
-  background: color-mix(in srgb, var(--pool-primary) 26%, var(--surface));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--pool-secondary) 34%, transparent),
-    0 16px 34px color-mix(in srgb, var(--pool-primary) 24%, transparent);
+  border-color: var(--line);
 }
 
 .match-card {
