@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, EyeOff, LoaderCircle, LogOut, Shield } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, LogOut, Settings2, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -117,9 +117,18 @@ export function AccountMenu({
         <div
           id="account-menu"
           role="menu"
-          className="absolute right-0 top-12 w-52 rounded-2xl border bg-white p-2 shadow-2xl shadow-brand/15"
+          className="absolute right-0 top-12 w-60 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/15"
         >
           <p className="truncate px-3 py-2 text-sm font-black">{displayName}</p>
+          {!isDemo && (
+            <Link
+              href="/conta"
+              onClick={() => setOpen(false)}
+              className="interactive flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-muted hover:bg-surface-muted"
+            >
+              <Settings2 className="size-4" /> Minha conta
+            </Link>
+          )}
           {isAdmin && (
             <Link
               href="/admin"
