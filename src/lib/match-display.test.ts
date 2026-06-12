@@ -6,17 +6,56 @@ import {
 import type { DemoMatch } from "@/lib/types";
 
 describe("match display priorities", () => {
-  it("puts live matches before pending and saved matches", () => {
+  it("puts live matches first and then keeps chronological order", () => {
     const matches = [
-      match("saved", { prediction: { homeScore: 1, awayScore: 0 } }),
-      match("pending"),
-      match("live", { locked: true, providerStatus: "live", liveResult: { homeScore: 1, awayScore: 1 } }),
+      match("pending-later", { scheduledAt: "2026-06-14T20:00:00Z" }),
+      match("saved-earlier", {
+        scheduledAt: "2026-06-12T20:00:00Z",
+        prediction: { homeScore: 1, awayScore: 0 },
+      }),
+      match("live", {
+        locked: true,
+        providerStatus: "live",
+        scheduledAt: "2026-06-13T20:00:00Z",
+        liveResult: { homeScore: 1, awayScore: 1 },
+      }),
     ];
 
     expect(prioritizeHomeMatches(matches).map((item) => item.id)).toEqual([
       "live",
-      "pending",
-      "saved",
+      "saved-earlier",
+      "pending-later",
+    ]);
+  });
+
+  it("keeps finished matches behind upcoming matches", () => {
+    const matches = [
+      match("finished", {
+        scheduledAt: "2026-06-11T20:00:00Z",
+        result: { homeScore: 2, awayScore: 0 },
+      }),
+      match("upcoming", { scheduledAt: "2026-06-12T20:00:00Z" }),
+    ];
+
+    expect(prioritizeHomeMatches(matches).map((item) => item.id)).toEqual([
+      "upcoming",
+      "finished",
+    ]);
+  });
+
+  it("keeps provider-finished matches awaiting confirmation behind upcoming matches", () => {
+    const matches = [
+      match("awaiting-confirmation", {
+        providerStatus: "finished",
+        scheduledAt: "2026-06-11T20:00:00Z",
+        liveResult: { homeScore: 2, awayScore: 0 },
+      }),
+      match("upcoming", { scheduledAt: "2026-06-12T20:00:00Z" }),
+    ];
+
+    expect(prioritizeHomeMatches(matches).map((item) => item.id)).toEqual([
+      "upcoming",
+      "awaiting-confirmation",
     ]);
   });
 

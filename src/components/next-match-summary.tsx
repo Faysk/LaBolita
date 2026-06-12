@@ -6,31 +6,29 @@ import { TeamFlag } from "@/components/team-flag";
 import { useLocalResults } from "@/lib/local-state";
 import type { DemoMatch } from "@/lib/types";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
-import { isLiveMatch, isOpenMatch } from "@/lib/match-display";
+import { hasSavedPrediction, isLiveMatch, prioritizeHomeMatches } from "@/lib/match-display";
 
 export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
   const results = useLocalResults();
-  const liveMatch = matches.find(isLiveMatch);
-  const pendingMatch = matches.find(
-    (match) =>
-      isOpenMatch(match) &&
-      !results[match.id] &&
-      !match.prediction,
+  const candidateMatches = prioritizeHomeMatches(
+    matches.filter((match) => !results[match.id]),
   );
-  const nextOpenMatch = matches.find(
-    (match) => isOpenMatch(match) && !results[match.id],
-  );
-  const nextMatch = liveMatch ?? pendingMatch ?? nextOpenMatch;
+  const liveMatch = candidateMatches.find(isLiveMatch);
+  const nextMatch = liveMatch ?? candidateMatches.find((match) => !match.result);
   const heading = liveMatch
     ? "Agora ao vivo"
-    : pendingMatch
-      ? "Próximo palpite pendente"
-      : "Próximo bloqueio";
+    : nextMatch
+      ? hasSavedPrediction(nextMatch)
+        ? "Seu palpite está salvo"
+        : "Próximo jogo"
+      : "Agenda encerrada";
   const action = liveMatch
     ? "Acompanhar ao vivo"
-    : pendingMatch
-      ? "Completar palpite"
-      : "Revisar palpites";
+    : nextMatch
+      ? hasSavedPrediction(nextMatch)
+        ? "Ver ou alterar palpite"
+        : "Completar palpite"
+      : "Ver calendário";
   const isLive = Boolean(liveMatch);
   const score = liveMatch?.liveResult;
 
