@@ -28,7 +28,11 @@ export function AdminMatchQueue({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [filter, setFilter] = useState<
     "action" | "live" | "divergence" | "upcoming" | "finished" | "all"
-  >(() => matches.some((match) => match.providerStatus === "live") ? "live" : "action");
+  >(() =>
+    matches.some((match) => match.providerStatus === "live" && !match.result)
+      ? "live"
+      : "action",
+  );
   const [grouping, setGrouping] = useState<"stage" | "date">("date");
   const [search, setSearch] = useState("");
   const statuses = matches.map((match) => ({
@@ -48,6 +52,15 @@ export function AdminMatchQueue({
     item.needsTeamAssignment ||
     item.hasDivergence ||
     (!item.effectiveResult && item.match.providerStatus === "finished");
+  const isLiveItem = (item: (typeof statuses)[number]) =>
+    !item.effectiveResult && item.match.providerStatus === "live";
+  const isUpcomingItem = (item: (typeof statuses)[number]) =>
+    !item.effectiveResult && !isLiveItem(item) && !needsAction(item);
+  const liveCount = statuses.filter(isLiveItem).length;
+  const actionCount = statuses.filter(needsAction).length;
+  const divergenceCount = statuses.filter((item) => item.hasDivergence).length;
+  const upcomingCount = statuses.filter(isUpcomingItem).length;
+  const finishedCount = statuses.filter((item) => item.effectiveResult).length;
   const cleanSearch = search.trim().toLocaleLowerCase("pt-BR");
   const visible = statuses.filter((item) => {
     const matchesSearch =
@@ -57,12 +70,10 @@ export function AdminMatchQueue({
         .includes(cleanSearch);
     if (!matchesSearch) return false;
     if (filter === "action") return needsAction(item);
-    if (filter === "live") return item.match.providerStatus === "live";
+    if (filter === "live") return isLiveItem(item);
     if (filter === "divergence") return item.hasDivergence;
     if (filter === "finished") return Boolean(item.effectiveResult);
-    if (filter === "upcoming") {
-      return !item.effectiveResult && item.match.providerStatus !== "live" && !needsAction(item);
-    }
+    if (filter === "upcoming") return isUpcomingItem(item);
     return true;
   });
   const grouped = groupAdminMatches(visible, grouping);
@@ -72,13 +83,13 @@ export function AdminMatchQueue({
       <div className="border-b bg-surface-muted/55 p-4 md:p-5">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {([
-            ...(statuses.some((item) => item.match.providerStatus === "live")
-              ? [["live", "Ao vivo", statuses.filter((item) => item.match.providerStatus === "live").length] as const]
+            ...(liveCount > 0
+              ? [["live", "Ao vivo", liveCount] as const]
               : []),
-            ["action", "Precisam de ação", statuses.filter(needsAction).length],
-            ["divergence", "Divergências", statuses.filter((item) => item.hasDivergence).length],
-            ["upcoming", "Próximos", statuses.filter((item) => !item.effectiveResult && item.match.providerStatus !== "live" && !needsAction(item)).length],
-            ["finished", "Finalizados", statuses.filter((item) => item.effectiveResult).length],
+            ["action", "Precisam de ação", actionCount],
+            ["divergence", "Divergências", divergenceCount],
+            ["upcoming", "Próximos", upcomingCount],
+            ["finished", "Finalizados", finishedCount],
             ["all", "Todos", statuses.length],
           ] as const).map(([value, label, count]) => (
             <button
