@@ -38,7 +38,7 @@ export default async function HomePage() {
       }`}>
         <div className="absolute -right-16 -top-20 size-64 rounded-full bg-accent/20 blur-3xl" />
         <div className="absolute -bottom-28 left-1/3 size-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative grid gap-8 md:grid-cols-[1.35fr_0.65fr] md:items-end">
+        <div className="relative grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)] md:items-center">
           <div>
             <div className={`${viewer.isAuthenticated ? "mb-3 md:mb-5" : "mb-5"} inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.13em]`}>
               <Sparkles className="size-3.5 text-accent" />
