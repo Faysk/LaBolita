@@ -1,5 +1,7 @@
 "use client";
 
+import { formatPreferredDateTime, useTimePreference } from "@/lib/user-preferences";
+
 export function LocalMatchDateTime({
   scheduledAt,
   fallbackDate,
@@ -13,39 +15,24 @@ export function LocalMatchDateTime({
   includeZone?: boolean;
   className?: string;
 }) {
+  const { preference } = useTimePreference();
   const fallback = `${fallbackDate} · ${fallbackTime}${includeZone ? " · BRT" : ""}`;
   const label =
     typeof window === "undefined"
       ? fallback
-      : formatLocalDateTime(scheduledAt, includeZone) ?? fallback;
+      : formatPreferredDateTime(scheduledAt, includeZone, preference) ?? fallback;
 
   return (
     <span
       className={className}
-      title="Horário local do seu dispositivo"
+      title={
+        preference.mode === "auto"
+          ? "Horário local do seu dispositivo"
+          : "Horário ajustado nas suas preferências"
+      }
       suppressHydrationWarning
     >
       {label}
     </span>
   );
-}
-
-function formatLocalDateTime(scheduledAt: string | undefined, includeZone: boolean) {
-  if (!scheduledAt) return null;
-  const date = new Date(scheduledAt);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const parts = new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    timeZoneName: includeZone ? "short" : undefined,
-  }).formatToParts(date);
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value.replace(".", "") ?? "";
-  const zone = includeZone ? value("timeZoneName") : "";
-  return `${value("day")} ${value("month")} · ${value("hour")}:${value("minute")}${zone ? ` · ${zone}` : ""}`;
 }
