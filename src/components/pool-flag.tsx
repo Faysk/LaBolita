@@ -26,11 +26,7 @@ export function PoolFlag({
       aria-label={`Bandeira de ${countryName(safeCode)}`}
       title={countryName(safeCode)}
     >
-      <span
-        aria-hidden
-        className={`fi fi-${safeCode} block h-full bg-contain bg-center bg-no-repeat`}
-        style={{ width: "100%" }}
-      />
+      <span aria-hidden className={`fi fi-${safeCode} block h-full bg-cover bg-center`} style={{ width: "100%" }} />
     </span>
   );
 }
