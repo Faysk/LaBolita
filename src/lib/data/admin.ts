@@ -39,11 +39,18 @@ export type AuditEntry = {
 export type MasterOverview = {
   isGlobalAdmin: boolean;
   isMaster: boolean;
+  activeTab: MasterTab;
+  search: string;
+  page: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
   pools: MasterPool[];
   users: MasterUser[];
   audit: AuditEntry[];
   termsEnforcementEnabled: boolean;
 };
+
+export type MasterTab = "pools" | "users" | "audit";
 
 type MasterPoolRow = {
   pool_id: string;
@@ -70,12 +77,29 @@ type MasterUserRow = {
   created_at: string;
 };
 
-export async function getMasterOverview(): Promise<MasterOverview> {
+export async function getMasterOverview({
+  activeTab = "pools",
+  search = "",
+  page = 1,
+}: {
+  activeTab?: MasterTab;
+  search?: string;
+  page?: number;
+} = {}): Promise<MasterOverview> {
+  const cleanSearch = search.trim().slice(0, 80);
+  const safePage = Math.max(1, Math.trunc(page) || 1);
+  const pageSize = activeTab === "audit" ? 50 : 24;
+  const offset = (safePage - 1) * pageSize;
   const supabase = await createServerSupabaseClient();
   if (!supabase) {
     return {
       isGlobalAdmin: true,
       isMaster: true,
+      activeTab,
+      search: cleanSearch,
+      page: safePage,
+      hasPreviousPage: safePage > 1,
+      hasNextPage: false,
       pools: [],
       users: [],
       audit: [],
@@ -88,6 +112,11 @@ export async function getMasterOverview(): Promise<MasterOverview> {
     return {
       isGlobalAdmin: false,
       isMaster: false,
+      activeTab,
+      search: cleanSearch,
+      page: safePage,
+      hasPreviousPage: false,
+      hasNextPage: false,
       pools: [],
       users: [],
       audit: [],
@@ -105,6 +134,11 @@ export async function getMasterOverview(): Promise<MasterOverview> {
     return {
       isGlobalAdmin: false,
       isMaster: false,
+      activeTab,
+      search: cleanSearch,
+      page: safePage,
+      hasPreviousPage: false,
+      hasNextPage: false,
       pools: [],
       users: [],
       audit: [],
@@ -113,21 +147,27 @@ export async function getMasterOverview(): Promise<MasterOverview> {
   }
 
   const [poolsResult, usersResult, auditResult, settingsResult] = await Promise.all([
-    supabase.rpc("master_list_pools", {
-      p_search: null,
-      p_limit: 1000,
-      p_offset: 0,
-    }),
-    supabase.rpc("master_list_users", {
-      p_search: null,
-      p_limit: 1000,
-      p_offset: 0,
-    }),
-    supabase
-      .from("admin_audit_logs")
-      .select("id, action, entity_type, entity_id, metadata, created_at")
-      .order("created_at", { ascending: false })
-      .limit(50),
+    activeTab === "pools"
+      ? supabase.rpc("master_list_pools", {
+          p_search: cleanSearch || null,
+          p_limit: pageSize + 1,
+          p_offset: offset,
+        })
+      : Promise.resolve({ data: [], error: null }),
+    activeTab === "users"
+      ? supabase.rpc("master_list_users", {
+          p_search: cleanSearch || null,
+          p_limit: pageSize + 1,
+          p_offset: offset,
+        })
+      : Promise.resolve({ data: [], error: null }),
+    activeTab === "audit"
+      ? supabase
+        .from("admin_audit_logs")
+        .select("id, action, entity_type, entity_id, metadata, created_at")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + pageSize)
+      : Promise.resolve({ data: [], error: null }),
     supabase.rpc("get_master_settings"),
   ]);
   const overviewError =
@@ -138,10 +178,25 @@ export async function getMasterOverview(): Promise<MasterOverview> {
     });
   }
 
+  const rawPools = (poolsResult.data ?? []) as MasterPoolRow[];
+  const rawUsers = (usersResult.data ?? []) as MasterUserRow[];
+  const rawAudit = auditResult.data ?? [];
+  const hasNextPage =
+    activeTab === "pools"
+      ? rawPools.length > pageSize
+      : activeTab === "users"
+        ? rawUsers.length > pageSize
+        : rawAudit.length > pageSize;
+
   return {
     isGlobalAdmin: true,
     isMaster: Boolean(profile.is_master_admin),
-    pools: ((poolsResult.data ?? []) as MasterPoolRow[]).map((pool) => ({
+    activeTab,
+    search: cleanSearch,
+    page: safePage,
+    hasPreviousPage: safePage > 1,
+    hasNextPage,
+    pools: rawPools.slice(0, pageSize).map((pool) => ({
       poolId: pool.pool_id,
       poolName: pool.pool_name,
       ownerId: pool.owner_id,
@@ -153,7 +208,7 @@ export async function getMasterOverview(): Promise<MasterOverview> {
       memberCount: Number(pool.member_count),
       createdAt: pool.created_at,
     })),
-    users: ((usersResult.data ?? []) as MasterUserRow[]).map((profileRow) => ({
+    users: rawUsers.slice(0, pageSize).map((profileRow) => ({
       userId: profileRow.user_id,
       displayName: profileRow.display_name,
       email: profileRow.email,
@@ -164,7 +219,7 @@ export async function getMasterOverview(): Promise<MasterOverview> {
       poolsOwned: Number(profileRow.pools_owned),
       createdAt: profileRow.created_at,
     })),
-    audit: (auditResult.data ?? []).map((entry) => ({
+    audit: rawAudit.slice(0, pageSize).map((entry) => ({
       id: entry.id,
       action: entry.action,
       entityType: entry.entity_type,

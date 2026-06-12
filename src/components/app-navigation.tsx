@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, CircleHelp, Home, Target } from "lucide-react";
+import { BarChart3, CircleHelp, Home, Target, Trophy } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -8,6 +8,7 @@ const navigation = [
   { href: "/", label: "Início", icon: Home },
   { href: "/palpites", label: "Palpites", icon: Target },
   { href: "/boloes", label: "Bolões", icon: BarChart3 },
+  { href: "/competicao", label: "Copa", icon: Trophy },
   { href: "/regras", label: "Regras", icon: CircleHelp },
 ];
 
@@ -41,7 +42,7 @@ export function MobileNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-4 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl md:hidden">
+    <nav className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-5 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl md:hidden">
       {navigation.map((item) => {
         const active = isActivePath(pathname, item.href);
         return (

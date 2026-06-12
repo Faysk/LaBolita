@@ -14,6 +14,7 @@ const DEFAULT_BACKUP_FEED_URL =
 const MAX_FEED_BYTES = 2_000_000;
 const EARLY_STATUS_TOLERANCE_MS = 15 * 60 * 1000;
 const DATABASE_REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_AUTO_FINALIZE_DELAY_MINUTES = 10;
 
 type DatabaseMatch = {
   id: string;
@@ -109,6 +110,14 @@ export async function syncResultsFeed() {
     }
   }
 
+  const { data: autoFinalized, error: autoFinalizeError } = await supabase.rpc(
+    "finalize_provider_group_matches",
+    { p_safety_minutes: autoFinalizeDelayMinutes() },
+  );
+  if (autoFinalizeError && !isMissingAutoFinalizeFunction(autoFinalizeError)) {
+    throw autoFinalizeError;
+  }
+
   const summary = {
     source,
     fallbackUsed,
@@ -116,6 +125,7 @@ export async function syncResultsFeed() {
     matched: matched.length,
     updated: changed.length,
     finalCandidates: observations.filter((item) => item.status === "finished").length,
+    autoFinalized: Number(autoFinalized ?? 0),
     ignoredRegressions,
   };
   await recordSyncState({ status: "ok", ...summary }, supabase);
@@ -247,4 +257,19 @@ async function recordSyncState(
 function sanitizeError(error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown synchronization failure.";
   return message.replace(/\s+/g, " ").slice(0, 300);
+}
+
+function autoFinalizeDelayMinutes() {
+  const configured = Number(process.env.RESULTS_AUTO_FINALIZE_DELAY_MINUTES);
+  return Number.isInteger(configured) && configured >= 5 && configured <= 120
+    ? configured
+    : DEFAULT_AUTO_FINALIZE_DELAY_MINUTES;
+}
+
+function isMissingAutoFinalizeFunction(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42883" ||
+    error.code === "PGRST202" ||
+    /finalize_provider_group_matches/i.test(error.message ?? "")
+  );
 }

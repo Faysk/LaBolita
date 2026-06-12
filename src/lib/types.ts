@@ -80,12 +80,13 @@ export type PoolSummary = {
 
 export type RankingEntry = {
   position: number;
+  provisionalPosition?: number;
   name: string;
   initials: string;
   points: number;
+  provisionalPoints?: number;
   exact: number;
   correct: number;
-  trend: string;
   isCurrentUser?: boolean;
   avatarUrl?: string;
 };

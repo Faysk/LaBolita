@@ -4,20 +4,18 @@ import { useState } from "react";
 import { CalendarDays, CheckCircle2, CircleDashed, Layers3 } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
+import {
+  initialPredictionFilter,
+  isLiveMatch,
+  type PredictionFilter,
+} from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
-const filters = [
-  ["all", "Todos"],
-  ["pending", "Pendentes"],
-  ["saved", "Salvos"],
-  ["group", "Grupos"],
-  ["knockout", "Mata-mata"],
-  ["locked", "Bloqueados"],
-] as const;
-
 export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
-  const [filter, setFilter] = useState<(typeof filters)[number][0]>("all");
-  const [grouping, setGrouping] = useState<"stage" | "date">("stage");
+  const [filter, setFilter] = useState<PredictionFilter>(() =>
+    initialPredictionFilter(matches),
+  );
+  const [grouping, setGrouping] = useState<"stage" | "date">("date");
   const predictions = useLocalPredictions(matches);
   const results = useLocalResults();
   const isComplete = (match: DemoMatch) =>
@@ -26,8 +24,19 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
     (match) => !match.locked && !match.result && !results[match.id],
   );
   const pendingMatches = openMatches.filter((match) => !isComplete(match));
+  const liveMatches = matches.filter(isLiveMatch);
+  const filters: [PredictionFilter, string][] = [
+    ...(liveMatches.length > 0 ? [["live", "Ao vivo"] as [PredictionFilter, string]] : []),
+    ["pending", "Pendentes"],
+    ["all", "Todos"],
+    ["saved", "Salvos"],
+    ["group", "Grupos"],
+    ["knockout", "Mata-mata"],
+    ["locked", "Bloqueados"],
+  ];
 
   const visibleMatches = matches.filter((match) => {
+    if (filter === "live") return isLiveMatch(match);
     if (filter === "pending") {
       return (
         !isComplete(match) &&
@@ -76,11 +85,11 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
         Revise o placar e toque em salvar. Assim nenhuma digitação parcial vira palpite.
       </div>
       <div className="mb-5 flex justify-end gap-2">
-        <ViewButton active={grouping === "stage"} onClick={() => setGrouping("stage")} icon={Layers3}>
-          Por fase
-        </ViewButton>
         <ViewButton active={grouping === "date"} onClick={() => setGrouping("date")} icon={CalendarDays}>
           Por data
+        </ViewButton>
+        <ViewButton active={grouping === "stage"} onClick={() => setGrouping("stage")} icon={Layers3}>
+          Por fase
         </ViewButton>
       </div>
       <div className="grid gap-7">

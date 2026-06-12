@@ -184,9 +184,9 @@ export const demoPools = [
 ];
 
 export const demoRanking = [
-  { position: 1, name: "Marina Souza", initials: "MS", points: 72, exact: 4, correct: 11, trend: "—" },
-  { position: 2, name: "Faysk", initials: "FY", points: 68, exact: 3, correct: 12, trend: "↑ 1", isCurrentUser: true },
-  { position: 3, name: "João Pedro", initials: "JP", points: 63, exact: 3, correct: 10, trend: "↓ 1" },
-  { position: 4, name: "Camila Reis", initials: "CR", points: 59, exact: 2, correct: 11, trend: "↑ 2" },
-  { position: 5, name: "Rafael Lima", initials: "RL", points: 55, exact: 2, correct: 9, trend: "↓ 1" },
+  { position: 1, name: "Marina Souza", initials: "MS", points: 72, exact: 4, correct: 11 },
+  { position: 2, name: "Faysk", initials: "FY", points: 68, exact: 3, correct: 12, isCurrentUser: true },
+  { position: 3, name: "João Pedro", initials: "JP", points: 63, exact: 3, correct: 10 },
+  { position: 4, name: "Camila Reis", initials: "CR", points: 59, exact: 2, correct: 11 },
+  { position: 5, name: "Rafael Lima", initials: "RL", points: 55, exact: 2, correct: 9 },
 ];

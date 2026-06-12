@@ -4,6 +4,8 @@ import {
   Archive,
   ArchiveRestore,
   Check,
+  ChevronLeft,
+  ChevronRight,
   History,
   LoaderCircle,
   Search,
@@ -21,18 +23,19 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
 
 export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
-  const [tab, setTab] = useState<"pools" | "users" | "audit">("pools");
-  const [search, setSearch] = useState("");
+  const router = useRouter();
+  const tab = overview.activeTab;
+  const [search, setSearch] = useState(overview.search);
 
   if (!overview.isGlobalAdmin) return null;
 
-  const cleanSearch = search.trim().toLocaleLowerCase("pt-BR");
-  const pools = overview.pools.filter((pool) =>
-    `${pool.poolName} ${pool.ownerName} ${pool.inviteCode}`.toLocaleLowerCase("pt-BR").includes(cleanSearch),
-  );
-  const users = overview.users.filter((user) =>
-    `${user.displayName} ${user.email}`.toLocaleLowerCase("pt-BR").includes(cleanSearch),
-  );
+  function navigate(nextTab: typeof tab, nextPage = 1, nextSearch = "") {
+    const params = new URLSearchParams();
+    params.set("master_tab", nextTab);
+    if (nextSearch.trim()) params.set("master_search", nextSearch.trim());
+    if (nextPage > 1) params.set("master_page", String(nextPage));
+    router.push(`/admin?${params.toString()}`);
+  }
 
   return (
     <section className="card mt-8 overflow-hidden">
@@ -52,21 +55,57 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
       <div className="p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-2 overflow-x-auto">
-            <TabButton active={tab === "pools"} onClick={() => setTab("pools")} icon={Archive}>Bolões ({overview.pools.length})</TabButton>
-            <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={Users}>Usuários ({overview.users.length})</TabButton>
-            <TabButton active={tab === "audit"} onClick={() => setTab("audit")} icon={History}>Auditoria ({overview.audit.length})</TabButton>
+            <TabButton active={tab === "pools"} onClick={() => navigate("pools")} icon={Archive}>Bolões</TabButton>
+            <TabButton active={tab === "users"} onClick={() => navigate("users")} icon={Users}>Usuários</TabButton>
+            <TabButton active={tab === "audit"} onClick={() => navigate("audit")} icon={History}>Auditoria</TabButton>
           </div>
           {tab !== "audit" && (
-            <label className="relative md:w-72">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nesta lista" className="w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand" />
-            </label>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                navigate(tab, 1, search);
+              }}
+              className="flex gap-2 md:w-[24rem]"
+            >
+              <label className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar no servidor" className="w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand" />
+              </label>
+              <button type="submit" className="interactive rounded-xl bg-brand px-4 text-xs font-black text-white">Buscar</button>
+            </form>
           )}
         </div>
 
-        {tab === "pools" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div>}
-        {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{users.map((user) => <MasterUserCard key={user.userId} user={user} />)}</div>}
+        {tab === "pools" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div>}
+        {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.users.map((user) => <MasterUserCard key={user.userId} user={user} />)}</div>}
         {tab === "audit" && <AuditList entries={overview.audit} />}
+        {((tab === "pools" && overview.pools.length === 0) ||
+          (tab === "users" && overview.users.length === 0)) && (
+          <p className="mt-5 rounded-2xl border bg-surface-muted p-5 text-sm text-muted">
+            Nenhum resultado encontrado nesta página.
+          </p>
+        )}
+        {(overview.hasPreviousPage || overview.hasNextPage) && (
+          <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4">
+            <button
+              type="button"
+              disabled={!overview.hasPreviousPage}
+              onClick={() => navigate(tab, overview.page - 1, overview.search)}
+              className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-brand disabled:opacity-40"
+            >
+              <ChevronLeft className="size-4" /> Anterior
+            </button>
+            <span className="text-xs font-bold text-muted">Página {overview.page}</span>
+            <button
+              type="button"
+              disabled={!overview.hasNextPage}
+              onClick={() => navigate(tab, overview.page + 1, overview.search)}
+              className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-brand disabled:opacity-40"
+            >
+              Próxima <ChevronRight className="size-4" />
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

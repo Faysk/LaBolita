@@ -27,13 +27,46 @@ export async function GET() {
     });
   }
 
-  const [teams, matches, providerMappedMatches, renderableMatch, tournaments, resultsSync] =
+  const activeTournaments = await supabase
+    .from("tournaments")
+    .select("id")
+    .eq("is_active", true);
+  if (activeTournaments.error) {
+    return NextResponse.json(
+      {
+        status: "degraded",
+        app: "labolita",
+        database: "unreachable",
+        launchReady: false,
+        errorCode: activeTournaments.error.code,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 503 },
+    );
+  }
+
+  const activeTournamentId = activeTournaments.data?.length === 1
+    ? activeTournaments.data[0].id
+    : null;
+
+  const [teams, matches, providerMappedMatches, renderableMatch, resultsSync] =
     await Promise.all([
-    supabase.from("teams").select("id", { count: "exact", head: true }),
-    supabase.from("matches").select("id", { count: "exact", head: true }),
+    activeTournamentId
+      ? supabase
+        .from("teams")
+        .select("id", { count: "exact", head: true })
+        .eq("tournament_id", activeTournamentId)
+      : Promise.resolve({ count: 0, error: null }),
+    activeTournamentId
+      ? supabase
+        .from("matches")
+        .select("id", { count: "exact", head: true })
+        .eq("tournament_id", activeTournamentId)
+      : Promise.resolve({ count: 0, error: null }),
     supabase
       .from("matches")
       .select("id", { count: "exact", head: true })
+      .eq("tournament_id", activeTournamentId ?? "00000000-0000-0000-0000-000000000000")
       .not("provider_match_id", "is", null),
     supabase
       .from("matches")
@@ -44,14 +77,11 @@ export async function GET() {
           away_team:teams!matches_away_team_id_tournament_id_fkey(id)
         `,
       )
+      .eq("tournament_id", activeTournamentId ?? "00000000-0000-0000-0000-000000000000")
       .eq("stage", "group")
       .order("match_number")
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from("tournaments")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true),
     supabase.rpc("get_public_results_sync_status").maybeSingle(),
   ]);
   const databaseError =
@@ -59,7 +89,6 @@ export async function GET() {
     matches.error ??
     providerMappedMatches.error ??
     renderableMatch.error ??
-    tournaments.error ??
     resultsSync.error;
 
   if (databaseError) {
@@ -83,7 +112,7 @@ export async function GET() {
     renderableMatch.data?.home_team && renderableMatch.data?.away_team,
   );
   const launchReady =
-    (tournaments.count ?? 0) === 1 &&
+    activeTournaments.data?.length === 1 &&
     teamCount === REQUIRED_TEAMS &&
     matchCount === REQUIRED_MATCHES &&
     providerMappedCount === REQUIRED_MATCHES &&
@@ -101,6 +130,8 @@ export async function GET() {
       renderReady,
       requiredTeams: REQUIRED_TEAMS,
       requiredMatches: REQUIRED_MATCHES,
+      activeTournamentId,
+      activeTournaments: activeTournaments.data?.length ?? 0,
     },
     resultsSyncConfigured: Boolean(
       process.env.RESULTS_FEED_URL &&

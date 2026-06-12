@@ -4,6 +4,7 @@ import { AdminMatchQueue } from "@/components/admin-match-queue";
 import { MasterAdminConsole } from "@/components/master-admin-console";
 import { requireAdmin } from "@/lib/auth";
 import { getMasterOverview } from "@/lib/data/admin";
+import type { MasterTab } from "@/lib/data/admin";
 import { getMatches, getResultsSyncState, getTeams } from "@/lib/data/matches";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
@@ -12,13 +13,26 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ master_tab?: string; master_search?: string; master_page?: string }>;
+}) {
   await requireAdmin();
+  const params = await searchParams;
+  const masterTab: MasterTab =
+    params.master_tab === "users" || params.master_tab === "audit"
+      ? params.master_tab
+      : "pools";
   const [matches, teams, resultsSyncState, masterOverview] = await Promise.all([
     getMatches(),
     getTeams(),
     getResultsSyncState(),
-    getMasterOverview(),
+    getMasterOverview({
+      activeTab: masterTab,
+      search: params.master_search ?? "",
+      page: Number(params.master_page ?? 1),
+    }),
   ]);
   const databaseConfigured = hasSupabaseConfig();
   const resultsSyncConfigured = Boolean(
