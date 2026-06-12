@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Clock3, LoaderCircle, Monitor, Moon, Save, Sun, UserRoundCog } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { UserAvatar } from "@/components/user-avatar";
@@ -26,12 +26,16 @@ export function AccountSettingsPanel({
   email,
   avatarUrl,
   showAvatarPublicly,
+  persistedThemePreference,
+  persistedTimePreference,
   sampleMatch,
 }: {
   displayName: string;
   email?: string | null;
   avatarUrl?: string | null;
   showAvatarPublicly: boolean;
+  persistedThemePreference?: ThemePreference | null;
+  persistedTimePreference?: TimePreference | null;
   sampleMatch?: DemoMatch | null;
 }) {
   const router = useRouter();
@@ -40,15 +44,34 @@ export function AccountSettingsPanel({
   const [publicAvatar, setPublicAvatar] = useState(showAvatarPublicly);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [message, setMessage] = useState<string | null>(null);
+  const [preferenceState, setPreferenceState] = useState<SaveState>("idle");
+  const [preferenceMessage, setPreferenceMessage] = useState<string | null>(null);
   const { preference: themePreference, effectiveTheme, setPreference: setThemePreference } =
     useThemePreference();
   const { preference: timePreference, setPreference: updateTimePreference } = useTimePreference();
   const [zoneValue, setZoneValue] = useState(
-    timePreference.mode === "zone" ? timePreference.timeZone : "America/Sao_Paulo",
+    persistedTimePreference?.mode === "zone"
+      ? persistedTimePreference.timeZone
+      : timePreference.mode === "zone"
+        ? timePreference.timeZone
+        : "America/Sao_Paulo",
   );
   const [offsetValue, setOffsetValue] = useState(
-    String(timePreference.mode === "offset" ? timePreference.offsetMinutes : detectCurrentOffsetMinutes()),
+    String(
+      persistedTimePreference?.mode === "offset"
+        ? persistedTimePreference.offsetMinutes
+        : timePreference.mode === "offset"
+          ? timePreference.offsetMinutes
+          : detectCurrentOffsetMinutes(),
+    ),
   );
+
+  useEffect(() => {
+    if (persistedThemePreference) setThemePreference(persistedThemePreference);
+    if (!persistedTimePreference) return;
+
+    updateTimePreference(persistedTimePreference);
+  }, [persistedThemePreference, persistedTimePreference, setThemePreference, updateTimePreference]);
 
   const dirty =
     name.trim() !== displayName ||
@@ -92,10 +115,57 @@ export function AccountSettingsPanel({
 
   function updateTheme(nextPreference: ThemePreference) {
     setThemePreference(nextPreference);
+    void persistAccountPreferences({ themePreference: nextPreference });
   }
 
   function updateTime(nextPreference: TimePreference) {
     updateTimePreference(nextPreference);
+    void persistAccountPreferences({ timePreference: nextPreference });
+  }
+
+  async function persistAccountPreferences({
+    themePreference: nextThemePreference,
+    timePreference: nextTimePreference,
+  }: {
+    themePreference?: ThemePreference;
+    timePreference?: TimePreference;
+  }) {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase) return;
+
+    const payload: Record<string, string | number | null> = {};
+    if (nextThemePreference) payload.theme_preference = nextThemePreference;
+    if (nextTimePreference) Object.assign(payload, toTimePreferencePayload(nextTimePreference));
+    if (Object.keys(payload).length === 0) return;
+
+    setPreferenceState("saving");
+    setPreferenceMessage("Sincronizando preferência com sua conta...");
+
+    const { data: authData } = await supabase.auth.getUser();
+    if (!authData.user) {
+      setPreferenceState("error");
+      setPreferenceMessage("Entre novamente para sincronizar preferências.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(payload)
+      .eq("id", authData.user.id);
+
+    if (error) {
+      setPreferenceState("error");
+      setPreferenceMessage(
+        isMissingPreferenceColumn(error)
+          ? "Salvo neste dispositivo. A sincronização entre aparelhos será ativada após atualizar o banco."
+          : friendlyServerError(error, "Não foi possível sincronizar suas preferências."),
+      );
+      return;
+    }
+
+    setPreferenceState("saved");
+    setPreferenceMessage("Preferência sincronizada com sua conta.");
+    router.refresh();
   }
 
   function selectZone(nextZone: string) {
@@ -304,6 +374,17 @@ export function AccountSettingsPanel({
             </label>
           </div>
 
+          {preferenceMessage && (
+            <p
+              className={`mt-3 text-xs font-bold ${
+                preferenceState === "error" ? "text-amber-700" : "text-brand"
+              }`}
+              aria-live="polite"
+            >
+              {preferenceMessage}
+            </p>
+          )}
+
           <div className="mt-5 rounded-2xl border bg-surface-muted p-4">
             <p className="text-xs font-black uppercase tracking-[0.12em] text-brand">
               Prévia
@@ -392,4 +473,36 @@ function initialsFromName(name: string) {
     .join("")
     .toUpperCase();
   return initials || "LB";
+}
+
+function toTimePreferencePayload(preference: TimePreference) {
+  if (preference.mode === "auto") {
+    return {
+      time_preference_mode: "auto",
+      time_zone: null,
+      time_offset_minutes: null,
+    };
+  }
+
+  if (preference.mode === "zone") {
+    return {
+      time_preference_mode: "zone",
+      time_zone: preference.timeZone,
+      time_offset_minutes: null,
+    };
+  }
+
+  return {
+    time_preference_mode: "offset",
+    time_zone: null,
+    time_offset_minutes: preference.offsetMinutes,
+  };
+}
+
+function isMissingPreferenceColumn(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    /theme_preference|time_preference/i.test(error.message ?? "")
+  );
 }

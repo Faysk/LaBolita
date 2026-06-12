@@ -118,6 +118,8 @@ pela ESPN. O procedimento completo está em
 
 O fluxo diário do painel, incluindo definição dos participantes do mata-mata,
 está em [docs/ADMIN_OPERATIONS.md](docs/ADMIN_OPERATIONS.md).
+O fluxo de homologação com banco separado e promoção segura para produção está
+em [docs/HOMOLOGATION_ENVIRONMENT.md](docs/HOMOLOGATION_ENVIRONMENT.md).
 
 Smoke tests que usam a infraestrutura real:
 
@@ -125,6 +127,7 @@ Smoke tests que usam a infraestrutura real:
 npm run auth:smoke:remote
 npm run db:smoke:remote
 npm run results:smoke:remote
+npm run test:homolog
 npm run test:production
 ```
 

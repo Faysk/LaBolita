@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { AccountSettingsPanel } from "@/components/account-settings-panel";
 import { requireUser } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
+import {
+  normalizeThemePreference,
+  normalizeTimePreference,
+} from "@/lib/user-preference-values";
 
 export const metadata: Metadata = {
   title: "Minha conta",
@@ -12,12 +16,9 @@ export default async function AccountPage() {
   const context = await requireUser("/conta");
   if (!context) return null;
 
-  const { data: profile, error } = await context.supabase
-    .from("profiles")
-    .select("display_name, avatar_url, show_avatar_publicly")
-    .eq("id", context.user.id)
-    .single();
+  const { data: profile, error } = await loadAccountProfile(context.supabase, context.user.id);
   if (error) throw error;
+  if (!profile) throw new Error("Perfil não encontrado.");
 
   const matches = await getMatches();
   const sampleMatch = matches.find((match) => !match.result) ?? matches[0] ?? null;
@@ -39,8 +40,57 @@ export default async function AccountPage() {
         email={context.user.email}
         avatarUrl={profile.avatar_url}
         showAvatarPublicly={Boolean(profile.show_avatar_publicly)}
+        persistedThemePreference={normalizeThemePreference(profile.theme_preference)}
+        persistedTimePreference={normalizeTimePreference(
+          profile.time_preference_mode,
+          profile.time_zone,
+          profile.time_offset_minutes,
+        )}
         sampleMatch={sampleMatch}
       />
     </main>
+  );
+}
+
+async function loadAccountProfile(
+  supabase: NonNullable<Awaited<ReturnType<typeof requireUser>>>["supabase"],
+  userId: string,
+) {
+  const baseColumns = "display_name, avatar_url, show_avatar_publicly";
+  const preferenceColumns =
+    "theme_preference, time_preference_mode, time_zone, time_offset_minutes";
+  const result = await supabase
+    .from("profiles")
+    .select(`${baseColumns}, ${preferenceColumns}`)
+    .eq("id", userId)
+    .single();
+
+  if (!result.error || !isMissingPreferenceColumn(result.error)) return result;
+
+  const fallback = await supabase
+    .from("profiles")
+    .select(baseColumns)
+    .eq("id", userId)
+    .single();
+
+  return {
+    ...fallback,
+    data: fallback.data
+      ? {
+          ...fallback.data,
+          theme_preference: null,
+          time_preference_mode: null,
+          time_zone: null,
+          time_offset_minutes: null,
+        }
+      : fallback.data,
+  };
+}
+
+function isMissingPreferenceColumn(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    /theme_preference|time_preference/i.test(error.message ?? "")
   );
 }

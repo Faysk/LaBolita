@@ -155,7 +155,9 @@ site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   "http://localhost:3000/auth/callback",
-  "https://labolita.faysk.dev/auth/callback"
+  "https://labolita.faysk.dev/auth/callback",
+  "https://homolog.labolita.faysk.dev/auth/callback",
+  "https://homolog.labolita.faysk.dev/**"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600

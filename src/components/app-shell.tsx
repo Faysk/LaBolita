@@ -11,6 +11,11 @@ import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserPreferencesHydrator } from "@/components/user-preferences-hydrator";
+import {
+  normalizeThemePreference,
+  normalizeTimePreference,
+} from "@/lib/user-preference-values";
 
 export async function AppShell({ children }: { children: ReactNode }) {
   const supabase = await createServerSupabaseClient();
@@ -32,6 +37,14 @@ export async function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <>
+      <UserPreferencesHydrator
+        themePreference={normalizeThemePreference(profile?.theme_preference)}
+        timePreference={normalizeTimePreference(
+          profile?.time_preference_mode,
+          profile?.time_zone,
+          profile?.time_offset_minutes,
+        )}
+      />
       <a href="#main-content" className="skip-link">
         Pular para o conteúdo
       </a>
@@ -118,32 +131,62 @@ async function loadProfileForShell(
 ) {
   const baseColumns =
     "display_name, avatar_url, is_admin, is_master_admin, terms_accepted_at, terms_version, disabled_at";
+  const optionalColumns =
+    "show_avatar_publicly, theme_preference, time_preference_mode, time_zone, time_offset_minutes";
   const result = await supabase
+    .from("profiles")
+    .select(`${baseColumns}, ${optionalColumns}`)
+    .eq("id", userId)
+    .single();
+
+  if (!result.error || !isMissingOptionalProfileColumn(result.error)) return result;
+
+  const fallback = await supabase
     .from("profiles")
     .select(`${baseColumns}, show_avatar_publicly`)
     .eq("id", userId)
     .single();
 
-  if (!result.error || !isMissingPublicAvatarColumn(result.error)) return result;
+  if (!fallback.error || !isMissingOptionalProfileColumn(fallback.error)) {
+    return {
+      ...fallback,
+      data: fallback.data
+        ? {
+            ...fallback.data,
+            theme_preference: null,
+            time_preference_mode: null,
+            time_zone: null,
+            time_offset_minutes: null,
+          }
+        : fallback.data,
+    };
+  }
 
-  const fallback = await supabase
+  const minimalFallback = await supabase
     .from("profiles")
     .select(baseColumns)
     .eq("id", userId)
     .single();
 
   return {
-    ...fallback,
-    data: fallback.data
-      ? { ...fallback.data, show_avatar_publicly: false }
-      : fallback.data,
+    ...minimalFallback,
+    data: minimalFallback.data
+      ? {
+          ...minimalFallback.data,
+          show_avatar_publicly: false,
+          theme_preference: null,
+          time_preference_mode: null,
+          time_zone: null,
+          time_offset_minutes: null,
+        }
+      : minimalFallback.data,
   };
 }
 
-function isMissingPublicAvatarColumn(error: { code?: string; message?: string }) {
+function isMissingOptionalProfileColumn(error: { code?: string; message?: string }) {
   return (
     error.code === "42703" ||
     error.code === "PGRST204" ||
-    /show_avatar_publicly/i.test(error.message ?? "")
+    /show_avatar_publicly|theme_preference|time_preference/i.test(error.message ?? "")
   );
 }

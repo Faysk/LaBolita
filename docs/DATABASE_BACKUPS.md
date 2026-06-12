@@ -35,3 +35,5 @@ Ordem esperada dos arquivos:
 5. `03_data.sql`
 
 Para produção, valide o restore em outro banco antes de qualquer operação destrutiva.
+O procedimento de homologação e restore drill está em
+[`docs/HOMOLOGATION_ENVIRONMENT.md`](HOMOLOGATION_ENVIRONMENT.md).
