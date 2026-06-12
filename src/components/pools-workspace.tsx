@@ -4,25 +4,22 @@ import {
   Archive,
   ArchiveRestore,
   Check,
+  Copy,
+  Globe2,
   LoaderCircle,
   LogIn,
   Plus,
   Search,
+  Settings2,
   UserMinus,
   Users,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
-import {
-  EmptyCard,
-  PaginationLink,
-  PoolCard,
-  PoolSection,
-  PublicPoolCard,
-  Ranking,
-} from "@/components/pools/pool-display";
+import { PoolFlag } from "@/components/pool-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
 import { COUNTRIES } from "@/lib/countries";
@@ -36,6 +33,8 @@ import {
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import type { PoolSummary, RankingEntry } from "@/lib/types";
 import { friendlyServerError } from "@/lib/user-errors";
+import { UserAvatar } from "@/components/user-avatar";
+import { rankingLabel } from "@/lib/ranking-display";
 
 type ManagedMember = {
   user_id: string;
@@ -46,7 +45,7 @@ type ManagedMember = {
 
 export function PoolsWorkspace({
   pools: initialPools,
-  publicPools,
+  publicPools: initialPublicPools,
   ranking,
   rankingName,
   rankingsByPool,
@@ -64,6 +63,8 @@ export function PoolsWorkspace({
   const pools = [...initialPools, ...localPools].filter(
     (pool, index, all) => all.findIndex((item) => item.id === pool.id) === index,
   );
+  const membershipIds = new Set(pools.map((pool) => pool.id));
+  const publicPools = initialPublicPools.filter((pool) => !membershipIds.has(pool.id));
   const activePools = pools.filter((pool) => !pool.isArchived);
   const archivedPools = pools.filter((pool) => pool.isArchived);
   const firstPool = activePools[0] ?? publicPools[0];
@@ -88,7 +89,6 @@ export function PoolsWorkspace({
       points: 0,
       exact: 0,
       correct: 0,
-      trend: "—",
     }));
   const selectedBaseRanking =
     (selectedPool && loadedRankings[selectedPool.id]) ??
@@ -219,15 +219,27 @@ export function PoolsWorkspace({
       {isAuthenticated && (
         <PoolSection title="Seus bolões" subtitle="Grupos em que você participa ou administra.">
           {activePools.map((pool) => (
-            <PoolCard
-              key={pool.id}
-              pool={pool}
-              selected={pool.id === selectedPool?.id}
-              copied={copiedCode === pool.code}
-              onCopy={() => copyCode(pool.code)}
-              onSelect={() => void selectPool(pool)}
-              onManage={pool.isOwner ? () => setManagedPoolId(managedPoolId === pool.id ? null : pool.id) : undefined}
-            />
+            <Fragment key={pool.id}>
+              <PoolCard
+                pool={pool}
+                selected={pool.id === selectedPool?.id}
+                copied={copiedCode === pool.code}
+                onCopy={() => copyCode(pool.code)}
+                onSelect={() => void selectPool(pool)}
+                onManage={pool.isOwner ? () => setManagedPoolId(managedPoolId === pool.id ? null : pool.id) : undefined}
+              />
+              {pool.id === selectedPool?.id && (
+                <div className="md:col-span-2 lg:col-span-3">
+                  <Ranking
+                    entries={visibleRanking}
+                    name={selectedPool.name}
+                    memberCount={selectedPool.members}
+                    loading={rankingLoadingId === selectedPool.id}
+                    inline
+                  />
+                </div>
+              )}
+            </Fragment>
           ))}
           {activePools.length === 0 && (
             <EmptyCard text="Você ainda não participa de nenhum bolão. Crie um grupo, use um convite ou descubra um bolão público." />
@@ -267,14 +279,26 @@ export function PoolsWorkspace({
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {publicPools.map((pool) => (
-            <PublicPoolCard
-              key={pool.id}
-              pool={pool}
-              selected={pool.id === selectedPool?.id}
-              joining={joiningId === pool.id}
-              onSelect={() => void selectPool(pool)}
-              onJoin={() => joinPublicPool(pool)}
-            />
+            <Fragment key={pool.id}>
+              <PublicPoolCard
+                pool={pool}
+                selected={pool.id === selectedPool?.id}
+                joining={joiningId === pool.id}
+                onSelect={() => void selectPool(pool)}
+                onJoin={() => joinPublicPool(pool)}
+              />
+              {pool.id === selectedPool?.id && (
+                <div className="md:col-span-2 lg:col-span-3">
+                  <Ranking
+                    entries={visibleRanking}
+                    name={selectedPool.name}
+                    memberCount={selectedPool.members}
+                    loading={rankingLoadingId === selectedPool.id}
+                    inline
+                  />
+                </div>
+              )}
+            </Fragment>
           ))}
           {publicPools.length === 0 && (
             <EmptyCard text={publicSearch ? "Nenhum bolão público encontrado nesta busca." : "Ainda não há bolões públicos disponíveis."} />
@@ -308,13 +332,122 @@ export function PoolsWorkspace({
         </details>
       )}
 
-      <Ranking
-        entries={visibleRanking}
-        name={selectedPool?.name ?? rankingName}
-        memberCount={selectedPool?.members ?? visibleRanking.length}
-        loading={rankingLoadingId === selectedPool?.id}
-      />
+      {!selectedPool && (
+        <Ranking
+          entries={visibleRanking}
+          name={rankingName}
+          memberCount={visibleRanking.length}
+          loading={false}
+        />
+      )}
     </main>
+  );
+}
+
+function PoolSection({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-8">
+      <h2 className="text-2xl font-black tracking-tight">{title}</h2>
+      <p className="mt-1 text-sm text-muted">{subtitle}</p>
+      <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{children}</div>
+    </section>
+  );
+}
+
+function PoolCard({
+  pool,
+  selected,
+  copied,
+  onCopy,
+  onSelect,
+  onManage,
+}: {
+  pool: PoolSummary;
+  selected: boolean;
+  copied: boolean;
+  onCopy: () => void;
+  onSelect: () => void;
+  onManage?: () => void;
+}) {
+  return (
+    <article data-testid={`pool-${pool.id}`} className={`card relative overflow-hidden p-5 ${selected ? "card-dark text-white" : ""}`}>
+      <div className="relative flex items-start justify-between">
+        <PoolFlag code={pool.flagCode} size={selected ? "lg" : "md"} />
+        <div className="flex items-center gap-2">
+          {pool.isPublic && <Globe2 className="size-4 opacity-60" aria-label="Bolão público" />}
+          {onManage && (
+            <button type="button" aria-label={`Gerenciar ${pool.name}`} onClick={onManage} className="interactive rounded-xl p-2">
+              <Settings2 className="size-4" />
+            </button>
+          )}
+        </div>
+      </div>
+      <h3 className="relative mt-6 text-xl font-black tracking-tight">{pool.name}</h3>
+      <p className={`mt-2 flex items-center gap-1 text-sm ${selected ? "text-white/60" : "text-muted"}`}>
+        <Users className="size-4" /> {pool.members} jogadores
+      </p>
+      {pool.code && (
+        <div className={`mt-5 flex items-center justify-between rounded-2xl p-3 ${selected ? "bg-white/10" : "bg-surface-muted"}`}>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider opacity-55">Código</p>
+            <p className="mt-0.5 font-mono text-sm font-bold">{pool.code}</p>
+          </div>
+          <button type="button" aria-label={`Copiar código ${pool.code}`} onClick={onCopy} className="interactive rounded-xl p-2">
+            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+          </button>
+        </div>
+      )}
+      <button type="button" onClick={onSelect} className={`interactive mt-3 w-full rounded-xl px-3 py-2 text-xs font-black ${selected ? "bg-accent text-brand-strong" : "bg-surface-muted text-brand"}`}>
+        {selected ? "Ranking selecionado" : "Ver ranking"}
+      </button>
+    </article>
+  );
+}
+
+function PublicPoolCard({
+  pool,
+  selected,
+  joining,
+  onSelect,
+  onJoin,
+}: {
+  pool: PoolSummary;
+  selected: boolean;
+  joining: boolean;
+  onSelect: () => void;
+  onJoin: () => void;
+}) {
+  return (
+    <article className={`card relative overflow-hidden p-5 ${selected ? "ring-2 ring-brand" : ""}`}>
+      <div className="relative flex items-center justify-between">
+        <PoolFlag code={pool.flagCode} size="lg" />
+        <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-black text-brand-strong">Público</span>
+      </div>
+      <h3 className="relative mt-5 text-xl font-black tracking-tight">{pool.name}</h3>
+      <p className="mt-2 text-sm text-muted">Por {pool.ownerName ?? "organizador"} · {pool.members} jogadores</p>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <button type="button" onClick={onSelect} className="interactive rounded-xl bg-surface-muted px-3 py-2 text-xs font-black text-brand">
+          Ver ranking
+        </button>
+        <button type="button" disabled={joining} aria-busy={joining} onClick={onJoin} className="interactive flex items-center justify-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white disabled:opacity-60">
+          {joining ? <LoaderCircle className="size-3 animate-spin" /> : <Plus className="size-3" />}
+          {joining ? "Entrando..." : "Participar"}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function EmptyCard({ text }: { text: string }) {
+  return <p className="card p-6 text-sm text-muted md:col-span-2 lg:col-span-3">{text}</p>;
+}
+
+function PaginationLink({ page, disabled, search, children }: { page: number; disabled: boolean; search: string; children: React.ReactNode }) {
+  const href = `/boloes?pagina=${page}${search ? `&busca=${encodeURIComponent(search)}` : ""}`;
+  return disabled ? (
+    <span className="rounded-xl border px-4 py-2 text-muted opacity-40">{children}</span>
+  ) : (
+    <Link className="interactive rounded-xl border bg-white px-4 py-2 text-brand" href={href}>{children}</Link>
   );
 }
 
@@ -595,8 +728,10 @@ function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {
   return data.map((entry) => {
     const row = entry as {
       rank_position: number;
+      provisional_rank_position?: number;
       display_name: string;
       total_points: number;
+      provisional_points?: number;
       exact_scores: number;
       correct_results: number;
       user_id: string | null;
@@ -604,14 +739,89 @@ function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {
     };
     return {
       position: Number(row.rank_position),
+      provisionalPosition:
+        row.provisional_rank_position === undefined
+          ? undefined
+          : Number(row.provisional_rank_position),
       name: row.display_name,
       initials: row.display_name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase(),
       points: Number(row.total_points),
+      provisionalPoints:
+        row.provisional_points === undefined ? undefined : Number(row.provisional_points),
       exact: Number(row.exact_scores),
       correct: Number(row.correct_results),
-      trend: "—",
       isCurrentUser: row.user_id === currentUserId,
       avatarUrl: row.avatar_url ?? undefined,
     };
   });
+}
+
+function Ranking({
+  entries,
+  name,
+  memberCount,
+  loading,
+  inline = false,
+}: {
+  entries: RankingEntry[];
+  name: string;
+  memberCount: number;
+  loading: boolean;
+  inline?: boolean;
+}) {
+  const hasProvisional = entries.some(
+    (entry) =>
+      entry.provisionalPoints !== undefined &&
+      entry.provisionalPoints !== entry.points,
+  );
+  return (
+    <section
+      data-testid="pool-ranking"
+      className={`card overflow-hidden ${inline ? "" : "mt-8"}`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b p-5 md:p-6">
+        <div><p className="eyebrow">{name}</p><h2 className="mt-1 text-2xl font-black tracking-tight">Classificação</h2></div>
+        <div className="flex items-center gap-2">
+          {hasProvisional && <div className="status-live rounded-2xl border px-3 py-2 text-xs font-black">Ao vivo · provisório</div>}
+          <div className="rounded-2xl bg-accent px-3 py-2 text-xs font-black text-brand-strong">{memberCount} jogadores</div>
+        </div>
+      </div>
+      <div className="hidden grid-cols-[3rem_1fr_6rem_6rem_6rem] gap-3 border-b bg-surface-muted/55 px-6 py-2 text-[10px] font-black uppercase tracking-wider text-muted md:grid">
+        <span className="text-center">Pos.</span>
+        <span>Participante</span>
+        <span className="text-right">Pontos</span>
+        <span className="text-center">Exatos</span>
+        <span className="text-center">Resultados</span>
+      </div>
+      <div className="divide-y">
+        {loading && Array.from({ length: 3 }, (_, index) => <div key={index} className="flex items-center gap-3 px-5 py-4"><span className="skeleton size-10 rounded-full" /><span className="skeleton h-4 flex-1 rounded-xl" /><span className="skeleton h-4 w-16 rounded-xl" /></div>)}
+        {!loading && entries.map((player) => (
+          <div key={`${player.position}-${player.name}`} data-testid={player.isCurrentUser ? "ranking-current-user" : undefined} className={`grid grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${player.isCurrentUser ? "bg-accent/20" : ""}`}>
+            <span className="text-center text-sm font-black text-muted">{rankingPositionLabel(player, entries, hasProvisional)}</span>
+            <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name} {player.isCurrentUser && <span className="ml-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">Você</span>}</p><p className="text-xs text-muted md:hidden">{pluralize(player.exact, "cravada", "cravadas")} · {pluralize(player.correct, "resultado", "resultados")}</p></div></div>
+            <span className="text-right text-sm font-black text-brand">
+              {hasProvisional ? player.provisionalPoints ?? player.points : player.points} pts
+              {hasProvisional && player.provisionalPoints !== player.points && (
+                <small className="block text-[9px] font-bold text-muted">{player.points} oficial</small>
+              )}
+            </span>
+            <span className="hidden text-center text-sm text-muted md:block">{pluralize(player.exact, "exato", "exatos")}</span>
+            <span className="hidden text-center text-sm text-muted md:block">{pluralize(player.correct, "resultado", "resultados")}</span>
+          </div>
+        ))}
+        {!loading && entries.length === 0 && <p className="p-6 text-center text-sm text-muted">O ranking aparece assim que o bolão tiver participantes.</p>}
+      </div>
+    </section>
+  );
+}
+
+function rankingPositionLabel(player: RankingEntry, entries: RankingEntry[], provisional: boolean) {
+  return rankingLabel(player, entries, {
+    provisional,
+    tiedSuffix: "=",
+  });
+}
+
+function pluralize(value: number, singular: string, plural: string) {
+  return `${value} ${value === 1 ? singular : plural}`;
 }

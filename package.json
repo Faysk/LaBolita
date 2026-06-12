@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/prepare-next-build.mjs && next build",
+    "build": "next build",
     "build:demo": "node scripts/build-demo.mjs",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "node scripts/prepare-next-build.mjs && next typegen && tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "check": "npm run lint && npm run typecheck && npm test && npm run schedule:test && npm run db:smoke && npm run test:ui",
     "test": "vitest run",
     "test:ui": "node scripts/test-ui.mjs",

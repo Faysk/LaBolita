@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import { createPublicSupabaseClient } from "@/lib/supabase/public";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const REQUIRED_TEAMS = 48;
 const REQUIRED_MATCHES = 104;
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
-  const supabase = createPublicSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   if (!supabase) {
-    return healthJson({
+    return NextResponse.json({
       status: "ok",
       app: "labolita",
       database: "demo",
@@ -29,30 +27,46 @@ export async function GET() {
     });
   }
 
-  const { data: tournament, error: tournamentError } = await supabase
+  const activeTournaments = await supabase
     .from("tournaments")
     .select("id")
-    .eq("is_active", true)
-    .single();
-
-  if (tournamentError) {
-    return degraded(tournamentError.code);
+    .eq("is_active", true);
+  if (activeTournaments.error) {
+    return NextResponse.json(
+      {
+        status: "degraded",
+        app: "labolita",
+        database: "unreachable",
+        launchReady: false,
+        errorCode: activeTournaments.error.code,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 503 },
+    );
   }
+
+  const activeTournamentId = activeTournaments.data?.length === 1
+    ? activeTournaments.data[0].id
+    : null;
 
   const [teams, matches, providerMappedMatches, renderableMatch, resultsSync] =
     await Promise.all([
-    supabase
-      .from("teams")
-      .select("id", { count: "exact", head: true })
-      .eq("tournament_id", tournament.id),
+    activeTournamentId
+      ? supabase
+        .from("teams")
+        .select("id", { count: "exact", head: true })
+        .eq("tournament_id", activeTournamentId)
+      : Promise.resolve({ count: 0, error: null }),
+    activeTournamentId
+      ? supabase
+        .from("matches")
+        .select("id", { count: "exact", head: true })
+        .eq("tournament_id", activeTournamentId)
+      : Promise.resolve({ count: 0, error: null }),
     supabase
       .from("matches")
       .select("id", { count: "exact", head: true })
-      .eq("tournament_id", tournament.id),
-    supabase
-      .from("matches")
-      .select("id", { count: "exact", head: true })
-      .eq("tournament_id", tournament.id)
+      .eq("tournament_id", activeTournamentId ?? "00000000-0000-0000-0000-000000000000")
       .not("provider_match_id", "is", null),
     supabase
       .from("matches")
@@ -63,7 +77,7 @@ export async function GET() {
           away_team:teams!matches_away_team_id_tournament_id_fkey(id)
         `,
       )
-      .eq("tournament_id", tournament.id)
+      .eq("tournament_id", activeTournamentId ?? "00000000-0000-0000-0000-000000000000")
       .eq("stage", "group")
       .order("match_number")
       .limit(1)
@@ -78,7 +92,17 @@ export async function GET() {
     resultsSync.error;
 
   if (databaseError) {
-    return degraded(databaseError.code);
+    return NextResponse.json(
+      {
+        status: "degraded",
+        app: "labolita",
+        database: "unreachable",
+        launchReady: false,
+        errorCode: databaseError.code,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 503 },
+    );
   }
 
   const teamCount = teams.count ?? 0;
@@ -88,12 +112,13 @@ export async function GET() {
     renderableMatch.data?.home_team && renderableMatch.data?.away_team,
   );
   const launchReady =
+    activeTournaments.data?.length === 1 &&
     teamCount === REQUIRED_TEAMS &&
     matchCount === REQUIRED_MATCHES &&
     providerMappedCount === REQUIRED_MATCHES &&
     renderReady;
 
-  return healthJson({
+  return NextResponse.json({
     status: "ok",
     app: "labolita",
     database: "connected",
@@ -105,6 +130,8 @@ export async function GET() {
       renderReady,
       requiredTeams: REQUIRED_TEAMS,
       requiredMatches: REQUIRED_MATCHES,
+      activeTournamentId,
+      activeTournaments: activeTournaments.data?.length ?? 0,
     },
     resultsSyncConfigured: Boolean(
       process.env.RESULTS_FEED_URL &&
@@ -113,26 +140,5 @@ export async function GET() {
     ),
     resultsSync: resultsSync.data ?? { status: "unknown" },
     timestamp: new Date().toISOString(),
-  });
-}
-
-function degraded(errorCode: string) {
-  return healthJson(
-    {
-      status: "degraded",
-      app: "labolita",
-      database: "unreachable",
-      launchReady: false,
-      errorCode,
-      timestamp: new Date().toISOString(),
-    },
-    503,
-  );
-}
-
-function healthJson(body: object, status = 200) {
-  return NextResponse.json(body, {
-    status,
-    headers: { "Cache-Control": "no-store" },
   });
 }

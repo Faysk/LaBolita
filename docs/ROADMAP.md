@@ -52,11 +52,5 @@ Critério de saída: checklist operacional assinado e primeiro jogo pronto.
 
 - Atualização automática de resultados com revisão humana.
 - Notificações de palpites pendentes.
-- Lembretes antes do bloqueio e resumo diário.
-- Histórico por rodada, evolução do ranking e tendências reais.
-- Painel operacional com sync, divergências, bloqueios e auditoria recente.
-- Homologação Supabase com comparação automática de migrations.
-- Observabilidade para health, OAuth, cron, frontend e RPCs.
-- PWA somente leitura após estabilização do core.
 - Compartilhamento de ranking e comentários.
 - Palpites especiais e estatísticas avançadas somente após regras aprovadas.

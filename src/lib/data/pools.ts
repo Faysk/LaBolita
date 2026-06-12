@@ -28,10 +28,13 @@ type PublicPoolRow = {
 
 type RankingRow = {
   rank_position: number;
+  provisional_rank_position?: number;
   user_id?: string | null;
+  is_current_user?: boolean;
   display_name: string;
   avatar_url?: string | null;
   total_points: number;
+  provisional_points?: number;
   exact_scores: number;
   correct_results: number;
 };
@@ -47,6 +50,11 @@ export type PoolsOverview = {
   publicPage: number;
   publicPages: number;
   publicSearch: string;
+};
+
+export type PublicPoolHighlight = PoolSummary & {
+  totalPoints: number;
+  topPlayers: RankingEntry[];
 };
 
 export async function getPoolsOverview({
@@ -106,6 +114,7 @@ export async function getPoolsOverview({
   );
   const privateIds = new Set(pools.map((pool) => pool.id));
   const publicPools = publicRows
+    .filter((pool) => !privateIds.has(pool.pool_id))
     .map(
       (pool) =>
         ({
@@ -116,7 +125,6 @@ export async function getPoolsOverview({
           position: 1,
           ownerName: pool.owner_name,
           isPublic: true,
-          isMember: privateIds.has(pool.pool_id),
         }) satisfies PoolSummary,
     );
   const rankingsByPool: Record<string, RankingEntry[]> = {};
@@ -164,6 +172,7 @@ export async function getPoolsOverview({
 export async function getPublicGlobalRanking(): Promise<RankingEntry[]> {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return demoRanking.slice(0, 3);
+  const user = await getOptionalUser(supabase);
 
   const { data, error } = await supabase.rpc("get_public_global_ranking", {
     p_limit: 3,
@@ -174,7 +183,84 @@ export async function getPublicGlobalRanking(): Promise<RankingEntry[]> {
     });
   }
 
-  return mapRanking((data ?? []) as RankingRow[]);
+  return mapRanking((data ?? []) as RankingRow[], user?.id);
+}
+
+export async function getPublicPoolHighlights(limit = 3): Promise<PublicPoolHighlight[]> {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) {
+    const totalPoints = demoRanking.reduce((total, player) => total + player.points, 0);
+    return demoPools.slice(0, limit).map((pool) => ({
+      ...pool,
+      isPublic: true,
+      totalPoints,
+      topPlayers: demoRanking.slice(0, 3),
+    }));
+  }
+
+  const user = await getOptionalUser(supabase);
+  const { data: publicData, error: publicError } = await supabase.rpc("get_public_pools", {
+    p_search: null,
+    p_limit: 12,
+    p_offset: 0,
+  });
+  if (publicError) {
+    console.error("Could not load public pool highlights", publicError);
+    return [];
+  }
+
+  const highlights = await Promise.all(
+    ((publicData ?? []) as PublicPoolRow[]).map(async (pool) => {
+      const { data, error } = await supabase.rpc("get_public_pool_ranking", {
+        p_pool_id: pool.pool_id,
+        p_limit: 100,
+        p_offset: 0,
+      });
+      if (error) {
+        console.error("Could not load public pool highlight ranking", {
+          poolId: pool.pool_id,
+          code: error.code,
+          message: error.message,
+        });
+        return {
+          id: pool.pool_id,
+          name: pool.pool_name,
+          flagCode: pool.flag_code,
+          members: Number(pool.member_count),
+          position: 1,
+          ownerName: pool.owner_name,
+          isPublic: true,
+          totalPoints: 0,
+          topPlayers: [],
+        } satisfies PublicPoolHighlight;
+      }
+
+      const ranking = mapRanking((data ?? []) as RankingRow[], user?.id);
+      return {
+        id: pool.pool_id,
+        name: pool.pool_name,
+        flagCode: pool.flag_code,
+        members: Number(pool.member_count),
+        position: 1,
+        ownerName: pool.owner_name,
+        isPublic: true,
+        totalPoints: ranking.reduce(
+          (total, player) => total + (player.provisionalPoints ?? player.points),
+          0,
+        ),
+        topPlayers: ranking.slice(0, 3),
+      } satisfies PublicPoolHighlight;
+    }),
+  );
+
+  return highlights
+    .sort(
+      (left, right) =>
+        right.totalPoints - left.totalPoints ||
+        right.members - left.members ||
+        left.name.localeCompare(right.name, "pt-BR"),
+    )
+    .slice(0, limit);
 }
 
 function demoOverview(): PoolsOverview {
@@ -195,13 +281,21 @@ function demoOverview(): PoolsOverview {
 function mapRanking(ranking: RankingRow[], currentUserId?: string): RankingEntry[] {
   return ranking.map((entry) => ({
     position: Number(entry.rank_position),
+    provisionalPosition:
+      entry.provisional_rank_position === undefined
+        ? undefined
+        : Number(entry.provisional_rank_position),
     name: entry.display_name,
     initials: initials(entry.display_name),
     points: Number(entry.total_points),
+    provisionalPoints:
+      entry.provisional_points === undefined
+        ? undefined
+        : Number(entry.provisional_points),
     exact: Number(entry.exact_scores),
     correct: Number(entry.correct_results),
-    trend: "—",
-    isCurrentUser: entry.user_id === currentUserId,
+    isCurrentUser:
+      entry.is_current_user === true || entry.user_id === currentUserId,
     avatarUrl: entry.avatar_url ?? undefined,
   }));
 }

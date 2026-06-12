@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { PredictionBoard } from "@/components/prediction-board";
+import { LiveRefresh } from "@/components/live-refresh";
+import { isLiveMatch } from "@/lib/match-display";
 import { requireUser } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
 
@@ -11,9 +13,13 @@ export const metadata: Metadata = {
 export default async function PredictionsPage() {
   await requireUser("/palpites");
   const matches = await getMatches();
+  const awaitingOfficial = matches.some(
+    (match) => match.providerStatus === "finished" && !match.result,
+  );
 
   return (
     <main className="page-container py-7 md:py-10">
+      <LiveRefresh active={matches.some(isLiveMatch) || awaitingOfficial} />
       <div className="mb-7">
         <p className="eyebrow">A bola está com você</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">

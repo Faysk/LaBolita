@@ -1,17 +1,6 @@
 import "server-only";
-import { getViewerContext } from "@/lib/auth";
-
-const MASTER_PAGE_SIZE = 25;
-
-export type MasterAdminTab = "pools" | "users" | "audit";
-
-export type MasterOverviewParams = {
-  activeTab?: MasterAdminTab;
-  poolPage?: number;
-  poolSearch?: string;
-  userPage?: number;
-  userSearch?: string;
-};
+import { getOptionalUser } from "@/lib/supabase/auth";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type MasterPool = {
   poolId: string;
@@ -50,20 +39,18 @@ export type AuditEntry = {
 export type MasterOverview = {
   isGlobalAdmin: boolean;
   isMaster: boolean;
+  activeTab: MasterTab;
+  search: string;
+  page: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
   pools: MasterPool[];
   users: MasterUser[];
   audit: AuditEntry[];
   termsEnforcementEnabled: boolean;
-  activeTab: MasterAdminTab;
-  poolPage: number;
-  poolPages: number;
-  poolTotal: number;
-  poolSearch: string;
-  userPage: number;
-  userPages: number;
-  userTotal: number;
-  userSearch: string;
 };
+
+export type MasterTab = "pools" | "users" | "audit";
 
 type MasterPoolRow = {
   pool_id: string;
@@ -76,7 +63,6 @@ type MasterPoolRow = {
   archived_at: string | null;
   member_count: number;
   created_at: string;
-  total_count: number;
 };
 
 type MasterUserRow = {
@@ -89,73 +75,99 @@ type MasterUserRow = {
   terms_accepted_at: string | null;
   pools_owned: number;
   created_at: string;
-  total_count: number;
 };
 
-export async function getMasterOverview(
-  params: MasterOverviewParams = {},
-): Promise<MasterOverview> {
-  const activeTab = params.activeTab ?? "pools";
-  const poolPage = positivePage(params.poolPage);
-  const userPage = positivePage(params.userPage);
-  const poolSearch = cleanSearch(params.poolSearch);
-  const userSearch = cleanSearch(params.userSearch);
-  const emptyOverview = {
-    pools: [],
-    users: [],
-    audit: [],
-    termsEnforcementEnabled: false,
-    activeTab,
-    poolPage,
-    poolPages: 1,
-    poolTotal: 0,
-    poolSearch,
-    userPage,
-    userPages: 1,
-    userTotal: 0,
-    userSearch,
-  };
-  const { supabase, user, profile, demoMode } = await getViewerContext();
-  if (demoMode) {
+export async function getMasterOverview({
+  activeTab = "pools",
+  search = "",
+  page = 1,
+}: {
+  activeTab?: MasterTab;
+  search?: string;
+  page?: number;
+} = {}): Promise<MasterOverview> {
+  const cleanSearch = search.trim().slice(0, 80);
+  const safePage = Math.max(1, Math.trunc(page) || 1);
+  const pageSize = activeTab === "audit" ? 50 : 24;
+  const offset = (safePage - 1) * pageSize;
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) {
     return {
-      ...emptyOverview,
       isGlobalAdmin: true,
       isMaster: true,
+      activeTab,
+      search: cleanSearch,
+      page: safePage,
+      hasPreviousPage: safePage > 1,
+      hasNextPage: false,
+      pools: [],
+      users: [],
+      audit: [],
+      termsEnforcementEnabled: false,
     };
   }
 
+  const user = await getOptionalUser(supabase);
   if (!user) {
     return {
-      ...emptyOverview,
       isGlobalAdmin: false,
       isMaster: false,
+      activeTab,
+      search: cleanSearch,
+      page: safePage,
+      hasPreviousPage: false,
+      hasNextPage: false,
+      pools: [],
+      users: [],
+      audit: [],
+      termsEnforcementEnabled: false,
     };
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_admin, is_master_admin")
+    .eq("id", user.id)
+    .single();
+  if (profileError) throw profileError;
   if (!profile?.is_admin) {
     return {
-      ...emptyOverview,
       isGlobalAdmin: false,
       isMaster: false,
+      activeTab,
+      search: cleanSearch,
+      page: safePage,
+      hasPreviousPage: false,
+      hasNextPage: false,
+      pools: [],
+      users: [],
+      audit: [],
+      termsEnforcementEnabled: false,
     };
   }
 
   const [poolsResult, usersResult, auditResult, settingsResult] = await Promise.all([
-    supabase.rpc("master_list_pools", {
-      p_search: poolSearch || null,
-      p_limit: activeTab === "pools" ? MASTER_PAGE_SIZE : 1,
-      p_offset: activeTab === "pools" ? (poolPage - 1) * MASTER_PAGE_SIZE : 0,
-    }),
-    supabase.rpc("master_list_users", {
-      p_search: userSearch || null,
-      p_limit: activeTab === "users" ? MASTER_PAGE_SIZE : 1,
-      p_offset: activeTab === "users" ? (userPage - 1) * MASTER_PAGE_SIZE : 0,
-    }),
-    supabase
-      .from("admin_audit_logs")
-      .select("id, action, entity_type, entity_id, metadata, created_at")
-      .order("created_at", { ascending: false })
-      .limit(activeTab === "audit" ? 50 : 1),
+    activeTab === "pools"
+      ? supabase.rpc("master_list_pools", {
+          p_search: cleanSearch || null,
+          p_limit: pageSize + 1,
+          p_offset: offset,
+        })
+      : Promise.resolve({ data: [], error: null }),
+    activeTab === "users"
+      ? supabase.rpc("master_list_users", {
+          p_search: cleanSearch || null,
+          p_limit: pageSize + 1,
+          p_offset: offset,
+        })
+      : Promise.resolve({ data: [], error: null }),
+    activeTab === "audit"
+      ? supabase
+        .from("admin_audit_logs")
+        .select("id, action, entity_type, entity_id, metadata, created_at")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + pageSize)
+      : Promise.resolve({ data: [], error: null }),
     supabase.rpc("get_master_settings"),
   ]);
   const overviewError =
@@ -165,15 +177,26 @@ export async function getMasterOverview(
       cause: overviewError,
     });
   }
-  const poolRows = (poolsResult.data ?? []) as MasterPoolRow[];
-  const userRows = (usersResult.data ?? []) as MasterUserRow[];
-  const poolTotal = Number(poolRows[0]?.total_count ?? 0);
-  const userTotal = Number(userRows[0]?.total_count ?? 0);
+
+  const rawPools = (poolsResult.data ?? []) as MasterPoolRow[];
+  const rawUsers = (usersResult.data ?? []) as MasterUserRow[];
+  const rawAudit = auditResult.data ?? [];
+  const hasNextPage =
+    activeTab === "pools"
+      ? rawPools.length > pageSize
+      : activeTab === "users"
+        ? rawUsers.length > pageSize
+        : rawAudit.length > pageSize;
 
   return {
     isGlobalAdmin: true,
     isMaster: Boolean(profile.is_master_admin),
-    pools: (activeTab === "pools" ? poolRows : []).map((pool) => ({
+    activeTab,
+    search: cleanSearch,
+    page: safePage,
+    hasPreviousPage: safePage > 1,
+    hasNextPage,
+    pools: rawPools.slice(0, pageSize).map((pool) => ({
       poolId: pool.pool_id,
       poolName: pool.pool_name,
       ownerId: pool.owner_id,
@@ -185,7 +208,7 @@ export async function getMasterOverview(
       memberCount: Number(pool.member_count),
       createdAt: pool.created_at,
     })),
-    users: (activeTab === "users" ? userRows : []).map((profileRow) => ({
+    users: rawUsers.slice(0, pageSize).map((profileRow) => ({
       userId: profileRow.user_id,
       displayName: profileRow.display_name,
       email: profileRow.email,
@@ -196,7 +219,7 @@ export async function getMasterOverview(
       poolsOwned: Number(profileRow.pools_owned),
       createdAt: profileRow.created_at,
     })),
-    audit: (activeTab === "audit" ? (auditResult.data ?? []) : []).map((entry) => ({
+    audit: rawAudit.slice(0, pageSize).map((entry) => ({
       id: entry.id,
       action: entry.action,
       entityType: entry.entity_type,
@@ -205,26 +228,5 @@ export async function getMasterOverview(
       createdAt: entry.created_at,
     })),
     termsEnforcementEnabled: Boolean(settingsResult.data?.[0]?.terms_enforcement_enabled),
-    activeTab,
-    poolPage,
-    poolPages: pageCount(poolTotal),
-    poolTotal,
-    poolSearch,
-    userPage,
-    userPages: pageCount(userTotal),
-    userTotal,
-    userSearch,
   };
-}
-
-function positivePage(value?: number) {
-  return Number.isInteger(value) && Number(value) > 0 ? Number(value) : 1;
-}
-
-function cleanSearch(value?: string) {
-  return value?.trim().slice(0, 100) ?? "";
-}
-
-function pageCount(total: number) {
-  return Math.max(1, Math.ceil(total / MASTER_PAGE_SIZE));
 }

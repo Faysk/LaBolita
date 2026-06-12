@@ -38,7 +38,8 @@ export default function RulesPage() {
         <p className="mt-3 text-sm leading-6 text-muted md:text-base">
           Na fase de grupos, partidas podem terminar empatadas e não há disputa
           por pênaltis. No mata-mata, inclusive na disputa de terceiro lugar, o
-          placar considerado exclui as cobranças e o vencedor é informado separadamente.
+          placar considerado é o resultado ao fim da prorrogação e exclui as
+          cobranças de pênaltis; o classificado ou vencedor é informado separadamente.
         </p>
       </div>
 
