@@ -61,8 +61,10 @@ O cartão **Sincronização** no painel informa:
 - **Contingência ESPN ativa**: o feed principal falhou e o fallback respondeu.
 - **Falha na última tentativa**: nenhum feed seguro pôde ser usado.
 
-O placar observado nunca pontua automaticamente. Confirme o resultado somente
-depois de compará-lo com a FIFA e informe a fonte no campo de motivo.
+Na fase de grupos, o placar observado pode pontuar automaticamente depois do
+atraso configurado em `RESULTS_AUTO_FINALIZE_DELAY_MINUTES`. Revise a fila após
+cada jogo e corrija pelo painel se houver divergência com a FIFA. No mata-mata,
+a confirmação continua manual porque é necessário informar quem avançou.
 
 ## Diagnóstico
 
