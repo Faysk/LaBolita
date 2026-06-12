@@ -6,15 +6,20 @@ import { TeamFlag } from "@/components/team-flag";
 import { useLocalResults } from "@/lib/local-state";
 import type { DemoMatch } from "@/lib/types";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
-import { hasSavedPrediction, isLiveMatch, prioritizeHomeMatches } from "@/lib/match-display";
+import {
+  hasSavedPrediction,
+  isLiveMatch,
+  selectHomeTimelineMatches,
+} from "@/lib/match-display";
 
 export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
   const results = useLocalResults();
-  const candidateMatches = prioritizeHomeMatches(
+  const candidateMatches = selectHomeTimelineMatches(
     matches.filter((match) => !results[match.id]),
+    matches.length,
   );
   const liveMatch = candidateMatches.find(isLiveMatch);
-  const nextMatch = liveMatch ?? candidateMatches.find((match) => !match.result);
+  const nextMatch = liveMatch ?? candidateMatches[0];
   const heading = liveMatch
     ? "Agora ao vivo"
     : nextMatch
@@ -132,11 +137,11 @@ function SummaryTeam({
   align: "left" | "right";
 }) {
   return (
-    <div className={`flex min-w-0 flex-col items-center gap-2 ${
+    <div className={`flex min-w-0 max-w-full flex-col items-center gap-2 overflow-hidden ${
       align === "right" ? "sm:items-end" : "sm:items-start"
     }`}>
       <TeamFlag team={team} size="lg" />
-      <span className={`max-w-28 text-center text-base font-black leading-tight tracking-tight text-white sm:max-w-36 sm:text-lg ${
+      <span className={`line-clamp-2 w-full max-w-24 overflow-hidden break-words text-center text-sm font-black leading-tight tracking-tight text-white [overflow-wrap:anywhere] sm:max-w-32 sm:text-base ${
         align === "right" ? "sm:text-right" : "sm:text-left"
       }`}>
         {team.shortName || team.name}

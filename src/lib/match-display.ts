@@ -17,6 +17,10 @@ export function isOpenMatch(match: DemoMatch) {
   return !match.locked && !match.result;
 }
 
+export function isHomeTimelineMatch(match: DemoMatch) {
+  return isLiveMatch(match) || isOpenMatch(match);
+}
+
 export function hasSavedPrediction(match: DemoMatch) {
   return Boolean(match.prediction);
 }
@@ -35,6 +39,10 @@ export function prioritizeHomeMatches(matches: DemoMatch[]) {
     if (priorityDifference !== 0) return priorityDifference;
     return scheduledTime(left) - scheduledTime(right);
   });
+}
+
+export function selectHomeTimelineMatches(matches: DemoMatch[], limit = 3) {
+  return prioritizeHomeMatches(matches).filter(isHomeTimelineMatch).slice(0, limit);
 }
 
 function homePriority(match: DemoMatch) {
