@@ -429,11 +429,11 @@ function Team({
   compact: boolean;
 }) {
   return (
-    <div className={`grid min-w-0 max-w-full justify-items-center gap-2 overflow-hidden text-center ${align === "right" ? "md:justify-items-end md:text-right" : "md:justify-items-start md:text-left"}`}>
+    <div className={`grid min-w-0 justify-items-center gap-2 text-center ${align === "right" ? "md:justify-items-end md:text-right" : "md:justify-items-start md:text-left"}`}>
       <span className="flex h-12 items-center justify-center">
         <TeamFlag team={team} size={compact ? "md" : "lg"} />
       </span>
-      <p className={`line-clamp-2 flex min-h-8 w-full max-w-[6.25rem] items-start justify-center overflow-hidden break-words text-center font-black leading-4 tracking-tight [overflow-wrap:anywhere] sm:max-w-[7.25rem] ${align === "right" ? "md:justify-end md:text-right" : "md:justify-start md:text-left"} ${compact ? "text-xs" : "text-sm"}`}>
+      <p className={`line-clamp-2 flex min-h-8 w-full max-w-[7.25rem] items-start justify-center text-center font-black leading-4 tracking-tight ${align === "right" ? "md:justify-end md:text-right" : "md:justify-start md:text-left"} ${compact ? "text-xs" : "text-sm"}`}>
         {team.shortName}
       </p>
     </div>

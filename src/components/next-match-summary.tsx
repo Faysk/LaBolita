@@ -137,11 +137,11 @@ function SummaryTeam({
   align: "left" | "right";
 }) {
   return (
-    <div className={`flex min-w-0 max-w-full flex-col items-center gap-2 overflow-hidden ${
+    <div className={`flex min-w-0 flex-col items-center gap-2 ${
       align === "right" ? "sm:items-end" : "sm:items-start"
     }`}>
       <TeamFlag team={team} size="lg" />
-      <span className={`line-clamp-2 w-full max-w-24 overflow-hidden break-words text-center text-sm font-black leading-tight tracking-tight text-white [overflow-wrap:anywhere] sm:max-w-32 sm:text-base ${
+      <span className={`max-w-28 text-center text-base font-black leading-tight tracking-tight text-white sm:max-w-36 sm:text-lg ${
         align === "right" ? "sm:text-right" : "sm:text-left"
       }`}>
         {team.shortName || team.name}
