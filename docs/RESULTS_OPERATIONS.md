@@ -8,9 +8,11 @@
 - `data/world-cup-2026.json` contém as 48 seleções e 104 partidas verificadas em
   7 de junho de 2026. O arquivo foi estruturado com auxílio de um feed público e
   passa pelo validador completo do projeto antes de poder ser importado.
-- `npm run schedule:verify:sources` compara automaticamente os 104 horários com
-  uma segunda agenda pública. Essa conferência detectou e corrigiu o horário
-  oficial de Brasil x Haiti para 20h30 EDT em 19 de junho.
+- `npm run schedule:verify:sources` compara automaticamente os horários com
+  uma segunda agenda pública. Antes do início da Copa, a fonte secundária deve
+  listar as 104 partidas; depois do início, algumas fontes removem jogos já
+  disputados, então o script continua exigindo aderência para todos os jogos
+  ainda presentes/futuros.
 - Um provedor esportivo serve para velocidade operacional. Ele nunca deve
   substituir a conferência final quando houver divergência com a FIFA.
 
@@ -26,9 +28,12 @@ flowchart LR
   F --> R["Ranking e histórico auditável"]
 ```
 
-O endpoint protegido atualiza apenas `live_home_score`, `live_away_score`,
-`provider_status` e `provider_updated_at`. Ele não chama `finalize_match` e,
-portanto, não altera pontos automaticamente.
+O endpoint protegido atualiza `live_home_score`, `live_away_score`,
+`provider_status` e `provider_updated_at`. Quando o provedor marca uma partida
+da fase de grupos como finalizada, o backend também pode chamar
+`finalize_provider_group_matches` depois do atraso de segurança configurado em
+`RESULTS_AUTO_FINALIZE_DELAY_MINUTES`. Jogos de mata-mata continuam exigindo
+confirmação administrativa, porque dependem de quem avançou.
 
 ## Ativar sincronização
 
@@ -37,6 +42,7 @@ portanto, não altera pontos automaticamente.
 ```text
 RESULTS_FEED_URL=https://worldcup26.ir/get/games
 RESULTS_BACKUP_FEED_URL=
+RESULTS_AUTO_FINALIZE_DELAY_MINUTES=10
 CRON_SECRET=<segredo aleatório com pelo menos 32 caracteres>
 SUPABASE_SERVICE_ROLE_KEY=<service role key do projeto Supabase>
 ```
@@ -65,9 +71,10 @@ O feed público acima é adequado como contingência e para validar o fluxo, mas
 não oferece SLA conhecido. Mantenha confirmação humana obrigatória enquanto ele
 for a fonte primária.
 
-Cada execução exige exatamente 104 partidas com identificadores únicos. O
-sistema rejeita feed parcial, placar informado muito antes do início e regressão
-de `finished` para `live` ou `scheduled`. O resumo da última tentativa fica em
+Cada execução do feed de resultados exige exatamente 104 observações com
+identificadores únicos. O sistema rejeita feed parcial, placar informado muito
+antes do início e regressão de `finished` para `live` ou `scheduled`. O resumo
+da última tentativa, incluindo quantos jogos foram auto-finalizados, fica em
 `results_sync_state` e também aparece em `/api/health`.
 
 ## Provedor recomendado
@@ -88,8 +95,11 @@ administrativa permanecem iguais.
 1. Confirmar que horário e participantes estão corretos antes do bloqueio.
 2. Acompanhar `provider_status` durante o jogo.
 3. Depois do apito final, comparar o placar sugerido com a FIFA.
-4. Confirmar pelo painel administrativo, informando a fonte.
-5. Em caso de correção, usar novamente o painel com justificativa explícita.
+4. Em fase de grupos, conferir se a auto-finalização ocorreu corretamente ou
+   corrigir pelo painel se houver divergência.
+5. No mata-mata, confirmar pelo painel administrativo, informando placar, quem
+   avançou e fonte.
+6. Em caso de correção, usar novamente o painel com justificativa explícita.
 
 Nunca considerar disputa por pênaltis no placar: registrar o resultado após a
 prorrogação e informar separadamente quem avançou.
