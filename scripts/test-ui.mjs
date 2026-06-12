@@ -96,11 +96,25 @@ try {
   );
 
   await page.goto(`${BASE_URL}/admin`);
+  await page.getByRole("button", { name: "Usar tema escuro" }).click();
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
   await page.getByRole("button", { name: /^Todos ·/ }).click();
   await page.getByRole("button", { name: "Por data" }).click();
   assert.equal(await page.getByRole("button", { name: "Por data" }).getAttribute("aria-pressed"), "true");
   await page.getByRole("button", { name: "Por grupo/fase" }).click();
   await page.getByRole("button", { name: /^Divergências ·/ }).waitFor();
+  const darkAdminHeaderIsNearlyWhite = await page.locator(".sticky").first().evaluate((element) => {
+    const background = getComputedStyle(element).backgroundColor;
+    if (background.includes("255, 255, 255") || background.includes("1 1 1")) return true;
+    const channels = background.match(/[\d.]+/g)?.map(Number) ?? [];
+    return channels.length >= 3 && channels[0] > 240 && channels[1] > 240 && channels[2] > 240;
+  });
+  assert.equal(
+    darkAdminHeaderIsNearlyWhite,
+    false,
+    "admin group headers must not render as white bars in dark mode",
+  );
+  await page.getByRole("button", { name: "Usar tema claro" }).click();
   const adminOpeningMatch = page.getByTestId("admin-match-match-1");
   await adminOpeningMatch.getByRole("button", { name: "Informar resultado" }).click();
   await adminOpeningMatch.getByRole("spinbutton", { name: "México" }).fill("2");

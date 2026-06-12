@@ -80,7 +80,7 @@ export function AdminMatchQueue({
 
   return (
     <div>
-      <div className="border-b bg-surface-muted/55 p-4 md:p-5">
+      <div className="border-b bg-surface-muted/75 p-4 md:p-5">
         <div className="flex gap-2 overflow-x-auto pb-2">
           {([
             ...(liveCount > 0
@@ -98,7 +98,9 @@ export function AdminMatchQueue({
               aria-pressed={filter === value}
               onClick={() => setFilter(value)}
               className={`interactive whitespace-nowrap rounded-xl px-3 py-2 text-xs font-black ${
-                filter === value ? "bg-brand text-white" : "border bg-white text-muted"
+                filter === value
+                  ? "bg-brand text-white shadow-sm"
+                  : "border bg-surface text-muted hover:border-brand/60 hover:text-foreground"
               }`}
             >
               {label} · {count}
@@ -111,7 +113,7 @@ export function AdminMatchQueue({
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar seleção, grupo ou fase"
-            className="w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand"
+            className="w-full rounded-xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold outline-none placeholder:text-muted focus:border-brand"
           />
         </label>
         <div className="mt-3 flex justify-end gap-2">
@@ -134,7 +136,7 @@ export function AdminMatchQueue({
       <div className="divide-y">
         {grouped.map(([group, items]) => (
           <section key={group}>
-            <div className="sticky top-[4.25rem] z-10 flex items-center justify-between border-b bg-white/95 px-5 py-3 backdrop-blur">
+            <div className="sticky top-[4.25rem] z-10 flex items-center justify-between border-b bg-surface-muted/95 px-5 py-3 shadow-sm backdrop-blur">
               <h3 className="text-sm font-black text-brand">{group}</h3>
               <span className="text-xs font-bold text-muted">{items.length} jogos</span>
             </div>
@@ -142,7 +144,7 @@ export function AdminMatchQueue({
           <div
             key={match.id}
             data-testid={`admin-match-${match.id}`}
-            className="p-5 md:px-6"
+            className="bg-surface/35 p-5 md:px-6"
           >
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
@@ -163,7 +165,7 @@ export function AdminMatchQueue({
                   </p>
                 )}
                 {!effectiveResult && match.liveResult && (
-                  <p className="mt-1 text-sm font-bold text-amber-700">
+                  <p className="mt-2 inline-flex rounded-lg bg-warning-bg px-2.5 py-1 text-sm font-bold text-warning-fg">
                     Provedor: {match.liveResult.homeScore} x {match.liveResult.awayScore}
                     {match.providerStatus === "finished"
                       ? " · aguardando confirmação"
@@ -171,14 +173,14 @@ export function AdminMatchQueue({
                   </p>
                 )}
                 {needsTeamAssignment && (
-                  <p className="mt-1 text-sm font-bold text-amber-700">
+                  <p className="mt-2 inline-flex rounded-lg bg-warning-bg px-2.5 py-1 text-sm font-bold text-warning-fg">
                     Participantes ainda não definidos
                   </p>
                 )}
                 {effectiveResult && match.liveResult &&
                   (effectiveResult.homeScore !== match.liveResult.homeScore ||
                     effectiveResult.awayScore !== match.liveResult.awayScore) && (
-                    <p className="mt-1 flex items-center gap-1 text-sm font-bold text-red-700">
+                    <p className="mt-2 flex w-fit items-center gap-1 rounded-lg bg-danger-bg px-2.5 py-1 text-sm font-bold text-danger-fg">
                       <TriangleAlert className="size-4" />
                       Divergência com o provedor: {match.liveResult.homeScore} x{" "}
                       {match.liveResult.awayScore}
@@ -188,7 +190,7 @@ export function AdminMatchQueue({
               <button
                 type="button"
                 onClick={() => setActiveId(activeId === match.id ? null : match.id)}
-                className="interactive flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-2.5 text-sm font-bold text-brand"
+                className="interactive flex items-center justify-center gap-2 rounded-2xl border bg-surface px-4 py-2.5 text-sm font-bold text-brand hover:border-brand/70 hover:bg-surface-muted"
               >
                 {activeId === match.id ? (
                   <X className="size-4" />
@@ -252,7 +254,7 @@ function GroupingButton({
       aria-pressed={active}
       onClick={onClick}
       className={`interactive flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black ${
-        active ? "bg-brand text-white" : "bg-white text-muted"
+        active ? "bg-brand text-white shadow-sm" : "bg-surface text-muted hover:text-foreground"
       }`}
     >
       <Icon className="size-3.5" /> {children}
@@ -318,7 +320,7 @@ function TeamAssignmentForm({
   return (
     <form
       onSubmit={submit}
-      className="mt-4 grid gap-3 rounded-2xl bg-surface-muted p-4 md:grid-cols-2"
+      className="mt-4 grid gap-3 rounded-2xl border bg-surface-muted p-4 md:grid-cols-2"
     >
       <TeamSelect
         label="Mandante"
@@ -341,19 +343,19 @@ function TeamAssignmentForm({
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           placeholder="Ex.: classificação oficial confirmada pela FIFA"
-          className="mt-1 block w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-bold text-foreground outline-none focus:border-brand"
+          className="mt-1 block w-full rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold text-foreground outline-none placeholder:text-muted focus:border-brand"
         />
       </label>
       <button
         type="submit"
         disabled={busy || !homeTeamId || !awayTeamId || homeTeamId === awayTeamId}
         aria-busy={busy}
-        className="interactive flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60 md:col-span-2"
+        className="interactive flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white shadow-sm disabled:opacity-60 md:col-span-2"
       >
         {busy && <LoaderCircle className="size-4 animate-spin" />}
         {busy ? "Salvando..." : "Confirmar participantes"}
       </button>
-      {error && <p className="text-sm font-medium text-red-700 md:col-span-2">{error}</p>}
+      {error && <p className="rounded-xl bg-danger-bg px-3 py-2 text-sm font-bold text-danger-fg md:col-span-2">{error}</p>}
     </form>
   );
 }
@@ -376,7 +378,7 @@ function TeamSelect({
         required
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 block w-full rounded-xl border bg-white px-3 py-3 text-sm font-bold text-foreground outline-none focus:border-brand"
+        className="mt-1 block w-full rounded-xl border bg-surface px-3 py-3 text-sm font-bold text-foreground outline-none focus:border-brand"
       >
         <option value="">Selecione</option>
         {teams.map((team) => (
@@ -479,7 +481,7 @@ function ResultForm({
   return (
     <form
       onSubmit={submit}
-      className="mt-4 flex flex-col gap-3 rounded-2xl bg-surface-muted p-4 sm:flex-row sm:items-end"
+      className="mt-4 flex flex-col gap-3 rounded-2xl border bg-surface-muted p-4 sm:flex-row sm:items-end"
     >
       <ScoreField label={match.homeTeam.shortName} value={homeScore} onChange={(value) => updateScore("home", value)} />
       <ScoreField label={match.awayTeam.shortName} value={awayScore} onChange={(value) => updateScore("away", value)} />
@@ -490,7 +492,7 @@ function ResultForm({
             required
             value={advancingTeamId}
             onChange={(event) => setAdvancingTeamId(event.target.value)}
-            className="mt-1 block w-full rounded-xl border bg-white px-3 py-3 text-sm font-bold text-foreground outline-none focus:border-brand"
+            className="mt-1 block w-full rounded-xl border bg-surface px-3 py-3 text-sm font-bold text-foreground outline-none focus:border-brand"
           >
             <option value="">Selecione</option>
             <option value={match.homeTeam.id}>{match.homeTeam.shortName}</option>
@@ -510,19 +512,19 @@ function ResultForm({
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           placeholder={existingResult ? "Ex.: correção oficial" : "Ex.: conferido na FIFA"}
-          className="mt-1 block w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-bold text-foreground outline-none focus:border-brand"
+          className="mt-1 block w-full rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold text-foreground outline-none placeholder:text-muted focus:border-brand"
         />
       </label>
       <button
         type="submit"
         disabled={busy || !advancingSelectionValid}
         aria-busy={busy}
-        className="interactive flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white disabled:opacity-60"
+        className="interactive flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-extrabold text-white shadow-sm disabled:opacity-60"
       >
         {busy && <LoaderCircle className="size-4 animate-spin" />}
         {busy ? "Calculando..." : "Finalizar e pontuar"}
       </button>
-      {error && <p className="text-sm font-medium text-red-700">{error}</p>}
+      {error && <p className="rounded-xl bg-danger-bg px-3 py-2 text-sm font-bold text-danger-fg">{error}</p>}
       {!advancingSelectionValid && (
         <p className="status-danger rounded-xl border px-3 py-2 text-xs font-bold">
           O vencedor selecionado contradiz o placar informado.
@@ -551,7 +553,7 @@ function ScoreField({
         max="30"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-1 block w-full rounded-xl border bg-white px-3 py-2.5 text-center text-base font-black text-foreground outline-none focus:border-brand sm:w-24"
+        className="mt-1 block w-full rounded-xl border bg-surface px-3 py-2.5 text-center text-base font-black text-foreground outline-none focus:border-brand sm:w-24"
       />
     </label>
   );
