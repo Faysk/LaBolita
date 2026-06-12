@@ -149,7 +149,10 @@ try {
     .from("matches")
     .select("id")
     .eq("stage", "group")
-    .order("match_number")
+    .gt("prediction_lock_at", new Date().toISOString())
+    .not("home_team_id", "is", null)
+    .not("away_team_id", "is", null)
+    .order("prediction_lock_at")
     .limit(1)
     .single();
   if (matchError) throw matchError;
@@ -239,7 +242,7 @@ try {
     "public rankings must not expose identity-provider avatars",
   );
   const { data: publicGlobalRanking, error: publicGlobalRankingError } =
-    await publicClient.rpc("get_public_global_ranking", { p_limit: 3 });
+    await publicClient.rpc("get_public_global_ranking", { p_limit: 100 });
   if (publicGlobalRankingError) throw publicGlobalRankingError;
   assert.ok(
     publicGlobalRanking.some((entry) => entry.display_name === "Auditoria LaBolita"),
