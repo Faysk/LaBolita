@@ -1,54 +1,43 @@
 # Dados de Atletas
 
-Objetivo: listar gols, assistencias, cartoes, faltas, minutos, artilharia,
-rankings por selecao e eventos por partida sem comprometer a confiabilidade do
-bolao.
+O produto exibe dados de atletas em duas camadas.
 
-## Decisao inicial
+## Elencos oficiais
 
-Nao usar scraping fragil como fonte principal em producao.
+A base atual vem da lista oficial da FIFA:
 
-O caminho recomendado e integrar um provedor com chave, limites claros e cache
-server-side. A pagina `/competicao/jogadores` ja lista as fontes avaliadas e
-mostra se a chave de cada uma esta configurada.
+- Fonte: `https://fdp.fifa.org/assetspublic/ce281/pdf/SquadLists-English.pdf`
+- Versão usada: `Friday, 12 June 2026 04:24 UTC | Version 1`
+- Arquivo gerado: `src/data/world-cup-2026-squads.json`
+- Cobertura: 48 seleções, 1.248 jogadores, 26 atletas por seleção.
 
-## Fonte recomendada
+Campos disponíveis:
 
-1. API-Football / API-Sports
-   - Variavel: `APIFOOTBALL_KEY`.
-   - Tem endpoints para World Cup 2026 com fixtures, eventos, lineups,
-     estatisticas de jogadores, artilharia, assistencias e cartoes.
-   - Melhor encaixe para o que o LaBolita quer exibir ao vivo.
+- número;
+- posição;
+- nome de camisa;
+- nome completo;
+- data de nascimento;
+- clube;
+- altura;
+- jogos pela seleção;
+- gols pela seleção.
 
-## Alternativas
+Esses dados alimentam `/competicao/jogadores` e as páginas individuais de seleção.
 
-2. BALLDONTLIE FIFA API
-   - Variavel: `BALLDONTLIE_FIFA_API_KEY`.
-   - Boa alternativa para elencos, partidas, eventos e estatisticas por jogo.
+## Eventos da Copa
 
-3. football-data.org
-   - Variavel: `FOOTBALL_DATA_API_KEY`.
-   - Boa fonte secundaria para fixtures, tabelas, lineups e eventos, conforme o
-     plano contratado.
+Gols, assistências, cartões, substituições, faltas e estatísticas por partida
+devem entrar como uma segunda camada, porque dependem de feed de eventos ao
+vivo ou pós-jogo.
 
-4. Sportmonks
-   - Variavel: `SPORTMONKS_API_TOKEN`.
-   - Caminho mais robusto se o produto precisar SLA e dados pagos.
+Critério antes de exibir em produção:
 
-5. openfootball/worldcup.json
-   - Sem chave.
-   - Util para dados estruturais/historicos, mas nao resolve estatisticas ao
-     vivo por atleta.
+- origem identificada em cada evento;
+- cache server-side;
+- atualização auditável;
+- divergências visíveis para admin;
+- possibilidade de correção manual.
 
-## Proximo passo tecnico
-
-Quando a fonte for escolhida, criar migrations para:
-
-- `athletes`
-- `team_rosters`
-- `match_events`
-- `athlete_match_stats`
-- `athlete_provider_mappings`
-
-Depois criar um sync server-side com cache, auditoria de divergencias e origem
-do dado em cada linha.
+Enquanto essa camada não estiver pronta, a interface não deve prometer
+assistências, cartões ou faltas individuais como dado confirmado.

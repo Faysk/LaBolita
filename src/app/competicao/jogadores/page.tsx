@@ -1,29 +1,49 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Database, ShieldCheck, Trophy } from "lucide-react";
-import { athleteSourceStatuses } from "@/lib/athlete-data-sources";
+import { ArrowRight, Goal, ShieldCheck, Trophy, Users } from "lucide-react";
+import { TeamFlag } from "@/components/team-flag";
+import { uniqueTeams } from "@/lib/competition";
+import { getMatches } from "@/lib/data/matches";
+import {
+  allPlayers,
+  getSquadByCode,
+  playerAge,
+  positionShortLabel,
+  sourceVersionLabel,
+  squadSummary,
+} from "@/lib/squads";
+import type { SquadPlayer } from "@/lib/squads";
 
 export const metadata: Metadata = {
-  title: "Jogadores e dados",
-  description: "Plano de integracao de estatisticas de atletas da Copa 2026.",
+  title: "Jogadores da Copa",
+  description: "Elencos oficiais, destaques e dados das seleções da Copa 2026.",
 };
 
-export default function PlayersDataPage() {
-  const sources = athleteSourceStatuses();
-  const recommended = sources.find((source) => source.recommendation === "recommended");
+export default async function PlayersDataPage() {
+  const matches = await getMatches();
+  const teams = uniqueTeams(matches);
+  const players = allPlayers();
+  const topScorers = [...players]
+    .sort((left, right) => right.goals - left.goals || right.caps - left.caps)
+    .slice(0, 8);
+  const mostCapped = [...players]
+    .sort((left, right) => right.caps - left.caps || right.goals - left.goals)
+    .slice(0, 8);
+  const averageAge = Math.round(
+    players.reduce((total, player) => total + playerAge(player), 0) / players.length,
+  );
 
   return (
     <main className="page-container py-7 md:py-10">
       <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="eyebrow">Dados de atletas</p>
+          <p className="eyebrow">Elencos oficiais</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
-            Jogadores
+            Jogadores da Copa
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
-            Esta area fica pronta para artilharia, assistencias, cartoes, faltas,
-            minutos e rankings por selecao assim que um provedor confiavel for
-            configurado.
+            Consulte os convocados, clubes, posições, jogos e gols pela seleção.
+            As estatísticas de partida entram conforme os jogos forem confirmados.
           </p>
         </div>
         <Link
@@ -34,68 +54,69 @@ export default function PlayersDataPage() {
         </Link>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <InfoCard
-          icon={Trophy}
-          title="O que entra aqui"
-          text="Artilharia, assistencias, cartoes, faltas, minutos, rankings por selecao e eventos por partida."
+      <section className="grid gap-4 md:grid-cols-4">
+        <InfoCard icon={Users} title="Jogadores" value={String(players.length)} />
+        <InfoCard icon={Trophy} title="Seleções" value={String(teams.length)} />
+        <InfoCard icon={Goal} title="Média de idade" value={`${averageAge} anos`} />
+        <InfoCard icon={ShieldCheck} title="Fonte" value="FIFA" />
+      </section>
+
+      <section className="mt-8 grid min-w-0 gap-5 lg:grid-cols-2">
+        <Leaderboard
+          title="Artilheiros pela seleção"
+          subtitle="Gols acumulados antes da Copa, conforme lista oficial."
+          players={topScorers}
+          metric={(player) => `${player.goals} gols`}
         />
-        <InfoCard
-          icon={Database}
-          title="Fonte recomendada"
-          text={recommended ? recommended.name : "API-Football / API-Sports"}
-        />
-        <InfoCard
-          icon={ShieldCheck}
-          title="Regra de seguranca"
-          text="Nada de scraping fragil em producao: primeiro chave, limite, licenca e cache no servidor."
+        <Leaderboard
+          title="Mais jogos pela seleção"
+          subtitle="Experiência internacional declarada na lista oficial."
+          players={mostCapped}
+          metric={(player) => `${player.caps} jogos`}
         />
       </section>
 
       <section className="mt-8">
-        <div className="mb-4">
-          <p className="eyebrow">Pipeline sugerido</p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight">Fontes avaliadas</h2>
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="eyebrow">Por seleção</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">Elencos</h2>
+          </div>
+          <p className="max-w-xl text-xs font-bold leading-5 text-muted">
+            {sourceVersionLabel()}
+          </p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {sources.map((source) => (
-            <article key={source.id} className="card p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-wider text-brand">
-                    {source.badge}
-                  </p>
-                  <h3 className="mt-1 text-xl font-black tracking-tight">{source.name}</h3>
-                </div>
-                <span
-                  className={`rounded-full px-3 py-1 text-[10px] font-black ${
-                    source.configured ? "status-success" : "status-warning"
-                  }`}
-                >
-                  {source.configured ? "Configurada" : "A configurar"}
-                </span>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-muted">{source.coverage}</p>
-              <div className="mt-4 grid gap-3 text-sm md:grid-cols-2">
-                <div className="rounded-2xl bg-surface-muted p-3">
-                  <p className="font-black">Forca</p>
-                  <p className="mt-1 text-muted">{source.strengths}</p>
-                </div>
-                <div className="rounded-2xl bg-surface-muted p-3">
-                  <p className="font-black">Cuidado</p>
-                  <p className="mt-1 text-muted">{source.risks}</p>
-                </div>
-              </div>
-              <a
-                href={source.href}
-                target="_blank"
-                rel="noreferrer"
-                className="interactive mt-4 inline-flex items-center gap-2 rounded-xl border bg-white px-3 py-2 text-xs font-black text-brand"
+        <div className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {teams.map((team) => {
+            const squad = getSquadByCode(team.code);
+            const summary = squad ? squadSummary(squad) : null;
+            return (
+              <Link
+                key={team.id}
+                href={`/competicao/selecoes/${encodeURIComponent(team.id)}`}
+                className="interactive card block min-w-0 overflow-hidden p-5"
               >
-                Ver fonte <ArrowRight className="size-3.5" />
-              </a>
-            </article>
-          ))}
+                <div className="flex items-center gap-3">
+                  <TeamFlag team={team} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-lg font-black">{team.name}</h3>
+                    <p className="text-xs font-bold text-muted">
+                      {squad ? `${squad.players.length} convocados` : "Elenco a confirmar"}
+                    </p>
+                  </div>
+                  <ArrowRight className="size-4 text-brand" />
+                </div>
+                {summary && (
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <MiniMetric label="Artilheiro" value={summary.topScorer.name} />
+                    <MiniMetric label="Gols" value={String(summary.topScorer.goals)} />
+                    <MiniMetric label="Mais jogos" value={summary.mostCapped.name} />
+                    <MiniMetric label="Média" value={`${summary.averageAge} anos`} />
+                  </div>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </section>
     </main>
@@ -105,19 +126,68 @@ export default function PlayersDataPage() {
 function InfoCard({
   icon: Icon,
   title,
-  text,
+  value,
 }: {
   icon: typeof Trophy;
   title: string;
-  text: string;
+  value: string;
 }) {
   return (
     <article className="card p-5">
       <span className="inline-flex rounded-2xl bg-surface-muted p-3 text-brand">
         <Icon className="size-5" />
       </span>
-      <h2 className="mt-4 text-lg font-black tracking-tight">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-muted">{text}</p>
+      <p className="mt-4 text-2xl font-black">{value}</p>
+      <h2 className="text-sm font-bold text-muted">{title}</h2>
     </article>
+  );
+}
+
+function Leaderboard({
+  title,
+  subtitle,
+  players,
+  metric,
+}: {
+  title: string;
+  subtitle: string;
+  players: ReturnType<typeof allPlayers>;
+  metric: (player: SquadPlayer) => string;
+}) {
+  return (
+    <section className="card min-w-0 overflow-hidden p-5">
+      <div>
+        <p className="eyebrow">Destaques</p>
+        <h2 className="mt-1 text-xl font-black tracking-tight">{title}</h2>
+        <p className="mt-1 text-sm leading-6 text-muted">{subtitle}</p>
+      </div>
+      <div className="mt-5 grid gap-2">
+        {players.map((player, index) => (
+          <div key={`${player.team.code}-${player.number}`} className="min-w-0 rounded-2xl bg-surface-muted p-3">
+            <div className="flex items-center gap-3">
+              <span className="w-6 shrink-0 text-center text-sm font-black text-muted">{index + 1}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black">{player.name}</p>
+                <p className="truncate text-xs text-muted">
+                  {player.team.name} · {positionShortLabel(player.position)} · {player.club}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand-strong">
+                {metric(player)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl bg-surface-muted p-3">
+      <p className="text-[10px] font-black uppercase tracking-wider text-muted">{label}</p>
+      <p className="mt-1 truncate font-black">{value}</p>
+    </div>
   );
 }

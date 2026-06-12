@@ -371,7 +371,7 @@ function PoolCard({
 }) {
   return (
     <article data-testid={`pool-${pool.id}`} className={`card relative overflow-hidden p-5 ${selected ? "card-dark text-white" : ""}`}>
-      <div className="pointer-events-none absolute -right-10 -top-10 opacity-25 blur-sm">
+      <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 opacity-25 blur-sm">
         <PoolFlag code={pool.flagCode} size="xl" />
       </div>
       <div className="relative flex items-start justify-between">
@@ -422,7 +422,7 @@ function PublicPoolCard({
 }) {
   return (
     <article className={`card relative overflow-hidden p-5 ${selected ? "ring-2 ring-brand" : ""}`}>
-      <div className="pointer-events-none absolute -right-8 -top-8 opacity-20 blur-sm">
+      <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 opacity-20 blur-sm">
         <PoolFlag code={pool.flagCode} size="xl" />
       </div>
       <div className="relative flex items-center justify-between">
