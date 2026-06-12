@@ -39,10 +39,9 @@ export function prioritizeHomeMatches(matches: DemoMatch[]) {
 
 function homePriority(match: DemoMatch) {
   if (isLiveMatch(match)) return 0;
-  if (isOpenMatch(match) && !hasSavedPrediction(match)) return 1;
-  if (isOpenMatch(match) && hasSavedPrediction(match)) return 2;
-  if (!match.result) return 3;
-  return 4;
+  if (!match.result && match.providerStatus !== "finished") return 1;
+  if (!match.result) return 2;
+  return 3;
 }
 
 function scheduledTime(match: DemoMatch) {
