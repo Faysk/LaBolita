@@ -1,9 +1,7 @@
-import "server-only";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { isAuthSessionMissingError } from "@supabase/supabase-js";
-import { cache } from "react";
 
-export const getOptionalUser = cache(async function getOptionalUser(
+export async function getOptionalUser(
   supabase: SupabaseClient,
 ): Promise<User | null> {
   const {
@@ -13,4 +11,4 @@ export const getOptionalUser = cache(async function getOptionalUser(
 
   if (error && !isAuthSessionMissingError(error)) throw error;
   return user;
-});
+}

@@ -2,26 +2,37 @@
 
 import {
   Archive,
+  ArchiveRestore,
+  Check,
   History,
   LoaderCircle,
   Search,
   ShieldCheck,
+  ShieldPlus,
+  UserRoundCog,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import {
-  MasterPoolCard,
-  MasterUserCard,
-} from "@/components/admin/master-entity-cards";
-import type { MasterOverview } from "@/lib/data/admin";
+import type { MasterOverview, MasterPool, MasterUser } from "@/lib/data/admin";
+import { CountryFlag } from "@/components/country-flag";
+import { COUNTRIES } from "@/lib/countries";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
 
 export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
+  const [tab, setTab] = useState<"pools" | "users" | "audit">("pools");
+  const [search, setSearch] = useState("");
+
   if (!overview.isGlobalAdmin) return null;
-  const tab = overview.activeTab;
+
+  const cleanSearch = search.trim().toLocaleLowerCase("pt-BR");
+  const pools = overview.pools.filter((pool) =>
+    `${pool.poolName} ${pool.ownerName} ${pool.inviteCode}`.toLocaleLowerCase("pt-BR").includes(cleanSearch),
+  );
+  const users = overview.users.filter((user) =>
+    `${user.displayName} ${user.email}`.toLocaleLowerCase("pt-BR").includes(cleanSearch),
+  );
 
   return (
     <section className="card mt-8 overflow-hidden">
@@ -41,17 +52,20 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
       <div className="p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-2 overflow-x-auto">
-            <TabLink active={tab === "pools"} href={adminHref(overview, "pools")} icon={Archive}>Bolões ({overview.poolTotal})</TabLink>
-            <TabLink active={tab === "users"} href={adminHref(overview, "users")} icon={Users}>Usuários ({overview.userTotal})</TabLink>
-            <TabLink active={tab === "audit"} href={adminHref(overview, "audit")} icon={History}>Auditoria</TabLink>
+            <TabButton active={tab === "pools"} onClick={() => setTab("pools")} icon={Archive}>Bolões ({overview.pools.length})</TabButton>
+            <TabButton active={tab === "users"} onClick={() => setTab("users")} icon={Users}>Usuários ({overview.users.length})</TabButton>
+            <TabButton active={tab === "audit"} onClick={() => setTab("audit")} icon={History}>Auditoria ({overview.audit.length})</TabButton>
           </div>
           {tab !== "audit" && (
-            <SearchForm overview={overview} tab={tab} />
+            <label className="relative md:w-72">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nesta lista" className="w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand" />
+            </label>
           )}
         </div>
 
-        {tab === "pools" && <><div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div><Pagination overview={overview} tab="pools" /></>}
-        {tab === "users" && <><div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.users.map((user) => <MasterUserCard key={user.userId} user={user} />)}</div><Pagination overview={overview} tab="users" /></>}
+        {tab === "pools" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div>}
+        {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{users.map((user) => <MasterUserCard key={user.userId} user={user} />)}</div>}
         {tab === "audit" && <AuditList entries={overview.audit} />}
       </div>
     </section>
@@ -96,56 +110,178 @@ function TermsEnforcementControl({ enabled }: { enabled: boolean }) {
   );
 }
 
-function TabLink({ active, href, icon: Icon, children }: { active: boolean; href: string; icon: typeof Archive; children: React.ReactNode }) {
+function TabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: typeof Archive; children: React.ReactNode }) {
   return (
-    <Link href={href} scroll={false} className={`interactive flex whitespace-nowrap items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black ${active ? "bg-brand text-white" : "bg-surface-muted text-muted"}`}>
+    <button type="button" onClick={onClick} className={`interactive flex whitespace-nowrap items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black ${active ? "bg-brand text-white" : "bg-surface-muted text-muted"}`}>
       <Icon className="size-4" /> {children}
-    </Link>
+    </button>
   );
 }
 
-function SearchForm({ overview, tab }: { overview: MasterOverview; tab: "pools" | "users" }) {
-  const name = tab === "pools" ? "busca_boloes" : "busca_usuarios";
-  const value = tab === "pools" ? overview.poolSearch : overview.userSearch;
+function MasterPoolCard({ pool }: { pool: MasterPool }) {
+  const router = useRouter();
+  const [name, setName] = useState(pool.poolName);
+  const [isPublic, setIsPublic] = useState(pool.isPublic);
+  const [flagCode, setFlagCode] = useState(pool.flagCode);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [members, setMembers] = useState<
+    { user_id: string; display_name: string; role: "owner" | "admin" | "member" }[] | null
+  >(null);
+
+  async function update(archived: boolean) {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || busy) return;
+    setBusy(true);
+    setError(null);
+    const { error: rpcError } = await supabase.rpc("update_pool_with_flag", {
+      p_pool_id: pool.poolId,
+      p_name: name,
+      p_is_public: isPublic,
+      p_flag_code: flagCode,
+      p_archived: archived,
+      p_reason: reason,
+    });
+    if (rpcError) {
+      setError(friendlyServerError(rpcError, "Não foi possível aplicar o ajuste master."));
+      navigator.vibrate?.([25, 30, 25]);
+    } else {
+      navigator.vibrate?.(25);
+      router.refresh();
+    }
+    setBusy(false);
+  }
+
+  async function loadMembers() {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || busy) return;
+    setBusy(true);
+    const { data, error: rpcError } = await supabase.rpc("get_managed_pool_members", {
+      p_pool_id: pool.poolId,
+    });
+    if (rpcError) setError(friendlyServerError(rpcError, "Não foi possível carregar os participantes."));
+    else setMembers((data ?? []) as typeof members);
+    setBusy(false);
+  }
+
+  async function removeMember(userId: string) {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || busy || reason.trim().length < 3) return;
+    setBusy(true);
+    const { error: rpcError } = await supabase.rpc("remove_pool_member", {
+      p_pool_id: pool.poolId,
+      p_user_id: userId,
+      p_reason: reason,
+    });
+    if (rpcError) setError(friendlyServerError(rpcError, "Não foi possível remover o participante."));
+    else {
+      setMembers((current) => current?.filter((member) => member.user_id !== userId) ?? []);
+      navigator.vibrate?.(25);
+      router.refresh();
+    }
+    setBusy(false);
+  }
 
   return (
-    <form action="/admin" className="flex gap-2 md:w-96">
-      <input type="hidden" name="aba" value={tab} />
-      <label className="relative min-w-0 flex-1">
-        <span className="sr-only">Buscar nesta lista</span>
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-        <input name={name} defaultValue={value} maxLength={100} placeholder="Buscar nesta lista" className="w-full rounded-xl border bg-white py-3 pl-10 pr-3 text-sm font-bold outline-none focus:border-brand" />
-      </label>
-      <button type="submit" className="interactive rounded-xl bg-brand px-3 text-xs font-black text-white">Buscar</button>
-    </form>
+    <article className="rounded-2xl border bg-surface-muted p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 gap-3"><CountryFlag code={flagCode} size="sm" /><div><p className="font-black">{pool.poolName}</p><p className="mt-1 text-xs text-muted">Dono: {pool.ownerName} · {pool.memberCount} jogadores · {pool.inviteCode}</p></div></div>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${pool.archivedAt ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-brand"}`}>{pool.archivedAt ? "Arquivado" : "Ativo"}</span>
+      </div>
+      <div className="mt-4 grid gap-2">
+        <input value={name} minLength={3} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${pool.poolName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+        <select value={flagCode} onChange={(event) => setFlagCode(event.target.value)} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand">
+          {COUNTRIES.map((country) => <option key={country.code} value={country.code}>{country.flag} {country.name}</option>)}
+        </select>
+        <label className="flex items-center gap-2 text-xs font-bold text-muted"><input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="size-4 accent-[var(--brand)]" /> Listar publicamente</label>
+        <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${pool.poolName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(pool.archivedAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar</button>
+        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!pool.archivedAt)} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-40">{pool.archivedAt ? <ArchiveRestore className="size-3" /> : <Archive className="size-3" />} {pool.archivedAt ? "Recuperar" : "Arquivar"}</button>
+        <button type="button" disabled={busy} onClick={loadMembers} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-brand disabled:opacity-40"><Users className="size-3" /> Participantes</button>
+      </div>
+      {members && (
+        <div className="mt-3 divide-y rounded-xl border bg-white">
+          {members.map((member) => (
+            <div key={member.user_id} className="flex items-center gap-2 px-3 py-2">
+              <span className="min-w-0 flex-1 truncate text-xs font-bold">{member.display_name} · {member.role}</span>
+              {member.role !== "owner" && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => removeMember(member.user_id)} className="interactive rounded-lg px-2 py-1 text-[10px] font-black text-red-700 disabled:opacity-40">Remover</button>}
+            </div>
+          ))}
+        </div>
+      )}
+      {error && <p aria-live="polite" className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+    </article>
   );
 }
 
-function Pagination({ overview, tab }: { overview: MasterOverview; tab: "pools" | "users" }) {
-  const page = tab === "pools" ? overview.poolPage : overview.userPage;
-  const pages = tab === "pools" ? overview.poolPages : overview.userPages;
-  if (pages <= 1) return null;
+function MasterUserCard({ user }: { user: MasterUser }) {
+  const router = useRouter();
+  const [name, setName] = useState(user.displayName);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function update(disabled: boolean) {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || busy) return;
+    setBusy(true);
+    setError(null);
+    const { error: rpcError } = await supabase.rpc("master_update_user", {
+      p_user_id: user.userId,
+      p_display_name: name,
+      p_disabled: disabled,
+      p_reason: reason,
+    });
+    if (rpcError) {
+      setError(friendlyServerError(rpcError, "Não foi possível atualizar este usuário."));
+      navigator.vibrate?.([25, 30, 25]);
+    } else {
+      navigator.vibrate?.(25);
+      router.refresh();
+    }
+    setBusy(false);
+  }
+
+  async function updateAdminAccess() {
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || busy || user.isMasterAdmin || reason.trim().length < 3) return;
+    setBusy(true);
+    setError(null);
+    const { error: rpcError } = await supabase.rpc("admin_update_user_access", {
+      p_user_id: user.userId,
+      p_is_admin: !user.isAdmin,
+      p_reason: reason,
+    });
+    if (rpcError) setError(friendlyServerError(rpcError, "Não foi possível alterar o acesso administrativo."));
+    else {
+      navigator.vibrate?.(25);
+      router.refresh();
+    }
+    setBusy(false);
+  }
 
   return (
-    <nav aria-label={`Paginação de ${tab === "pools" ? "bolões" : "usuários"}`} className="mt-5 flex items-center justify-between gap-3">
-      <Link aria-disabled={page === 1} tabIndex={page === 1 ? -1 : undefined} href={adminHref(overview, tab, page - 1)} scroll={false} className={`interactive rounded-xl border bg-white px-3 py-2 text-xs font-black ${page === 1 ? "pointer-events-none opacity-40" : "text-brand"}`}>Anterior</Link>
-      <span className="text-xs font-bold text-muted">Página {page} de {pages}</span>
-      <Link aria-disabled={page === pages} tabIndex={page === pages ? -1 : undefined} href={adminHref(overview, tab, page + 1)} scroll={false} className={`interactive rounded-xl border bg-white px-3 py-2 text-xs font-black ${page === pages ? "pointer-events-none opacity-40" : "text-brand"}`}>Próxima</Link>
-    </nav>
+    <article className="rounded-2xl border bg-surface-muted p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0"><p className="truncate font-black">{user.displayName}</p><p className="mt-1 truncate text-xs text-muted">{user.email} · {user.poolsOwned} bolões</p></div>
+        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${user.isMasterAdmin ? "bg-accent text-brand-strong" : user.disabledAt ? "bg-red-100 text-red-800" : user.isAdmin ? "bg-blue-100 text-blue-800" : "bg-emerald-100 text-brand"}`}>{user.isMasterAdmin ? "Master principal" : user.disabledAt ? "Suspenso" : user.isAdmin ? "Admin" : "Ativo"}</span>
+      </div>
+      <p className="mt-2 text-xs text-muted">{user.termsAcceptedAt ? "Termos aceitos" : "Termos pendentes"}</p>
+      <div className="mt-4 grid gap-2">
+        <input value={name} minLength={2} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${user.displayName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+        <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${user.displayName}`} className="rounded-xl border bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(user.disabledAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar nome</button>
+        {!user.isMasterAdmin && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!user.disabledAt)} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-red-700 disabled:opacity-40"><UserRoundCog className="size-3" /> {user.disabledAt ? "Reativar conta" : "Suspender conta"}</button>}
+        {!user.isMasterAdmin && <button type="button" disabled={busy || Boolean(user.disabledAt) || reason.trim().length < 3} onClick={updateAdminAccess} className="interactive flex items-center gap-1 rounded-xl border bg-white px-3 py-2 text-xs font-black text-blue-800 disabled:opacity-40"><ShieldPlus className="size-3" /> {user.isAdmin ? "Remover admin" : "Promover admin"}</button>}
+      </div>
+      {error && <p aria-live="polite" className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+    </article>
   );
-}
-
-function adminHref(overview: MasterOverview, tab: MasterOverview["activeTab"], page?: number) {
-  const params = new URLSearchParams({ aba: tab });
-  if (tab === "pools") {
-    if (overview.poolSearch) params.set("busca_boloes", overview.poolSearch);
-    if ((page ?? overview.poolPage) > 1) params.set("pagina_boloes", String(page ?? overview.poolPage));
-  }
-  if (tab === "users") {
-    if (overview.userSearch) params.set("busca_usuarios", overview.userSearch);
-    if ((page ?? overview.userPage) > 1) params.set("pagina_usuarios", String(page ?? overview.userPage));
-  }
-  return `/admin?${params}`;
 }
 
 function AuditList({ entries }: { entries: MasterOverview["audit"] }) {

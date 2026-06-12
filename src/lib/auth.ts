@@ -1,64 +1,26 @@
 import "server-only";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
-import { cache } from "react";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
 import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-export type ViewerProfile = {
-  display_name: string | null;
-  avatar_url: string | null;
-  is_admin: boolean;
-  is_master_admin: boolean;
-  terms_accepted_at: string | null;
-  terms_version: string | null;
-  disabled_at: string | null;
-};
-
-type AuthenticatedViewerContext = {
-  supabase: SupabaseClient;
-  user: User;
-  profile: ViewerProfile | null;
-};
-
-export const getViewerContext = cache(async function getViewerContext() {
+export async function getViewerState() {
   const supabase = await createServerSupabaseClient();
   if (!supabase) {
-    return { supabase: null, user: null, profile: null, demoMode: true };
+    return { isAuthenticated: true, termsAccepted: true, isDisabled: false };
   }
 
   const user = await getOptionalUser(supabase);
   if (!user) {
-    return { supabase, user: null, profile: null, demoMode: false };
-  }
-
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select(
-      "display_name, avatar_url, is_admin, is_master_admin, terms_accepted_at, terms_version, disabled_at",
-    )
-    .eq("id", user.id)
-    .single();
-  if (error) throw error;
-
-  return {
-    supabase,
-    user,
-    profile: profile as ViewerProfile | null,
-    demoMode: false,
-  };
-});
-
-export async function getViewerState() {
-  const { user, profile, demoMode } = await getViewerContext();
-  if (demoMode) {
-    return { isAuthenticated: true, termsAccepted: true, isDisabled: false };
-  }
-
-  if (!user) {
     return { isAuthenticated: false, termsAccepted: false, isDisabled: false };
   }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("terms_accepted_at, terms_version, disabled_at")
+    .eq("id", user.id)
+    .single();
+  if (profileError) throw profileError;
 
   return {
     isAuthenticated: true,
@@ -69,13 +31,19 @@ export async function getViewerState() {
   };
 }
 
-export async function requireUser(
-  nextPath: string,
-): Promise<AuthenticatedViewerContext | null> {
-  const { supabase, user, profile, demoMode } = await getViewerContext();
-  if (demoMode) return null;
+export async function requireUser(nextPath: string) {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) return null;
+
+  const user = await getOptionalUser(supabase);
 
   if (!user) redirect(`/entrar?next=${encodeURIComponent(nextPath)}`);
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("terms_accepted_at, terms_version, disabled_at")
+    .eq("id", user.id)
+    .single();
+  if (profileError) throw profileError;
 
   if (profile?.disabled_at) redirect("/conta-suspensa");
   if (
@@ -85,14 +53,21 @@ export async function requireUser(
     redirect(`/aceitar-termos?next=${encodeURIComponent(nextPath)}`);
   }
 
-  return { supabase: supabase!, user, profile };
+  return { supabase, user, profile };
 }
 
 export async function requireAdmin() {
   const context = await requireUser("/admin");
   if (!context) return null;
 
-  if (!context.profile?.is_admin) redirect("/?erro=admin");
+  const { data: profile, error } = await context.supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", context.user.id)
+    .single();
+  if (error) throw error;
+
+  if (!profile?.is_admin) redirect("/?erro=admin");
   return context;
 }
 
@@ -100,6 +75,13 @@ export async function requireMasterAdmin() {
   const context = await requireUser("/admin");
   if (!context) return null;
 
-  if (!context.profile?.is_master_admin) redirect("/?erro=admin");
+  const { data: profile, error } = await context.supabase
+    .from("profiles")
+    .select("is_master_admin")
+    .eq("id", context.user.id)
+    .single();
+  if (error) throw error;
+
+  if (!profile?.is_master_admin) redirect("/?erro=admin");
   return context;
 }

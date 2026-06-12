@@ -67,8 +67,9 @@ export default function PrivacyPage() {
           Em bolões marcados como públicos, visitantes também podem ver o nome do
           bolão, seu organizador, quantidade de participantes e ranking, mas não
           recebem códigos de convite nem acesso aos palpites privados.
-          As bandeiras usadas na interface são servidas pelo próprio domínio da
-          aplicação.
+          Pequenos arquivos visuais de bandeiras podem ser carregados por CDNs
+          públicas, que recebem dados técnicos usuais da requisição, como endereço
+          IP e navegador.
         </p>
       </section>
 
