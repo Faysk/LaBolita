@@ -82,6 +82,32 @@ Como `public.profiles.id` referencia `auth.users.id`, nao copie apenas tabelas
 publicas com usuarios reais sem entender as dependencias. Para testes comuns,
 base limpa e usuarios de teste sao mais seguros.
 
+### Restaurar producao em homolog
+
+Quando for necessario deixar homolog com o mesmo estado de producao, use o
+workflow manual `Restore Homolog From Production`. Ele faz dump somente leitura
+de producao, aplica as migrations pendentes em homolog, sobrescreve os dados e carrega `auth.users`,
+`auth.identities` e tabelas publicas, mas nao copia sessoes, refresh tokens,
+fluxos OAuth, MFA ou WebAuthn efemeros.
+
+Configure uma connection string do banco de homolog como secret do GitHub:
+
+```bash
+gh secret set SUPABASE_HOMOLOG_DB_URL --repo Faysk/LaBolita
+```
+
+Depois execute:
+
+```bash
+gh workflow run "Restore Homolog From Production" \
+  -f confirm=RESTORE_HOMOLOG_FROM_PROD \
+  -f run_smoke=true
+```
+
+Esse processo sobrescreve o banco de homolog. Depois do restore, usuarios que
+estavam logados em homolog devem sair e entrar novamente, porque sessoes antigas
+nao sao reaproveitadas.
+
 ## Checklist antes de promover para producao
 
 ```bash
