@@ -125,15 +125,24 @@ function PlayerSticker({
     card: "h-44 w-32 rounded-[1.25rem]",
     feature: "h-80 w-56 rounded-[1.8rem]",
   }[variant];
-  const footerTextSize = variant === "feature" ? "text-base" : "text-xs";
-  const yearBadgeClass =
+  const yearClass =
     variant === "feature"
-      ? "left-3 top-3 px-2.5 py-1 text-xs"
-      : "left-2 top-2 px-2 py-0.5 text-[10px]";
-  const footerClass =
+      ? "left-4 top-4 text-6xl"
+      : compact
+        ? "left-2 top-2 text-2xl"
+        : "left-3 top-3 text-4xl";
+  const portraitPadding =
     variant === "feature"
-      ? "min-h-20 px-3 py-3 pr-14"
-      : "min-h-16 px-2.5 py-2.5 pr-12";
+      ? "px-3 pb-5 pt-9"
+      : compact
+        ? "px-1 pb-2 pt-5"
+        : "px-2 pb-4 pt-8";
+  const flagPosition =
+    variant === "feature"
+      ? "bottom-3 right-3"
+      : compact
+        ? "bottom-1 right-1"
+        : "bottom-2 right-2";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
@@ -150,41 +159,17 @@ function PlayerSticker({
       title={option.fullName ?? option.label}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,0.48),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.18),transparent_45%)]" />
-      <span className={`absolute rounded-full border border-white/25 bg-black/24 font-black leading-none text-white/90 ${yearBadgeClass}`}>
+      <span className={`pointer-events-none absolute font-black leading-none tracking-[-0.1em] text-white/24 ${yearClass}`}>
         26
       </span>
-      <span className="absolute right-2 top-2 rounded-full border border-white/35 bg-white/75 px-1.5 py-0.5 text-[8px] font-black text-brand-strong">
-        {option.position}
-      </span>
       <span
-        className={`relative mt-auto flex flex-1 items-end justify-center ${
-          compact ? "px-1 pb-7 pt-5" : "px-2 pt-10"
-        }`}
+        className={`relative mt-auto flex flex-1 items-end justify-center ${portraitPadding}`}
       >
         <PlayerPortrait option={option} compact={compact} />
       </span>
-      {compact ? (
-        <span className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between gap-1 rounded-xl border border-white/20 bg-black/35 px-1.5 py-1 text-white shadow-sm backdrop-blur">
-          <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-black leading-none">
-            #{option.number ?? "?"}
-          </span>
-          <span className="rounded-md border bg-white shadow-sm">
-            <TeamFlag team={teamFromSpecialOption(option)} size="sm" />
-          </span>
-        </span>
-      ) : (
-        <span className={`relative grid gap-1 border-t border-white/25 bg-black/32 text-white ${footerClass}`}>
-          <span className={`line-clamp-1 font-black leading-none ${footerTextSize}`}>
-            {option.label}
-          </span>
-          <span className="line-clamp-2 text-[9px] font-bold leading-tight text-white/75">
-            {option.club ?? option.teamName}
-          </span>
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg border bg-white shadow-sm">
-            <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "md" : "sm"} />
-          </span>
-        </span>
-      )}
+      <span className={`absolute ${flagPosition} z-20 rounded-lg border bg-white shadow-sm`}>
+        <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "md" : "sm"} />
+      </span>
     </span>
   );
 }
