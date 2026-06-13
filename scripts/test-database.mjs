@@ -533,8 +533,8 @@ async function verifyPredictionPrivacyAndResultCorrection() {
         "select avatar_url from public.get_pool_ranking($1) where display_name = 'Owner'",
         [publicPoolId],
       ),
-      "https://accounts.google.com/avatar/private-owner",
-      "members of the same pool can see profile avatars in its private ranking",
+      null,
+      "private pool rankings must respect avatar privacy",
     );
     await db.query("select public.create_pool('Bolão Arquivável', true)");
     secondPoolId = await scalar("select id from public.pools where owner_id = $1", [USER_TWO]);
@@ -567,6 +567,19 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     await assert.rejects(
       db.query("update public.profiles set is_admin = true where id = $1", [USER_TWO]),
       "users must not be able to grant themselves administrator permission",
+    );
+  });
+
+  await db.exec(`update public.profiles set show_avatar_publicly = true where id = '${USER_ONE}'`);
+
+  await asUser(USER_TWO, async () => {
+    assert.equal(
+      await scalar(
+        "select avatar_url from public.get_pool_ranking($1) where display_name = 'Owner'",
+        [publicPoolId],
+      ),
+      "https://accounts.google.com/avatar/private-owner",
+      "private pool rankings can show avatars after explicit public opt-in",
     );
   });
 
