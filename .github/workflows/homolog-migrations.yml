@@ -1,0 +1,48 @@
+name: Homolog migrations
+
+on:
+  push:
+    branches: [homolog]
+    paths:
+      - ".github/workflows/homolog-migrations.yml"
+      - "supabase/migrations/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homolog-migrations
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  migrate:
+    name: Apply migrations to homolog
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Apply pending migrations
+        shell: bash
+        env:
+          SUPABASE_HOMOLOG_DB_URL: ${{ secrets.SUPABASE_HOMOLOG_DB_URL }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_HOMOLOG_DB_URL:-}" ]; then
+            echo "SUPABASE_HOMOLOG_DB_URL secret is required."
+            exit 1
+          fi
+
+          npx supabase db push --db-url "$SUPABASE_HOMOLOG_DB_URL" --include-all --yes
