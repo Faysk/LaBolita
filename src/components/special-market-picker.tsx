@@ -133,7 +133,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
 
   return (
     <div className="space-y-7">
-      <section className="card-dark overflow-hidden rounded-[2rem] p-5 text-white md:p-8">
+      <section className="card-dark overflow-hidden rounded-[2rem] p-5 text-white md:p-8 lg:p-10">
         <Link
           href="/especiais"
           className="interactive inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/80"
@@ -141,8 +141,8 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           <ArrowLeft className="size-3.5" />
           Voltar aos especiais
         </Link>
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.78fr] lg:items-end">
-          <div>
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:items-stretch">
+          <div className="flex min-h-72 flex-col justify-end">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-accent">
               <Icon className="size-4" />
               {display.eyebrow}
@@ -154,7 +154,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               {display.teaser} Você pode alterar até {SPECIAL_LOCK_DATE_LABEL}.
             </p>
           </div>
-          <div className="rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10">
+          <div className="flex min-h-72 flex-col rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10 md:p-5">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/55">
                 {display.pickLabel}
@@ -165,7 +165,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
                 {market.locked ? "Bloqueado" : complete ? "Pronto" : "Pendente"}
               </span>
             </div>
-            <div className="mt-4 min-h-32">
+            <div className="mt-4 flex-1">
               {selectedOptions.length > 0 ? (
                 <div className="grid gap-3">
                   {selectedOptions.map((option) => (
@@ -174,6 +174,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
                       option={option}
                       locked={market.locked || Boolean(sync.busy)}
                       onRemove={() => removeOption(option.key)}
+                      featured={market.pickCount === 1}
                     />
                   ))}
                 </div>
@@ -221,7 +222,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
         </section>
       )}
 
-      <section className="grid items-start gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid items-start gap-5 lg:grid-cols-[1.25fr_0.95fr]">
         <div className="card self-start p-5">
           <p className="eyebrow">Escolha com contexto</p>
           <h2 className="mt-1 text-2xl font-black tracking-tight">
@@ -372,11 +373,43 @@ function SelectedOptionRow({
   option,
   locked,
   onRemove,
+  featured = false,
 }: {
   option: SpecialOption;
   locked: boolean;
   onRemove: () => void;
+  featured?: boolean;
 }) {
+  if (featured) {
+    return (
+      <div className="grid gap-4 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+        <SpecialOptionSticker option={option} variant="card" selected />
+        <div className="min-w-0">
+          <p className="text-lg font-black leading-tight">{option.label}</p>
+          <p className="mt-1 text-sm font-bold text-white/62">
+            {summarizeSpecialOption(option)}
+          </p>
+          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
+            {option.position ? `${positionLabel(option.position)} · camisa ${option.number}` : "Seleção"}
+          </p>
+          <p className="mt-3 line-clamp-3 text-xs leading-5 text-white/62">
+            {option.position ? shortPlayerInsight(option) : shortTeamInsight(option)}
+          </p>
+        </div>
+        {!locked && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="interactive justify-self-start rounded-full border border-white/15 bg-white/10 p-2 text-white/75 sm:justify-self-auto"
+            aria-label={`Remover ${option.label}`}
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-3 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
       <SpecialOptionAvatar option={option} size="lg" />
@@ -404,7 +437,7 @@ function SelectedOptionRow({
 function OptionDetail({ option }: { option: SpecialOption }) {
   if (!option.position) {
     return (
-      <div className="grid gap-4 rounded-[1.5rem] border bg-surface-muted p-4 md:grid-cols-[auto_1fr]">
+      <div className="grid gap-5 rounded-[1.5rem] border bg-surface-muted p-4 md:p-5 xl:grid-cols-[auto_minmax(0,1fr)]">
         <div className="flex justify-center md:block">
           <SpecialOptionSticker option={option} variant="feature" />
         </div>
@@ -414,10 +447,9 @@ function OptionDetail({ option }: { option: SpecialOption }) {
           </p>
           <h3 className="mt-1 text-2xl font-black">{option.teamName}</h3>
           <p className="mt-2 text-sm leading-6 text-muted">
-            A figurinha da seleção usa a bandeira e a campanha atual. Para
-            especiais de ataque/defesa, a confirmação final segue corrigível no admin.
+            {teamInsight(option)}
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
             <DetailStat label="Pontos" value={option.teamStats?.points ?? 0} />
             <DetailStat label="Jogos" value={option.teamStats?.played ?? 0} />
             <DetailStat label="Gols pró" value={option.teamStats?.goalsFor ?? 0} />
@@ -433,8 +465,8 @@ function OptionDetail({ option }: { option: SpecialOption }) {
   }
 
   return (
-    <div className="rounded-[1.5rem] border bg-surface-muted p-4">
-      <div className="grid gap-5 md:grid-cols-[auto_1fr] md:items-start">
+    <div className="rounded-[1.5rem] border bg-surface-muted p-4 md:p-5">
+      <div className="grid gap-5 xl:grid-cols-[auto_minmax(0,1fr)] xl:items-start">
         <div className="flex justify-center md:block">
           <SpecialOptionSticker option={option} variant="feature" selected />
         </div>
@@ -442,16 +474,14 @@ function OptionDetail({ option }: { option: SpecialOption }) {
           <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
             {positionLabel(option.position)} · camisa {option.number}
           </p>
-          <h3 className="mt-1 text-2xl font-black leading-tight">
+          <h3 className="mt-1 text-2xl font-black leading-tight md:text-3xl">
             {option.fullName ?? option.label}
           </h3>
           <p className="mt-1 text-sm font-bold text-muted">{option.club}</p>
           <p className="mt-3 text-sm leading-6 text-muted">
-            Figurinha autoral criada a partir do elenco oficial, sem foto real.
-            Os dados históricos ajudam a escolher; eventos desta Copa entram
-            quando forem confirmados.
+            {playerInsight(option)}
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
             <DetailStat label="Seleção" value={option.teamName} />
             <DetailStat label="Idade" value={option.age ? `${option.age} anos` : "—"} />
             <DetailStat label="Altura" value={option.heightCm ? `${option.heightCm} cm` : "—"} />
@@ -514,7 +544,7 @@ function DetailStat({
       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
         {label}
       </p>
-      <p className="mt-1 truncate text-sm font-black">{value}</p>
+      <p className="mt-1 break-words text-sm font-black leading-tight">{value}</p>
     </div>
   );
 }
@@ -525,6 +555,52 @@ function Chip({ children }: { children: ReactNode }) {
       {children}
     </span>
   );
+}
+
+function playerInsight(option: SpecialOption) {
+  const role = option.position ? positionLabel(option.position).toLowerCase() : "jogador";
+  const goals = option.goals ?? 0;
+  const caps = option.caps ?? 0;
+  const shirt = option.number ? `camisa ${option.number}` : "nome do elenco";
+  const opening = `${capitalize(role)} da seleção ${option.teamName}, ${shirt}, chega com ${goals} gols em ${caps} jogos pela seleção.`;
+
+  if (option.position === "GK") {
+    return `${opening} Para Luva de Ouro, altura, volume de jogos e uma campanha defensiva forte podem pesar bastante.`;
+  }
+  if (option.position === "DF") {
+    return `${opening} É uma aposta de segurança e liderança: defensores crescem quando a seleção avança e sofre pouco.`;
+  }
+  if (option.position === "MF") {
+    return `${opening} É perfil de criação: boa escolha para assistências ou Bola de Ouro se a seleção dominar jogos grandes.`;
+  }
+  if ((option.age ?? 0) >= 33) {
+    return `${opening} A experiência pode pesar em jogo grande, principalmente se ele seguir protagonista até o mata-mata.`;
+  }
+  return `${opening} Perfil de finalizador: quanto mais longe a seleção for, maior a chance de transformar volume em artilharia.`;
+}
+
+function shortPlayerInsight(option: SpecialOption) {
+  if (!option.position) return shortTeamInsight(option);
+  const goals = option.goals ?? 0;
+  const caps = option.caps ?? 0;
+  if (option.position === "GK") {
+    return `${option.heightCm ?? "—"} cm, ${caps} jogos pela seleção. Boa leitura para Luva de Ouro.`;
+  }
+  return `${goals} gols e ${caps} jogos pela seleção. ${positionLabel(option.position)} com peso no palpite.`;
+}
+
+function teamInsight(option: SpecialOption) {
+  const stats = option.teamStats;
+  if (!stats || stats.played === 0) {
+    return `${option.teamName} ainda começa sua campanha nesta Copa. Para especiais de ataque, defesa e caminho até a final, o valor está no potencial antes da tendência ficar clara.`;
+  }
+  return `${option.teamName} soma ${stats.points} ponto(s), ${stats.goalsFor} gol(s) pró e ${stats.goalsAgainst} contra em ${stats.played} jogo(s). Esse recorte ajuda a ler ataque, defesa e força de campanha, mas o admin ainda pode corrigir o resultado final.`;
+}
+
+function shortTeamInsight(option: SpecialOption) {
+  const stats = option.teamStats;
+  if (!stats || stats.played === 0) return "Campanha a começar. Palpite baseado em potencial.";
+  return `${stats.goalsFor} gols pró, ${stats.goalsAgainst} contra e ${stats.points} ponto(s).`;
 }
 
 function visibleSpecialOptions(
@@ -573,4 +649,8 @@ function normalizeSearch(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

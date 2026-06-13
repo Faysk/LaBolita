@@ -31,6 +31,25 @@ const TEAM_PALETTES: Record<string, StickerPalette> = {
 const SKIN_TONES = ["#f0c6a5", "#d79a72", "#b87551", "#8d593c", "#5f3b2f", "#f4d1b7"];
 const HAIR_COLORS = ["#171717", "#2b1d16", "#3c2518", "#6e4326", "#c7a071", "#101827"];
 const HAIR_STYLES = ["short", "curls", "locs", "fade", "topknot", "waves"] as const;
+const JERSEY_PATTERNS = ["classic", "stripe", "sash", "keeper", "shoulder"] as const;
+
+type HairStyle = (typeof HAIR_STYLES)[number];
+type JerseyPattern = (typeof JERSEY_PATTERNS)[number];
+
+type VisualProfile = {
+  skin: string;
+  hair: string;
+  hairStyle: HairStyle;
+  jerseyPattern: JerseyPattern;
+};
+
+const PLAYER_STYLE_OVERRIDES: Record<string, Partial<VisualProfile>> = {
+  "ARG:10": { hairStyle: "short", skin: "#d79a72", hair: "#2b1d16" },
+  "BRA:10": { hairStyle: "fade", skin: "#b87551", hair: "#2b1d16" },
+  "ENG:9": { hairStyle: "short", skin: "#f0c6a5", hair: "#5b3a22" },
+  "FRA:10": { hairStyle: "fade", skin: "#8d593c", hair: "#111111" },
+  "POR:7": { hairStyle: "short", skin: "#d79a72", hair: "#2b1d16" },
+};
 
 export function SpecialOptionSticker({
   option,
@@ -104,7 +123,7 @@ function PlayerSticker({
     avatar: "h-16 w-12 rounded-[0.9rem]",
     thumb: "h-24 w-[4.75rem] rounded-[1.05rem]",
     card: "h-40 w-28 rounded-[1.2rem]",
-    feature: "h-72 w-52 rounded-[1.8rem]",
+    feature: "h-80 w-56 rounded-[1.8rem]",
   }[variant];
   const style = {
     "--sticker-primary": palette.primary,
@@ -121,19 +140,21 @@ function PlayerSticker({
       style={style}
       title={option.fullName ?? option.label}
     >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,0.42),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.18),transparent_45%)]" />
-      <span className="absolute -right-4 top-0 select-none text-[5.4rem] font-black leading-none tracking-[-0.18em] text-white/22">
-        26
-      </span>
+      <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,0.48),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.18),transparent_45%)]" />
       {!compact && (
-        <span className="absolute left-2 top-2 rounded-full bg-black/25 px-2 py-0.5 text-[9px] font-black text-white/90">
+        <span className="absolute inset-x-2 top-8 select-none text-center text-[2.35rem] font-black leading-none tracking-[-0.12em] text-white/18">
+          2026
+        </span>
+      )}
+      {!compact && (
+        <span className="absolute left-2 top-2 rounded-full bg-black/28 px-2 py-0.5 text-[9px] font-black text-white/90">
           #{option.number ?? "?"}
         </span>
       )}
       <span className="absolute right-2 top-2 rounded-full border border-white/35 bg-white/75 px-1.5 py-0.5 text-[8px] font-black text-brand-strong">
         {option.position}
       </span>
-      <span className="relative mt-auto flex flex-1 items-end justify-center px-1 pt-5">
+      <span className="relative mt-auto flex flex-1 items-end justify-center px-1 pt-7">
         <PlayerPortrait option={option} compact={compact} />
       </span>
       <span className="relative grid gap-1 border-t border-white/25 bg-black/30 px-2 py-2 text-white">
@@ -168,7 +189,7 @@ function TeamSticker({
     avatar: "h-14 w-12 rounded-[0.9rem]",
     thumb: "h-24 w-[4.75rem] rounded-[1.05rem]",
     card: "h-40 w-28 rounded-[1.2rem]",
-    feature: "h-64 w-52 rounded-[1.8rem]",
+    feature: "h-72 w-56 rounded-[1.8rem]",
   }[variant];
   const style = {
     "--sticker-primary": palette.primary,
@@ -186,9 +207,11 @@ function TeamSticker({
       title={option.teamName}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(255,255,255,0.42),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.16),transparent_45%)]" />
-      <span className="absolute -right-3 top-0 select-none text-[5rem] font-black leading-none tracking-[-0.2em] text-white/22">
-        26
-      </span>
+      {!compact && (
+        <span className="absolute inset-x-2 top-7 select-none text-center text-[2.35rem] font-black leading-none tracking-[-0.12em] text-white/18">
+          2026
+        </span>
+      )}
       <span className="relative flex flex-1 items-center justify-center px-3">
         <span className="rounded-[1.2rem] border border-white/45 bg-white/90 p-2 shadow-lg">
           <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "lg" : "md"} />
@@ -209,36 +232,117 @@ function TeamSticker({
 }
 
 function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: boolean }) {
-  const seed = hashSeed(option.key);
-  const skin = SKIN_TONES[seed % SKIN_TONES.length];
-  const hair = HAIR_COLORS[Math.floor(seed / 5) % HAIR_COLORS.length];
-  const hairStyle = HAIR_STYLES[Math.floor(seed / 11) % HAIR_STYLES.length];
+  const profile = visualProfile(option);
   const palette = teamPalette(option.teamCode);
-  const scale = compact ? 0.82 : 1;
+  const scale = compact ? 0.8 : 1;
+  const trimColor = palette.accent;
 
   return (
     <svg
-      viewBox="0 0 120 132"
+      viewBox="0 0 160 190"
       aria-hidden="true"
-      className="h-full w-full drop-shadow-lg"
-      style={{ transform: `scale(${scale}) translateY(${compact ? 8 : 4}px)` }}
+      className="h-full w-full drop-shadow-xl"
+      style={{ transform: `scale(${scale}) translateY(${compact ? 16 : 8}px)` }}
     >
+      <ellipse cx="80" cy="183" rx="44" ry="8" fill="rgba(0,0,0,0.18)" />
       <path
-        d="M20 132c4-35 21-52 40-52s36 17 40 52H20Z"
+        d="M31 184c4-45 24-70 49-70s45 25 49 70H31Z"
         fill={palette.primary}
         stroke="rgba(255,255,255,0.55)"
+        strokeWidth="4"
+      />
+      {jerseyPattern(profile.jerseyPattern, palette, trimColor)}
+      <path d="M56 111h48v25c0 13-48 13-48 0v-25Z" fill={profile.skin} />
+      <path
+        d="M45 73c0-34 18-55 35-55s35 21 35 55c0 29-16 48-35 48S45 102 45 73Z"
+        fill={profile.skin}
+        stroke="rgba(25,20,18,0.24)"
         strokeWidth="3"
       />
-      <path d="M42 83h36v19c0 10-36 10-36 0V83Z" fill={skin} />
-      <circle cx="60" cy="55" r="29" fill={skin} />
-      {hairShape(hairStyle, hair)}
+      <ellipse cx="44" cy="78" rx="6" ry="12" fill={profile.skin} />
+      <ellipse cx="116" cy="78" rx="6" ry="12" fill={profile.skin} />
+      {hairShape(profile.hairStyle, profile.hair)}
+      <g stroke="rgba(28,20,18,0.72)" strokeLinecap="round">
+        <path d="M62 73h10" strokeWidth="4" />
+        <path d="M88 73h10" strokeWidth="4" />
+        <path d="M80 78v14" strokeWidth="2.5" opacity="0.45" />
+        <path d="M69 100c7 5 15 5 22 0" strokeWidth="3" opacity="0.5" />
+      </g>
       <path
-        d="M23 132c2-19 9-33 19-42 11 12 25 12 36 0 10 9 17 23 19 42H23Z"
-        fill={palette.secondary}
-        opacity="0.48"
+        d="M56 123c12 11 36 11 48 0"
+        fill="none"
+        stroke={trimColor}
+        strokeLinecap="round"
+        strokeWidth="5"
       />
-      <path d="M48 101h24" stroke={palette.accent} strokeWidth="4" strokeLinecap="round" />
+      <path
+        d="M38 184c3-26 12-47 29-56"
+        fill="none"
+        stroke="rgba(255,255,255,0.45)"
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+      <path
+        d="M122 184c-3-26-12-47-29-56"
+        fill="none"
+        stroke="rgba(255,255,255,0.45)"
+        strokeLinecap="round"
+        strokeWidth="4"
+      />
+      {option.position === "GK" && (
+        <g>
+          <circle cx="44" cy="161" r="9" fill={trimColor} stroke="white" strokeWidth="3" />
+          <circle cx="116" cy="161" r="9" fill={trimColor} stroke="white" strokeWidth="3" />
+        </g>
+      )}
     </svg>
+  );
+}
+
+function jerseyPattern(pattern: JerseyPattern, palette: StickerPalette, accent: string) {
+  if (pattern === "stripe") {
+    return (
+      <g opacity="0.62">
+        <path d="M56 184V121" stroke={palette.secondary} strokeWidth="11" />
+        <path d="M80 184V116" stroke={accent} strokeWidth="7" />
+        <path d="M104 184V121" stroke={palette.secondary} strokeWidth="11" />
+      </g>
+    );
+  }
+  if (pattern === "sash") {
+    return (
+      <path
+        d="M39 184 112 119"
+        fill={palette.secondary}
+        opacity="0.55"
+        stroke={accent}
+        strokeWidth="10"
+      />
+    );
+  }
+  if (pattern === "keeper") {
+    return (
+      <g opacity="0.68">
+        <path d="M37 139h86" stroke={palette.secondary} strokeWidth="8" />
+        <path d="M48 157h64" stroke={accent} strokeWidth="6" />
+        <path d="M60 176h40" stroke={palette.secondary} strokeWidth="6" />
+      </g>
+    );
+  }
+  if (pattern === "shoulder") {
+    return (
+      <g opacity="0.62">
+        <path d="M32 184c5-34 18-56 37-66" fill={palette.secondary} />
+        <path d="M128 184c-5-34-18-56-37-66" fill={palette.secondary} />
+      </g>
+    );
+  }
+  return (
+    <path
+      d="M55 184c5-23 13-39 25-48 12 9 20 25 25 48H55Z"
+      fill={palette.secondary}
+      opacity="0.38"
+    />
   );
 }
 
@@ -257,23 +361,51 @@ function MiniPlayerPortrait({ option }: { option: SpecialOption }) {
   );
 }
 
-function hairShape(style: (typeof HAIR_STYLES)[number], color: string) {
+function visualProfile(option: SpecialOption): VisualProfile {
+  const seed = hashSeed(`${option.teamCode}:${option.number ?? 0}:${option.position ?? "T"}`);
+  const positionPattern: Record<string, JerseyPattern> = {
+    GK: "keeper",
+    DF: "shoulder",
+    MF: "stripe",
+    FW: "sash",
+  };
+  const base: VisualProfile = {
+    skin: SKIN_TONES[(seed + (option.number ?? 0)) % SKIN_TONES.length],
+    hair: HAIR_COLORS[(seed + Math.floor((option.heightCm ?? 170) / 7)) % HAIR_COLORS.length],
+    hairStyle: HAIR_STYLES[(seed + (option.number ?? 0)) % HAIR_STYLES.length],
+    jerseyPattern:
+      option.position && positionPattern[option.position]
+        ? positionPattern[option.position]
+        : JERSEY_PATTERNS[seed % JERSEY_PATTERNS.length],
+  };
+  const override = PLAYER_STYLE_OVERRIDES[`${option.teamCode}:${option.number}`];
+  return { ...base, ...override };
+}
+
+function hairShape(style: HairStyle, color: string) {
   if (style === "curls") {
     return (
       <g fill={color}>
-        {Array.from({ length: 8 }, (_, index) => (
-          <circle key={index} cx={32 + index * 8} cy={32 + (index % 2) * 3} r="8" />
+        {Array.from({ length: 9 }, (_, index) => (
+          <circle key={index} cx={45 + index * 9} cy={35 + (index % 2) * 3} r="8" />
         ))}
-        <path d="M31 38c8-17 50-20 58 1-8-5-46-7-58-1Z" />
+        <path d="M45 48c8-23 61-26 71 1-16-8-52-8-71-1Z" />
       </g>
     );
   }
   if (style === "locs") {
     return (
       <g fill={color}>
-        <path d="M33 30c10-16 43-18 56 4-20-5-39-5-56-4Z" />
-        {Array.from({ length: 7 }, (_, index) => (
-          <rect key={index} x={31 + index * 8} y={30} width="5" height={30 + (index % 3) * 6} rx="3" />
+        <path d="M46 45c10-28 58-31 69 2-18-9-50-10-69-2Z" />
+        {Array.from({ length: 8 }, (_, index) => (
+          <rect
+            key={index}
+            x={46 + index * 8}
+            y={38}
+            width="5"
+            height={18 + (index % 3) * 4}
+            rx="3"
+          />
         ))}
       </g>
     );
@@ -281,23 +413,23 @@ function hairShape(style: (typeof HAIR_STYLES)[number], color: string) {
   if (style === "topknot") {
     return (
       <g fill={color}>
-        <circle cx="60" cy="23" r="11" />
-        <path d="M31 34c8-18 48-21 58 2-15-5-43-5-58-2Z" />
+        <circle cx="80" cy="18" r="12" />
+        <path d="M45 47c9-27 60-30 70 2-18-8-51-8-70-2Z" />
       </g>
     );
   }
   if (style === "fade") {
-    return <path d="M31 39c5-24 52-29 59 0-18-10-42-9-59 0Z" fill={color} />;
+    return <path d="M45 50c6-31 61-36 70 0-22-13-48-12-70 0Z" fill={color} />;
   }
   if (style === "waves") {
     return (
-      <g fill="none" stroke={color} strokeLinecap="round" strokeWidth="7">
-        <path d="M32 35c9-9 17-9 26 0s17 9 29 0" />
-        <path d="M35 28c8-7 16-7 25 0s15 7 24 0" />
+      <g fill="none" stroke={color} strokeLinecap="round" strokeWidth="8">
+        <path d="M46 45c12-10 22-10 34 0s22 10 35 0" />
+        <path d="M50 36c10-8 20-8 30 0s20 8 30 0" />
       </g>
     );
   }
-  return <path d="M31 38c6-24 53-28 58 2-17-8-40-9-58-2Z" fill={color} />;
+  return <path d="M45 49c7-31 62-36 70 2-22-12-48-12-70-2Z" fill={color} />;
 }
 
 function teamPalette(code?: string): StickerPalette {
