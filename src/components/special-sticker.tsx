@@ -84,6 +84,7 @@ export function SpecialOptionAvatar({
       : size === "md"
         ? "size-12 rounded-2xl"
         : "size-16 rounded-[1.25rem]";
+  const flagSize = size === "lg" ? "sm" : "xs";
 
   return (
     <span
@@ -91,8 +92,8 @@ export function SpecialOptionAvatar({
       title={option.fullName ?? option.label}
     >
       <MiniPlayerPortrait option={option} />
-      <span className="absolute -bottom-0.5 -right-0.5 rounded-lg border bg-white shadow-sm">
-        <TeamFlag team={teamFromSpecialOption(option)} size="sm" />
+      <span className="absolute bottom-1 right-1 rounded-md bg-white shadow-sm">
+        <TeamFlag team={teamFromSpecialOption(option)} size={flagSize} />
       </span>
     </span>
   );
@@ -132,6 +133,8 @@ function PlayerSticker({
         : variant === "thumb"
           ? "text-3xl"
           : "text-xl";
+  const flagSize =
+    variant === "feature" ? "md" : variant === "card" ? "sm" : "xs";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
@@ -154,8 +157,8 @@ function PlayerSticker({
       <span className="relative z-10 flex h-full w-full items-end justify-center px-[8%] pb-[8%] pt-[15%]">
         <PlayerPortrait option={option} compact={false} />
       </span>
-      <span className="absolute bottom-[5%] right-[5%] z-20 rounded-lg border bg-white shadow-sm">
-        <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "md" : "sm"} />
+      <span className="absolute bottom-[5%] right-[5%] z-20 rounded-md bg-white shadow-sm">
+        <TeamFlag team={teamFromSpecialOption(option)} size={flagSize} />
       </span>
     </span>
   );
