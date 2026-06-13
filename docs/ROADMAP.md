@@ -53,4 +53,10 @@ Critério de saída: checklist operacional assinado e primeiro jogo pronto.
 - Atualização automática de resultados com revisão humana.
 - Notificações de palpites pendentes.
 - Compartilhamento de ranking e comentários.
-- Palpites especiais e estatísticas avançadas somente após regras aprovadas.
+- Palpites especiais com figurinhas autorais, sem fotos reais de jogadores.
+- Prazo recomendado para palpites especiais: **22 de junho de 2026**. Essa data
+  ainda dá tempo para os participantes entrarem na brincadeira, mas trava antes
+  da terceira rodada da fase de grupos, quando artilharia, assistências e
+  favoritos começam a ficar previsíveis demais.
+- Estatísticas avançadas de atletas podem entrar depois, com dados automáticos
+  quando confiáveis e correção manual pelo admin.

@@ -29,6 +29,8 @@ export type SpecialMarketDisplay = {
 };
 
 export const SPECIAL_LOCK_DATE_LABEL = "22 de junho";
+export const SPECIAL_LOCK_RATIONALE =
+  "Prazo pensado para dar tempo de participar sem esperar a terceira rodada, quando a Copa já começa a mostrar tendência demais.";
 
 type MarketProgressLike = {
   key: string;
@@ -51,7 +53,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu artilheiro",
     searchPlaceholder: "Buscar atacante, jogador ou seleção",
     emptyDetail: "Escolha um jogador para ver dados do elenco oficial.",
-    dataNote: "Destaques por elenco e histórico da seleção. Não são odds.",
+    dataNote: "Sugestões por posição, gols e jogos pela seleção. Não são odds.",
   },
   top_assists: {
     key: "top_assists",
@@ -66,7 +68,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu líder em assistências",
     searchPlaceholder: "Buscar meia, atacante ou seleção",
     emptyDetail: "Escolha um jogador para ver posição, clube e experiência.",
-    dataNote: "Destaques por posição, clube e histórico da seleção.",
+    dataNote: "Sugestões por posição, clube e histórico de seleção.",
   },
   golden_glove: {
     key: "golden_glove",
@@ -81,7 +83,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Minha Luva de Ouro",
     searchPlaceholder: "Buscar goleiro ou seleção",
     emptyDetail: "Escolha um goleiro para ver altura, jogos e clube.",
-    dataNote: "Prêmio oficial confirmado no fim da Copa.",
+    dataNote: "Sugestões de goleiros por posição, altura e experiência.",
   },
   golden_ball: {
     key: "golden_ball",
@@ -96,7 +98,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Minha Bola de Ouro",
     searchPlaceholder: "Buscar jogador ou seleção",
     emptyDetail: "Escolha um jogador para comparar dados oficiais.",
-    dataNote: "Destaques por elenco, experiência e gols.",
+    dataNote: "Sugestões por experiência, gols e peso no elenco.",
   },
   team_most_goals: {
     key: "team_most_goals",
@@ -111,7 +113,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu ataque escolhido",
     searchPlaceholder: "Buscar seleção",
     emptyDetail: "Escolha uma seleção para ver gols, saldo e campanha.",
-    dataNote: "Destaques pela campanha e gols da seleção.",
+    dataNote: "Sugestões pela campanha atual e força ofensiva.",
   },
   team_fewest_conceded: {
     key: "team_fewest_conceded",
@@ -126,7 +128,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Minha defesa escolhida",
     searchPlaceholder: "Buscar seleção",
     emptyDetail: "Escolha uma seleção para ver gols sofridos e jogos.",
-    dataNote: "Destaques por jogos e gols sofridos.",
+    dataNote: "Sugestões por jogos, gols sofridos e campanha atual.",
   },
   champion: {
     key: "champion",
@@ -141,7 +143,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu campeão",
     searchPlaceholder: "Buscar seleção",
     emptyDetail: "Escolha uma seleção para ver campanha atual.",
-    dataNote: "Palpite de longo prazo; segue aberto até o prazo configurado.",
+    dataNote: "Sugestões por campanha, saldo e caminho de torneio.",
   },
   runner_up: {
     key: "runner_up",

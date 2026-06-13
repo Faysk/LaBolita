@@ -12,7 +12,10 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { TeamFlag } from "@/components/team-flag";
+import {
+  SpecialOptionAvatar,
+  SpecialOptionSticker,
+} from "@/components/special-sticker";
 import {
   highlightSpecialOptions,
   localSpecialDateTime,
@@ -25,7 +28,6 @@ import {
   specialMarketDisplay,
 } from "@/lib/special-market-display";
 import type { SpecialMarketView } from "@/lib/data/specials";
-import type { DemoTeam } from "@/lib/types";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
 
@@ -50,6 +52,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
     }),
   );
   const [search, setSearch] = useState("");
+  const [visibleCount, setVisibleCount] = useState(60);
   const [sync, setSync] = useState<SyncState>({});
   const selectedOptions = selectedKeys
     .map((key) => optionByKey.get(key))
@@ -62,10 +65,11 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
     () => highlightSpecialOptions(market.key, market.options, 12),
     [market.key, market.options],
   );
-  const visibleOptions = useMemo(
+  const filteredOptions = useMemo(
     () => visibleSpecialOptions(market.options, search, selectedKeys, market.key),
     [market.key, market.options, search, selectedKeys],
   );
+  const visibleOptions = filteredOptions.slice(0, visibleCount);
 
   function chooseOption(option: SpecialOption) {
     if (market.locked || sync.busy) return;
@@ -150,7 +154,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               {display.teaser} Você pode alterar até {SPECIAL_LOCK_DATE_LABEL}.
             </p>
           </div>
-          <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
+          <div className="rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/55">
                 {display.pickLabel}
@@ -161,9 +165,9 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
                 {market.locked ? "Bloqueado" : complete ? "Pronto" : "Pendente"}
               </span>
             </div>
-            <div className="mt-4 min-h-28">
+            <div className="mt-4 min-h-32">
               {selectedOptions.length > 0 ? (
-                <div className="grid gap-2">
+                <div className="grid gap-3">
                   {selectedOptions.map((option) => (
                     <SelectedOptionRow
                       key={option.key}
@@ -174,9 +178,12 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
                   ))}
                 </div>
               ) : (
-                <p className="rounded-2xl border border-white/15 bg-black/10 p-4 text-sm leading-6 text-white/62">
-                  {display.emptyDetail}
-                </p>
+                <div className="rounded-[1.35rem] border border-white/15 bg-black/10 p-4">
+                  <p className="text-sm leading-6 text-white/68">{display.emptyDetail}</p>
+                  <p className="mt-3 text-xs font-bold text-white/45">
+                    Você salva agora e ainda pode trocar até {SPECIAL_LOCK_DATE_LABEL}.
+                  </p>
+                </div>
               )}
             </div>
             <button
@@ -244,7 +251,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               </h2>
             </div>
             <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-[10px] font-black text-brand-strong">
-              Top {highlighted.length}
+              {highlighted.length} destaques
             </span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -265,7 +272,13 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="eyebrow">Lista completa</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight">Buscar opção</h2>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">
+              Figurinhas disponíveis
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Mostrando {visibleOptions.length} de {filteredOptions.length} opções.
+              Use a busca para ir direto ao jogador ou seleção.
+            </p>
           </div>
           <div className="text-xs font-bold text-muted">
             Bloqueia: {localSpecialDateTime(market.lockAt)} · BRT
@@ -291,6 +304,17 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
             />
           ))}
         </div>
+        {visibleOptions.length < filteredOptions.length && (
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setVisibleCount((current) => current + 60)}
+              className="interactive min-h-11 rounded-2xl border bg-surface px-5 text-sm font-black text-brand hover:border-brand/70"
+            >
+              Mostrar mais figurinhas
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -312,15 +336,15 @@ function OptionCard({
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className={`interactive flex min-h-32 w-full items-center gap-4 rounded-2xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`interactive flex min-h-36 w-full items-center gap-4 overflow-hidden rounded-2xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ${
         selected
           ? "border-brand bg-success-bg text-success-fg"
           : "bg-surface-muted hover:border-brand/70"
       }`}
     >
-      <OptionAvatar option={option} />
+      <SpecialOptionSticker option={option} variant="thumb" selected={selected} />
       <span className="min-w-0 flex-1">
-        <span className="line-clamp-1 text-sm font-black text-foreground">
+        <span className="line-clamp-2 text-sm font-black leading-tight text-foreground">
           {option.label}
         </span>
         <span className="mt-1 block line-clamp-1 text-xs font-bold text-muted">
@@ -328,11 +352,15 @@ function OptionCard({
         </span>
         <span className="mt-2 flex flex-wrap gap-1.5">
           {option.position && (
-            <Chip>{option.position}</Chip>
+            <Chip>{positionLabel(option.position)}</Chip>
           )}
+          {option.number !== undefined && <Chip>#{option.number}</Chip>}
           {option.goals !== undefined && <Chip>{option.goals} gols</Chip>}
           {option.caps !== undefined && <Chip>{option.caps} jogos</Chip>}
-          {option.teamStats && <Chip>{option.teamStats.points} pts</Chip>}
+          {option.heightCm !== undefined && <Chip>{option.heightCm} cm</Chip>}
+          {option.teamStats && option.teamStats.played > 0 && (
+            <Chip>{option.teamStats.goalsFor} GP</Chip>
+          )}
         </span>
       </span>
       {selected && <CheckCircle2 className="size-5 shrink-0 text-brand" />}
@@ -350,11 +378,14 @@ function SelectedOptionRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-black/10 p-3">
-      <OptionAvatar option={option} size="md" />
+    <div className="grid gap-3 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+      <SpecialOptionAvatar option={option} size="lg" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black">{option.label}</p>
         <p className="truncate text-xs text-white/58">{summarizeSpecialOption(option)}</p>
+        <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent/85">
+          {option.position ? `${positionLabel(option.position)} · camisa ${option.number}` : "Seleção"}
+        </p>
       </div>
       {!locked && (
         <button
@@ -373,21 +404,29 @@ function SelectedOptionRow({
 function OptionDetail({ option }: { option: SpecialOption }) {
   if (!option.position) {
     return (
-      <div className="rounded-[1.5rem] border bg-surface-muted p-4">
-        <div className="flex items-center gap-4">
-          <TeamFlag team={teamFromOption(option)} size="lg" />
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
-              Seleção
-            </p>
-            <h3 className="text-xl font-black">{option.teamName}</h3>
-          </div>
+      <div className="grid gap-4 rounded-[1.5rem] border bg-surface-muted p-4 md:grid-cols-[auto_1fr]">
+        <div className="flex justify-center md:block">
+          <SpecialOptionSticker option={option} variant="feature" />
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-          <DetailStat label="Pontos" value={option.teamStats?.points ?? 0} />
-          <DetailStat label="Jogos" value={option.teamStats?.played ?? 0} />
-          <DetailStat label="Gols pró" value={option.teamStats?.goalsFor ?? 0} />
-          <DetailStat label="Saldo" value={option.teamStats?.goalDifference ?? 0} />
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
+            Seleção escolhida
+          </p>
+          <h3 className="mt-1 text-2xl font-black">{option.teamName}</h3>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            A figurinha da seleção usa a bandeira e a campanha atual. Para
+            especiais de ataque/defesa, a confirmação final segue corrigível no admin.
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+            <DetailStat label="Pontos" value={option.teamStats?.points ?? 0} />
+            <DetailStat label="Jogos" value={option.teamStats?.played ?? 0} />
+            <DetailStat label="Gols pró" value={option.teamStats?.goalsFor ?? 0} />
+            <DetailStat label="Gols contra" value={option.teamStats?.goalsAgainst ?? 0} />
+            <DetailStat label="Saldo" value={option.teamStats?.goalDifference ?? 0} />
+            <DetailStat label="Vitórias" value={option.teamStats?.wins ?? 0} />
+            <DetailStat label="Empates" value={option.teamStats?.draws ?? 0} />
+            <DetailStat label="Derrotas" value={option.teamStats?.losses ?? 0} />
+          </div>
         </div>
       </div>
     );
@@ -395,29 +434,34 @@ function OptionDetail({ option }: { option: SpecialOption }) {
 
   return (
     <div className="rounded-[1.5rem] border bg-surface-muted p-4">
-      <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start">
-        <OptionAvatar option={option} size="xl" />
+      <div className="grid gap-5 md:grid-cols-[auto_1fr] md:items-start">
+        <div className="flex justify-center md:block">
+          <SpecialOptionSticker option={option} variant="feature" selected />
+        </div>
         <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
             {positionLabel(option.position)} · camisa {option.number}
           </p>
-          <h3 className="mt-1 text-xl font-black leading-tight">
+          <h3 className="mt-1 text-2xl font-black leading-tight">
             {option.fullName ?? option.label}
           </h3>
           <p className="mt-1 text-sm font-bold text-muted">{option.club}</p>
           <p className="mt-3 text-sm leading-6 text-muted">
-            Dados oficiais de elenco e histórico da seleção. Estatísticas
-            individuais desta Copa entram conforme os jogos forem confirmados.
+            Figurinha autoral criada a partir do elenco oficial, sem foto real.
+            Os dados históricos ajudam a escolher; eventos desta Copa entram
+            quando forem confirmados.
           </p>
+          <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+            <DetailStat label="Seleção" value={option.teamName} />
+            <DetailStat label="Idade" value={option.age ? `${option.age} anos` : "—"} />
+            <DetailStat label="Altura" value={option.heightCm ? `${option.heightCm} cm` : "—"} />
+            <DetailStat label="Gols seleção" value={option.goals ?? 0} />
+            <DetailStat label="Jogos seleção" value={option.caps ?? 0} />
+            <DetailStat label="Clube" value={option.club ?? "—"} />
+          </div>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
-        <DetailStat label="Seleção" value={option.teamName} />
-        <DetailStat label="Idade" value={option.age ? `${option.age} anos` : "—"} />
-        <DetailStat label="Altura" value={option.heightCm ? `${option.heightCm} cm` : "—"} />
-        <DetailStat label="Gols" value={option.goals ?? 0} />
-        <DetailStat label="Jogos" value={option.caps ?? 0} />
-      </div>
+      <CurrentPlayerStats />
       {option.teamStats && (
         <div className="mt-3 rounded-2xl border bg-surface p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
@@ -435,43 +479,24 @@ function OptionDetail({ option }: { option: SpecialOption }) {
   );
 }
 
-function OptionAvatar({
-  option,
-  size = "lg",
-}: {
-  option: SpecialOption;
-  size?: "md" | "lg" | "xl";
-}) {
-  if (!option.position) {
-    return <TeamFlag team={teamFromOption(option)} size={size === "md" ? "md" : "lg"} />;
-  }
-
-  const sizeClass =
-    size === "xl"
-      ? "h-28 w-24 rounded-[1.35rem]"
-      : size === "md"
-        ? "size-12 rounded-2xl"
-        : "size-16 rounded-[1.2rem]";
-  const initialsClass = size === "xl" ? "text-3xl" : size === "md" ? "text-sm" : "text-lg";
-
+function CurrentPlayerStats() {
   return (
-    <span
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/20 bg-gradient-to-br from-brand via-emerald-400 to-accent text-brand-contrast shadow-lg shadow-black/10 ${sizeClass}`}
-      title={option.fullName ?? option.label}
-    >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.35),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.14),transparent_45%)]" />
-      {size === "xl" && (
-        <span className="absolute left-2 top-2 rounded-full bg-black/20 px-2 py-0.5 text-[10px] font-black text-white/80">
-          #{option.number ?? "?"}
-        </span>
-      )}
-      <span className={`relative font-black tracking-[-0.08em] ${initialsClass}`}>
-        {initials(option.label)}
-      </span>
-      <span className="absolute -bottom-0.5 -right-0.5 rounded-lg border bg-white shadow-sm">
-        <TeamFlag team={teamFromOption(option)} size={size === "xl" ? "md" : "sm"} />
-      </span>
-    </span>
+    <div className="mt-3 rounded-2xl border bg-surface p-3">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+          Nesta Copa
+        </p>
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+          Aguardando eventos individuais
+        </p>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        <DetailStat label="Gols" value="—" compact />
+        <DetailStat label="Assist." value="—" compact />
+        <DetailStat label="Cartões" value="—" compact />
+        <DetailStat label="Faltas" value="—" compact />
+      </div>
+    </div>
   );
 }
 
@@ -511,14 +536,12 @@ function visibleSpecialOptions(
   const normalized = normalizeSearch(search);
   const selected = new Set(selectedKeys.filter(Boolean));
   const ordered = normalized ? options : highlightSpecialOptions(marketKey, options, options.length);
-  const filtered = ordered
-    .filter((option) => {
-      if (!normalized) return true;
-      return normalizeSearch(
-        `${option.label} ${option.fullName ?? ""} ${option.teamName} ${option.club ?? ""}`,
-      ).includes(normalized);
-    })
-    .slice(0, normalized ? 80 : 36);
+  const filtered = ordered.filter((option) => {
+    if (!normalized) return true;
+    return normalizeSearch(
+      `${option.label} ${option.fullName ?? ""} ${option.teamName} ${option.club ?? ""}`,
+    ).includes(normalized);
+  });
 
   for (const key of selected) {
     const option = options.find((candidate) => candidate.key === key);
@@ -533,26 +556,6 @@ function visibleSpecialOptions(
 function compactSelection(keys: string[], pickCount: number) {
   return [...keys.filter(Boolean), ...Array.from({ length: pickCount }, () => "")]
     .slice(0, pickCount);
-}
-
-function teamFromOption(option: SpecialOption): DemoTeam {
-  return {
-    id: option.teamId,
-    code: option.teamCode,
-    name: option.teamName,
-    shortName: option.teamName,
-    flag: option.teamFlag ?? "🏳️",
-  };
-}
-
-function initials(value: string) {
-  const letters = value
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-  return letters || "?";
 }
 
 function positionLabel(position: NonNullable<SpecialOption["position"]>) {

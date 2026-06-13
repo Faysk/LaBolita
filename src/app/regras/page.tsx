@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import { CheckCircle2, Clock3, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  SPECIAL_LOCK_DATE_LABEL,
+  SPECIAL_LOCK_RATIONALE,
+} from "@/lib/special-market-display";
 
 export const metadata: Metadata = {
   title: "Regras",
@@ -136,9 +140,14 @@ export default function RulesPage() {
               ranking separado. Eles não substituem seus placares dos jogos.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Os especiais ficam abertos até 22 de junho. Cada categoria tem sua
+              Os especiais ficam abertos até {SPECIAL_LOCK_DATE_LABEL}. Cada categoria tem sua
               própria tela com busca, destaques e dados de elenco para ajudar na
               escolha.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {SPECIAL_LOCK_RATIONALE} A ideia é dar espaço para todos entrarem
+              na brincadeira, mas travar antes que artilharia, defesas e favoritos
+              fiquem óbvios demais.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
               Nas categorias por jogador, se você errar o atleta exato mas
