@@ -23,6 +23,18 @@ const stages = [
   ["Final", "×5"],
 ];
 
+const specialRules = [
+  ["Artilheiro", "30 pts", "5 pts se errar o jogador, mas acertar a seleção."],
+  ["Assistências", "25 pts", "5 pts se errar o jogador, mas acertar a seleção."],
+  ["Luva de Ouro", "25 pts", "5 pts se errar o goleiro, mas acertar a seleção."],
+  ["Bola de Ouro", "30 pts", "5 pts se errar o jogador, mas acertar a seleção."],
+  ["Mais gols", "25 pts", "Seleção que terminar com o melhor ataque."],
+  ["Menos gols sofridos", "25 pts", "Seleção que terminar com a defesa menos vazada."],
+  ["Campeão", "35 pts", "Acertou quem levanta a taça."],
+  ["Vice", "25 pts", "Acertou quem termina em segundo."],
+  ["Semifinalistas", "10 pts cada", "Você escolhe quatro seleções."],
+];
+
 export default function RulesPage() {
   return (
     <main className="page-container py-7 md:py-10">
@@ -121,8 +133,7 @@ export default function RulesPage() {
             <p className="mt-2 text-sm leading-6 text-muted">
               Artilheiro, assistências, Luva de Ouro, Bola de Ouro, campeão,
               vice, semifinalistas e seleções destaque têm pontuação própria e
-              ranking separado. Categorias por jogador podem render bônus menor
-              se você acertar a seleção, mas não o atleta exato.
+              ranking separado. Eles não substituem seus placares dos jogos.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
               Os especiais ficam abertos até 22 de junho. Cada categoria tem sua
@@ -130,11 +141,22 @@ export default function RulesPage() {
               escolha.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              O admin confirma os resultados especiais com fonte ou motivo. Nas
-              categorias por seleção, o painel pode sugerir o resultado usando
-              os placares já carregados, mas a confirmação final continua
-              manual e corrigível.
+              Nas categorias por jogador, se você errar o atleta exato mas
+              acertar a seleção dele, ainda pode ganhar pontos parciais. O
+              admin confirma os resultados finais e pode corrigir qualquer
+              divergência com histórico de auditoria.
             </p>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {specialRules.map(([name, points, description]) => (
+                <div key={name} className="rounded-2xl border bg-surface-muted p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+                    {points}
+                  </p>
+                  <h3 className="mt-1 font-black">{name}</h3>
+                  <p className="mt-2 text-xs leading-5 text-muted">{description}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

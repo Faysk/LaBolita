@@ -174,7 +174,7 @@ export async function getSpecialMarketsOverview(input?: {
       let options = optionsBySource.get(market.option_source);
       if (!options) {
         options = buildSpecialOptions(teams, market.option_source);
-        if (market.option_source === "teams") {
+        if (market.option_source === "teams" || market.option_source === "players" || market.option_source === "goalkeepers") {
           options = attachTeamStats(options, matches);
         }
         optionsBySource.set(market.option_source, options);

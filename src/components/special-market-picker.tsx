@@ -214,8 +214,8 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
         </section>
       )}
 
-      <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <div className="card p-5">
+      <section className="grid items-start gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+        <div className="card self-start p-5">
           <p className="eyebrow">Escolha com contexto</p>
           <h2 className="mt-1 text-2xl font-black tracking-tight">
             {selectedOptions.length > 0 ? "Detalhes da sua escolha" : "Aguardando seleção"}
@@ -233,15 +233,17 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           </div>
         </div>
 
-        <div className="card p-5">
+        <div className="card self-start p-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="eyebrow">{display.dataNote}</p>
-              <h2 className="mt-1 text-2xl font-black tracking-tight">
+            <div className="min-w-0">
+              <p className="max-w-xl text-[10px] font-black uppercase leading-5 tracking-[0.14em] text-brand">
+                {display.dataNote}
+              </p>
+              <h2 className="mt-3 text-2xl font-black leading-tight tracking-tight">
                 {display.highlightTitle}
               </h2>
             </div>
-            <span className="rounded-full bg-accent px-3 py-1 text-[10px] font-black text-brand-strong">
+            <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-[10px] font-black text-brand-strong">
               Top {highlighted.length}
             </span>
           </div>
@@ -310,7 +312,7 @@ function OptionCard({
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className={`interactive flex min-h-28 w-full items-center gap-3 rounded-2xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`interactive flex min-h-32 w-full items-center gap-4 rounded-2xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ${
         selected
           ? "border-brand bg-success-bg text-success-fg"
           : "bg-surface-muted hover:border-brand/70"
@@ -349,7 +351,7 @@ function SelectedOptionRow({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-black/10 p-3">
-      <OptionAvatar option={option} compact />
+      <OptionAvatar option={option} size="md" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black">{option.label}</p>
         <p className="truncate text-xs text-white/58">{summarizeSpecialOption(option)}</p>
@@ -371,8 +373,8 @@ function SelectedOptionRow({
 function OptionDetail({ option }: { option: SpecialOption }) {
   if (!option.position) {
     return (
-      <div className="rounded-2xl border bg-surface-muted p-4">
-        <div className="flex items-center gap-3">
+      <div className="rounded-[1.5rem] border bg-surface-muted p-4">
+        <div className="flex items-center gap-4">
           <TeamFlag team={teamFromOption(option)} size="lg" />
           <div>
             <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
@@ -392,59 +394,98 @@ function OptionDetail({ option }: { option: SpecialOption }) {
   }
 
   return (
-    <div className="rounded-2xl border bg-surface-muted p-4">
-      <div className="flex items-start gap-3">
-        <OptionAvatar option={option} />
+    <div className="rounded-[1.5rem] border bg-surface-muted p-4">
+      <div className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-start">
+        <OptionAvatar option={option} size="xl" />
         <div className="min-w-0">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
-            {option.position} · camisa {option.number}
+            {positionLabel(option.position)} · camisa {option.number}
           </p>
           <h3 className="mt-1 text-xl font-black leading-tight">
             {option.fullName ?? option.label}
           </h3>
           <p className="mt-1 text-sm font-bold text-muted">{option.club}</p>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            Dados oficiais de elenco e histórico da seleção. Estatísticas
+            individuais desta Copa entram conforme os jogos forem confirmados.
+          </p>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
         <DetailStat label="Seleção" value={option.teamName} />
         <DetailStat label="Idade" value={option.age ? `${option.age} anos` : "—"} />
         <DetailStat label="Altura" value={option.heightCm ? `${option.heightCm} cm` : "—"} />
         <DetailStat label="Gols" value={option.goals ?? 0} />
         <DetailStat label="Jogos" value={option.caps ?? 0} />
       </div>
+      {option.teamStats && (
+        <div className="mt-3 rounded-2xl border bg-surface p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+            Seleção nesta Copa
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+            <DetailStat label="Pontos" value={option.teamStats.points} compact />
+            <DetailStat label="Jogos" value={option.teamStats.played} compact />
+            <DetailStat label="Gols pró" value={option.teamStats.goalsFor} compact />
+            <DetailStat label="Saldo" value={option.teamStats.goalDifference} compact />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function OptionAvatar({
   option,
-  compact = false,
+  size = "lg",
 }: {
   option: SpecialOption;
-  compact?: boolean;
+  size?: "md" | "lg" | "xl";
 }) {
   if (!option.position) {
-    return <TeamFlag team={teamFromOption(option)} size={compact ? "md" : "lg"} />;
+    return <TeamFlag team={teamFromOption(option)} size={size === "md" ? "md" : "lg"} />;
   }
+
+  const sizeClass =
+    size === "xl"
+      ? "h-28 w-24 rounded-[1.35rem]"
+      : size === "md"
+        ? "size-12 rounded-2xl"
+        : "size-16 rounded-[1.2rem]";
+  const initialsClass = size === "xl" ? "text-3xl" : size === "md" ? "text-sm" : "text-lg";
 
   return (
     <span
-      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-brand text-brand-contrast shadow-sm ${
-        compact ? "size-11" : "size-14"
-      }`}
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/20 bg-gradient-to-br from-brand via-emerald-400 to-accent text-brand-contrast shadow-lg shadow-black/10 ${sizeClass}`}
       title={option.fullName ?? option.label}
     >
-      <span className="text-sm font-black">{initials(option.label)}</span>
-      <span className="absolute -bottom-0.5 -right-0.5 rounded-md border bg-white">
-        <TeamFlag team={teamFromOption(option)} size="sm" />
+      <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.35),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.14),transparent_45%)]" />
+      {size === "xl" && (
+        <span className="absolute left-2 top-2 rounded-full bg-black/20 px-2 py-0.5 text-[10px] font-black text-white/80">
+          #{option.number ?? "?"}
+        </span>
+      )}
+      <span className={`relative font-black tracking-[-0.08em] ${initialsClass}`}>
+        {initials(option.label)}
+      </span>
+      <span className="absolute -bottom-0.5 -right-0.5 rounded-lg border bg-white shadow-sm">
+        <TeamFlag team={teamFromOption(option)} size={size === "xl" ? "md" : "sm"} />
       </span>
     </span>
   );
 }
 
-function DetailStat({ label, value }: { label: string; value: string | number }) {
+function DetailStat({
+  label,
+  value,
+  compact = false,
+}: {
+  label: string;
+  value: string | number;
+  compact?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border bg-surface p-3">
+    <div className={`rounded-2xl border bg-surface ${compact ? "p-2.5" : "p-3"}`}>
       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
         {label}
       </p>
@@ -512,6 +553,15 @@ function initials(value: string) {
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
   return letters || "?";
+}
+
+function positionLabel(position: NonNullable<SpecialOption["position"]>) {
+  return {
+    GK: "Goleiro",
+    DF: "Defensor",
+    MF: "Meia",
+    FW: "Atacante",
+  }[position];
 }
 
 function normalizeSearch(value: string) {

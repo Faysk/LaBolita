@@ -51,7 +51,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu artilheiro",
     searchPlaceholder: "Buscar atacante, jogador ou seleção",
     emptyDetail: "Escolha um jogador para ver dados do elenco oficial.",
-    dataNote: "Destaques baseados em posição, gols e jogos pela seleção. Não são odds oficiais.",
+    dataNote: "Destaques por elenco e histórico da seleção. Não são odds.",
   },
   top_assists: {
     key: "top_assists",
@@ -66,7 +66,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu líder em assistências",
     searchPlaceholder: "Buscar meia, atacante ou seleção",
     emptyDetail: "Escolha um jogador para ver posição, clube e experiência.",
-    dataNote: "Sem feed de assistências ao vivo ainda; a lista usa dados oficiais de elenco.",
+    dataNote: "Destaques por posição, clube e histórico da seleção.",
   },
   golden_glove: {
     key: "golden_glove",
@@ -81,7 +81,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Minha Luva de Ouro",
     searchPlaceholder: "Buscar goleiro ou seleção",
     emptyDetail: "Escolha um goleiro para ver altura, jogos e clube.",
-    dataNote: "O prêmio oficial depende de votação/critério da competição e segue corrigível no admin.",
+    dataNote: "Prêmio oficial confirmado no fim da Copa.",
   },
   golden_ball: {
     key: "golden_ball",
@@ -96,7 +96,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Minha Bola de Ouro",
     searchPlaceholder: "Buscar jogador ou seleção",
     emptyDetail: "Escolha um jogador para comparar dados oficiais.",
-    dataNote: "Destaque por experiência e gols na seleção; resultado oficial continua manual.",
+    dataNote: "Destaques por elenco, experiência e gols.",
   },
   team_most_goals: {
     key: "team_most_goals",
@@ -111,7 +111,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu ataque escolhido",
     searchPlaceholder: "Buscar seleção",
     emptyDetail: "Escolha uma seleção para ver gols, saldo e campanha.",
-    dataNote: "O admin recebe sugestão automática baseada nos placares confirmados/ao vivo.",
+    dataNote: "Destaques pela campanha e gols da seleção.",
   },
   team_fewest_conceded: {
     key: "team_fewest_conceded",
@@ -126,7 +126,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Minha defesa escolhida",
     searchPlaceholder: "Buscar seleção",
     emptyDetail: "Escolha uma seleção para ver gols sofridos e jogos.",
-    dataNote: "O cálculo automático considera placares já disponíveis; o admin confirma o resultado.",
+    dataNote: "Destaques por jogos e gols sofridos.",
   },
   champion: {
     key: "champion",
