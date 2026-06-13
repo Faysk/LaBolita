@@ -86,6 +86,7 @@ async function applyProjectSql() {
 async function verifySeedAndScoring() {
   assert.equal(await scalar("select count(*)::integer from public.tournaments"), 1);
   assert.equal(await scalar("select count(*)::integer from public.matches"), 1);
+  assert.equal(await scalar("select count(*)::integer from public.special_markets"), 9);
   assert.equal(await scalar("select count(*)::integer from public.results_sync_state"), 1);
   assert.equal(
     await scalar(
@@ -380,6 +381,88 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   const publicPoolId = await scalar("select id from public.pools limit 1");
   assert.match(inviteCode, /^[A-F0-9]{12}$/);
   assert.equal(await scalar("select flag_code from public.pools where id = $1", [publicPoolId]), "pt");
+
+  const teamSpecialOption = JSON.stringify([
+    {
+      key: "team:MEX",
+      label: "México",
+      team_id: HOME_TEAM_ID,
+    },
+  ]);
+  const topScorerPrediction = JSON.stringify([
+    {
+      key: "player:MEX:9:atacante-mexico",
+      label: "Atacante México",
+      team_id: HOME_TEAM_ID,
+    },
+  ]);
+  const topScorerResult = JSON.stringify([
+    {
+      key: "player:MEX:10:outro-atacante",
+      label: "Outro Atacante",
+      team_id: HOME_TEAM_ID,
+    },
+  ]);
+
+  await asUser(USER_ONE, async () => {
+    await db.query("select public.save_special_prediction('team_most_goals', $1::jsonb)", [
+      teamSpecialOption,
+    ]);
+    await db.query("select public.save_special_prediction('top_scorer', $1::jsonb)", [
+      topScorerPrediction,
+    ]);
+    await assert.rejects(
+      db.query(`
+        insert into public.special_predictions (
+          user_id,
+          market_id,
+          position,
+          option_key,
+          option_label,
+          option_team_id
+        )
+        select
+          $1,
+          id,
+          1,
+          'team:RSA',
+          'África do Sul',
+          $2
+        from public.special_markets
+        where key = 'team_most_goals'
+      `, [USER_ONE, AWAY_TEAM_ID]),
+      "direct special prediction writes must be denied",
+    );
+  });
+
+  await asUser(USER_THREE, async () => {
+    await assert.rejects(
+      db.query(
+        "select public.set_special_market_result('team_most_goals', $1::jsonb, 'tentativa indevida', 'manual')",
+        [teamSpecialOption],
+      ),
+      "non-admin users must not set special market results",
+    );
+  });
+
+  await asUser(USER_ONE, async () => {
+    await db.query(
+      "select public.set_special_market_result('team_most_goals', $1::jsonb, 'resultado de teste', 'manual')",
+      [teamSpecialOption],
+    );
+    await db.query(
+      "select public.set_special_market_result('top_scorer', $1::jsonb, 'fonte oficial de teste', 'manual')",
+      [topScorerResult],
+    );
+    const ranking = await db.query(
+      "select display_name, total_points::integer, exact_hits::integer, partial_hits::integer from public.get_special_pool_ranking($1)",
+      [publicPoolId],
+    );
+    const owner = ranking.rows.find((row) => row.display_name === "Owner");
+    assert.equal(owner?.total_points, 30);
+    assert.equal(owner?.exact_hits, 1);
+    assert.equal(owner?.partial_hits, 1);
+  });
 
   await asAnon(async () => {
     await assert.rejects(

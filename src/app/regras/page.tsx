@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CheckCircle2, Clock3, EyeOff, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Clock3, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Regras",
@@ -108,6 +108,30 @@ export default function RulesPage() {
             </div>
           </div>
         </article>
+      </section>
+
+      <section className="mt-6 card p-5 md:p-6">
+        <div className="flex items-start gap-3">
+          <span className="rounded-2xl bg-brand/10 p-2 text-brand">
+            <Sparkles className="size-5" />
+          </span>
+          <div>
+            <p className="eyebrow">Extras</p>
+            <h2 className="mt-1 text-2xl font-black">Palpites especiais</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Artilheiro, assistências, Luva de Ouro, Bola de Ouro, campeão,
+              vice, semifinalistas e seleções destaque têm pontuação própria e
+              ranking separado. Categorias por jogador podem render bônus menor
+              se você acertar a seleção, mas não o atleta exato.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              O admin confirma os resultados especiais com fonte ou motivo. Nas
+              categorias por seleção, o painel pode sugerir o resultado usando
+              os placares já carregados, mas a confirmação final continua
+              manual e corrigível.
+            </p>
+          </div>
+        </div>
       </section>
     </main>
   );

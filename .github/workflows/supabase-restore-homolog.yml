@@ -142,6 +142,9 @@ jobs:
             public.admin_audit_logs,
             public.app_settings,
             public.match_result_history,
+            public.special_market_results,
+            public.special_predictions,
+            public.special_markets,
             public.prediction_scores,
             public.predictions,
             public.pool_members,
@@ -180,6 +183,8 @@ jobs:
           delete from auth.webauthn_challenges;
           delete from auth.webauthn_credentials;
 
+          select public.ensure_default_special_markets();
+
           do $$
           begin
             if (select count(*) from public.teams) <> 48 then
@@ -196,6 +201,10 @@ jobs:
 
             if (select count(*) from public.profiles where is_master_admin) <> 1 then
               raise exception 'expected exactly one master admin after restore';
+            end if;
+
+            if (select count(*) from public.special_markets) < 9 then
+              raise exception 'expected special markets after restore';
             end if;
           end $$;
 
