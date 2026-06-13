@@ -14,6 +14,11 @@ const bypassSecret =
 const smokeHeaders = bypassSecret
   ? {
       "x-vercel-protection-bypass": bypassSecret,
+    }
+  : {};
+const browserSmokeHeaders = bypassSecret
+  ? {
+      "x-vercel-protection-bypass": bypassSecret,
       "x-vercel-set-bypass-cookie": "true",
     }
   : {};
@@ -30,8 +35,8 @@ try {
     { width: 1440, height: 900 },
   ]) {
     const page = await browser.newPage({ viewport });
-    if (Object.keys(smokeHeaders).length > 0) {
-      await page.setExtraHTTPHeaders(smokeHeaders);
+    if (Object.keys(browserSmokeHeaders).length > 0) {
+      await page.setExtraHTTPHeaders(browserSmokeHeaders);
     }
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));

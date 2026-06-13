@@ -15,7 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { MasterOverview, MasterPool, MasterUser } from "@/lib/data/admin";
 import { CountryFlag } from "@/components/country-flag";
 import { COUNTRIES } from "@/lib/countries";
@@ -26,15 +26,31 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
   const router = useRouter();
   const tab = overview.activeTab;
   const [search, setSearch] = useState(overview.search);
+  const [pendingTab, setPendingTab] = useState<typeof tab | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const isNavigating = isPending || pendingTab !== null;
+  const pendingLabel =
+    pendingTab === "users" ? "usuários" : pendingTab === "audit" ? "auditoria" : "bolões";
 
   if (!overview.isGlobalAdmin) return null;
 
   function navigate(nextTab: typeof tab, nextPage = 1, nextSearch = "") {
+    const normalizedSearch = nextSearch.trim();
+    if (
+      nextTab === tab &&
+      nextPage === overview.page &&
+      normalizedSearch === overview.search.trim()
+    ) {
+      return;
+    }
     const params = new URLSearchParams();
     params.set("master_tab", nextTab);
-    if (nextSearch.trim()) params.set("master_search", nextSearch.trim());
+    if (normalizedSearch) params.set("master_search", normalizedSearch);
     if (nextPage > 1) params.set("master_page", String(nextPage));
-    router.push(`/admin?${params.toString()}`);
+    setPendingTab(nextTab);
+    startTransition(() => {
+      router.push(`/admin?${params.toString()}`, { scroll: false });
+    });
   }
 
   return (
@@ -55,9 +71,9 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
       <div className="bg-surface/35 p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-2 overflow-x-auto">
-            <TabButton active={tab === "pools"} onClick={() => navigate("pools")} icon={Archive}>Bolões</TabButton>
-            <TabButton active={tab === "users"} onClick={() => navigate("users")} icon={Users}>Usuários</TabButton>
-            <TabButton active={tab === "audit"} onClick={() => navigate("audit")} icon={History}>Auditoria</TabButton>
+            <TabButton active={tab === "pools"} pending={pendingTab === "pools"} disabled={isNavigating} onClick={() => navigate("pools")} icon={Archive}>Bolões</TabButton>
+            <TabButton active={tab === "users"} pending={pendingTab === "users"} disabled={isNavigating} onClick={() => navigate("users")} icon={Users}>Usuários</TabButton>
+            <TabButton active={tab === "audit"} pending={pendingTab === "audit"} disabled={isNavigating} onClick={() => navigate("audit")} icon={History}>Auditoria</TabButton>
           </div>
           {tab !== "audit" && (
             <form
@@ -71,41 +87,55 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
                 <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar no servidor" className="w-full rounded-xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
               </label>
-              <button type="submit" className="interactive rounded-xl bg-brand px-4 text-xs font-black text-white shadow-sm">Buscar</button>
+              <button type="submit" disabled={isNavigating} className="interactive rounded-xl bg-brand px-4 text-xs font-black text-white shadow-sm disabled:opacity-60">
+                {pendingTab === tab ? "Buscando..." : "Buscar"}
+              </button>
             </form>
           )}
         </div>
 
-        {tab === "pools" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div>}
-        {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.users.map((user) => <MasterUserCard key={user.userId} user={user} />)}</div>}
-        {tab === "audit" && <AuditList entries={overview.audit} />}
-        {((tab === "pools" && overview.pools.length === 0) ||
-          (tab === "users" && overview.users.length === 0)) && (
-          <p className="mt-5 rounded-2xl border bg-surface-muted p-5 text-sm text-muted">
-            Nenhum resultado encontrado nesta página.
-          </p>
-        )}
-        {(overview.hasPreviousPage || overview.hasNextPage) && (
-          <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4">
-            <button
-              type="button"
-              disabled={!overview.hasPreviousPage}
-              onClick={() => navigate(tab, overview.page - 1, overview.search)}
-              className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" /> Anterior
-            </button>
-            <span className="text-xs font-bold text-muted">Página {overview.page}</span>
-            <button
-              type="button"
-              disabled={!overview.hasNextPage}
-              onClick={() => navigate(tab, overview.page + 1, overview.search)}
-              className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"
-            >
-              Próxima <ChevronRight className="size-4" />
-            </button>
+        <div className="relative" aria-busy={isNavigating}>
+          {isNavigating && (
+            <div className="absolute inset-x-0 top-4 z-10 flex justify-center px-4" aria-live="polite">
+              <div className="flex items-center gap-2 rounded-full border border-brand/25 bg-surface px-4 py-2 text-xs font-black text-brand shadow-lg shadow-black/10">
+                <LoaderCircle className="size-4 animate-spin" />
+                Carregando {pendingLabel}
+              </div>
+            </div>
+          )}
+          <div className={isNavigating ? "pointer-events-none opacity-45 transition-opacity" : "transition-opacity"}>
+            {tab === "pools" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div>}
+            {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.users.map((user) => <MasterUserCard key={user.userId} user={user} />)}</div>}
+            {tab === "audit" && <AuditList entries={overview.audit} />}
+            {((tab === "pools" && overview.pools.length === 0) ||
+              (tab === "users" && overview.users.length === 0)) && (
+              <p className="mt-5 rounded-2xl border bg-surface-muted p-5 text-sm text-muted">
+                Nenhum resultado encontrado nesta página.
+              </p>
+            )}
+            {(overview.hasPreviousPage || overview.hasNextPage) && (
+              <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4">
+                <button
+                  type="button"
+                  disabled={!overview.hasPreviousPage || isNavigating}
+                  onClick={() => navigate(tab, overview.page - 1, overview.search)}
+                  className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"
+                >
+                  <ChevronLeft className="size-4" /> Anterior
+                </button>
+                <span className="text-xs font-bold text-muted">Página {overview.page}</span>
+                <button
+                  type="button"
+                  disabled={!overview.hasNextPage || isNavigating}
+                  onClick={() => navigate(tab, overview.page + 1, overview.search)}
+                  className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"
+                >
+                  Próxima <ChevronRight className="size-4" />
+                </button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </section>
   );
@@ -149,10 +179,10 @@ function TermsEnforcementControl({ enabled }: { enabled: boolean }) {
   );
 }
 
-function TabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: typeof Archive; children: React.ReactNode }) {
+function TabButton({ active, pending, disabled, onClick, icon: Icon, children }: { active: boolean; pending: boolean; disabled: boolean; onClick: () => void; icon: typeof Archive; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className={`interactive flex whitespace-nowrap items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black ${active ? "bg-brand text-white shadow-sm" : "border bg-surface text-muted hover:text-foreground"}`}>
-      <Icon className="size-4" /> {children}
+    <button type="button" disabled={disabled} onClick={onClick} className={`interactive flex whitespace-nowrap items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black disabled:cursor-wait disabled:opacity-65 ${active || pending ? "bg-brand text-white shadow-sm" : "border bg-surface text-muted hover:text-foreground"}`}>
+      {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Icon className="size-4" />} {pending ? "Carregando..." : children}
     </button>
   );
 }

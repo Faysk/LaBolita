@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   initialPredictionFilter,
   prioritizeHomeMatches,
+  selectHomeTimelineMatches,
 } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
@@ -56,6 +57,32 @@ describe("match display priorities", () => {
     expect(prioritizeHomeMatches(matches).map((item) => item.id)).toEqual([
       "upcoming",
       "awaiting-confirmation",
+    ]);
+  });
+
+  it("selects only live or still-open matches for the home timeline", () => {
+    const matches = [
+      match("stale-locked", {
+        locked: true,
+        scheduledAt: "2026-06-11T20:00:00Z",
+      }),
+      match("finished", {
+        locked: true,
+        scheduledAt: "2026-06-11T22:00:00Z",
+        result: { homeScore: 2, awayScore: 0 },
+      }),
+      match("live", {
+        locked: true,
+        providerStatus: "live",
+        scheduledAt: "2026-06-12T18:00:00Z",
+        liveResult: { homeScore: 1, awayScore: 1 },
+      }),
+      match("open", { scheduledAt: "2026-06-12T20:00:00Z" }),
+    ];
+
+    expect(selectHomeTimelineMatches(matches).map((item) => item.id)).toEqual([
+      "live",
+      "open",
     ]);
   });
 

@@ -14,7 +14,7 @@ import {
   getPublicGlobalRanking,
   getPublicPoolHighlights,
 } from "@/lib/data/pools";
-import { isLiveMatch, prioritizeHomeMatches } from "@/lib/match-display";
+import { isLiveMatch, selectHomeTimelineMatches } from "@/lib/match-display";
 
 export default async function HomePage() {
   const [matches, poolsOverview, publicRanking, publicPoolHighlights, viewer] = await Promise.all([
@@ -24,7 +24,7 @@ export default async function HomePage() {
     getPublicPoolHighlights(),
     getViewerState(),
   ]);
-  const highlightedMatches = prioritizeHomeMatches(matches).slice(0, 3);
+  const highlightedMatches = selectHomeTimelineMatches(matches, 3);
   const hasLiveMatch = highlightedMatches.some(isLiveMatch);
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
