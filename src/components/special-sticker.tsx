@@ -297,64 +297,68 @@ function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: b
 }
 
 function NeymarPortrait({ compact }: { compact: boolean }) {
-  const scale = compact ? 1.08 : 1;
+  const scale = compact ? 1.12 : 1.02;
 
   return (
     <svg
       viewBox="0 0 160 190"
       aria-hidden="true"
       className="h-full w-full drop-shadow-xl"
-      style={{ transform: `scale(${scale}) translateY(${compact ? -2 : 0}px)` }}
+      style={{ transform: `scale(${scale}) translateY(${compact ? -5 : -2}px)` }}
     >
-      <ellipse cx="80" cy="184" rx="48" ry="8" fill="rgba(0,0,0,0.18)" />
-      <g fill="none" stroke="#b36f47" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M56 108C39 93 27 71 21 45" strokeWidth="13" />
-        <path d="M104 108c17-15 29-37 35-63" strokeWidth="13" />
-        <path d="M30 42c-8-9-8-24-3-34" strokeWidth="6" />
-        <path d="M24 40c-6-9-6-22-2-31" strokeWidth="5" />
-        <path d="M36 42c-4-10-3-23 3-32" strokeWidth="5" />
-        <path d="M130 42c8-9 8-24 3-34" strokeWidth="6" />
-        <path d="M136 40c6-9 6-22 2-31" strokeWidth="5" />
-        <path d="M124 42c4-10 3-23-3-32" strokeWidth="5" />
+      <ellipse cx="80" cy="184" rx="47" ry="8" fill="rgba(0,0,0,0.18)" />
+      <g fill="none" strokeLinecap="round" opacity="0.7">
+        <path d="M41 71c-10-15-8-31 5-44" stroke="#f5d547" strokeWidth="4" />
+        <path d="M119 71c10-15 8-31-5-44" stroke="#178848" strokeWidth="4" />
       </g>
       <path
-        d="M43 184c4-47 17-78 37-78s33 31 37 78H43Z"
+        d="M35 184c5-42 21-68 45-68s40 26 45 68H35Z"
         fill="#f2d844"
-        stroke="rgba(255,255,255,0.58)"
+        stroke="rgba(255,255,255,0.62)"
         strokeWidth="4"
       />
-      <path d="M50 184h60l6 6H44l6-6Z" fill="#2852a3" />
-      <path d="M55 121c11 8 39 8 50 0" fill="none" stroke="#0f8d54" strokeWidth="6" />
-      <path d="M57 184c2-29 9-48 23-59 14 11 21 30 23 59" fill="none" stroke="#0f8d54" strokeWidth="3" opacity="0.55" />
+      <path d="M45 184h70l8 6H37l8-6Z" fill="#2852a3" />
+      <path d="M53 123c13 12 41 12 54 0" fill="none" stroke="#178848" strokeWidth="6" />
+      <path d="M43 184c4-27 13-47 28-59" fill="none" stroke="#178848" strokeWidth="4" opacity="0.6" />
+      <path d="M117 184c-4-27-13-47-28-59" fill="none" stroke="#2852a3" strokeWidth="4" opacity="0.55" />
       <text
         x="80"
-        y="156"
+        y="160"
         textAnchor="middle"
-        fontSize="25"
+        fontSize="28"
         fontWeight="900"
         fill="#1d7d5a"
-        opacity="0.55"
+        opacity="0.5"
       >
         10
       </text>
-      <path d="M58 105h44v22c0 12-44 12-44 0v-22Z" fill="#c77b50" />
+      <path d="M57 106h46v25c0 13-46 13-46 0v-25Z" fill="#c77b50" />
       <path
-        d="M46 66c0-30 17-49 34-49s34 19 34 49c0 29-15 49-34 49S46 95 46 66Z"
+        d="M44 66c0-31 18-51 36-51s36 20 36 51c0 31-16 51-36 51S44 97 44 66Z"
         fill="#c77b50"
         stroke="rgba(25,20,18,0.24)"
         strokeWidth="3"
       />
-      <ellipse cx="45" cy="73" rx="6" ry="11" fill="#c77b50" />
-      <ellipse cx="115" cy="73" rx="6" ry="11" fill="#c77b50" />
-      <path d="M47 50c6-29 61-33 68-1-23-12-48-12-68 1Z" fill="#241714" />
-      <path d="M63 104c11 12 24 12 34 0" fill="none" stroke="#241714" strokeLinecap="round" strokeWidth="5" opacity="0.62" />
-      <path d="M60 83c3 17 10 26 20 26s17-9 20-26" fill="none" stroke="#241714" strokeLinecap="round" strokeWidth="5" opacity="0.48" />
+      <ellipse cx="43" cy="73" rx="6" ry="12" fill="#c77b50" />
+      <ellipse cx="117" cy="73" rx="6" ry="12" fill="#c77b50" />
+      <path d="M45 49c8-32 62-37 70 0-23-12-49-12-70 0Z" fill="#241714" />
+      <path d="M55 54c12-15 39-21 59-4-14-4-34-3-59 4Z" fill="#3b2419" opacity="0.52" />
       <g stroke="#241714" strokeLinecap="round">
         <path d="M62 67h10" strokeWidth="4" />
         <path d="M88 67h10" strokeWidth="4" />
-        <path d="M80 74v15" strokeWidth="2.5" opacity="0.45" />
+        <path d="M80 74v14" strokeWidth="2.5" opacity="0.45" />
+        <path d="M68 99c8 5 16 5 24 0" strokeWidth="3" opacity="0.48" />
       </g>
-      <ellipse cx="80" cy="93" rx="7" ry="5" fill="#241714" opacity="0.72" />
+      <path
+        d="M62 85c5 18 13 26 18 26s13-8 18-26"
+        fill="none"
+        stroke="#241714"
+        strokeLinecap="round"
+        strokeWidth="4"
+        opacity="0.48"
+      />
+      <ellipse cx="80" cy="92" rx="7" ry="5" fill="#241714" opacity="0.68" />
+      <path d="M57 126c12 10 34 10 46 0" fill="none" stroke="#2852a3" strokeLinecap="round" strokeWidth="5" />
     </svg>
   );
 }
