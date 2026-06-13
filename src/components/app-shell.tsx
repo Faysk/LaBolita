@@ -64,6 +64,7 @@ export async function AppShell({ children }: { children: ReactNode }) {
               </Link>
             )}
             <AccountMenu
+              key={`${user?.id ?? "visitor"}-${Boolean(profile?.show_avatar_publicly)}`}
               displayName={demoMode ? "Faysk · demonstração" : displayName}
               isAuthenticated={demoMode || Boolean(user)}
               isAdmin={isAdmin}

@@ -25,4 +25,4 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run test:homolog
+      - run: npm run test:homolog -- --strict-sync

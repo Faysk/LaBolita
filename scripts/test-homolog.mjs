@@ -11,7 +11,7 @@ if (!strictSync && !process.argv.includes("--allow-unconfigured-sync")) {
   process.argv.push("--allow-unconfigured-sync");
 }
 
-if (!requirePublic && !process.argv.includes("--allow-protected-preview")) {
+if (!requirePublic && !strictSync && !process.argv.includes("--allow-protected-preview")) {
   process.argv.push("--allow-protected-preview");
 }
 
