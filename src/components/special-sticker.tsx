@@ -118,31 +118,20 @@ function PlayerSticker({
   selected: boolean;
 }) {
   const palette = teamPalette(option.teamCode);
-  const compact = variant === "avatar" || variant === "thumb";
   const sizeClass = {
-    avatar: "h-16 w-12 rounded-[0.9rem]",
-    thumb: "h-28 w-24 rounded-[1.15rem]",
-    card: "h-44 w-32 rounded-[1.25rem]",
-    feature: "h-80 w-56 rounded-[1.8rem]",
+    avatar: "w-12 rounded-[0.9rem]",
+    thumb: "w-24 rounded-[1.15rem]",
+    card: "w-32 rounded-[1.25rem]",
+    feature: "w-56 rounded-[1.8rem]",
   }[variant];
   const yearClass =
     variant === "feature"
-      ? "left-4 top-4 text-6xl"
-      : compact
-        ? "left-2 top-2 text-2xl"
-        : "left-3 top-3 text-4xl";
-  const portraitPadding =
-    variant === "feature"
-      ? "px-3 pb-5 pt-9"
-      : compact
-        ? "px-1 pb-2 pt-5"
-        : "px-2 pb-4 pt-8";
-  const flagPosition =
-    variant === "feature"
-      ? "bottom-3 right-3"
-      : compact
-        ? "bottom-1 right-1"
-        : "bottom-2 right-2";
+      ? "text-6xl"
+      : variant === "card"
+        ? "text-4xl"
+        : variant === "thumb"
+          ? "text-3xl"
+          : "text-xl";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
@@ -152,22 +141,20 @@ function PlayerSticker({
 
   return (
     <span
-      className={`relative inline-flex shrink-0 flex-col overflow-hidden border border-white/25 bg-[linear-gradient(145deg,var(--sticker-primary),var(--sticker-secondary))] shadow-xl shadow-black/15 ${sizeClass} ${
+      className={`relative inline-flex aspect-[3/4] shrink-0 overflow-hidden border border-white/25 bg-[linear-gradient(145deg,var(--sticker-primary),var(--sticker-secondary))] shadow-xl shadow-black/15 ${sizeClass} ${
         selected ? "ring-2 ring-accent" : ""
       }`}
       style={style}
       title={option.fullName ?? option.label}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,0.48),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.18),transparent_45%)]" />
-      <span className={`pointer-events-none absolute font-black leading-none tracking-[-0.1em] text-white/24 ${yearClass}`}>
+      <span className={`pointer-events-none absolute left-[8%] top-[7%] font-black leading-none tracking-[-0.1em] text-white/24 ${yearClass}`}>
         26
       </span>
-      <span
-        className={`relative mt-auto flex flex-1 items-end justify-center ${portraitPadding}`}
-      >
-        <PlayerPortrait option={option} compact={compact} />
+      <span className="relative z-10 flex h-full w-full items-end justify-center px-[8%] pb-[8%] pt-[15%]">
+        <PlayerPortrait option={option} compact={false} />
       </span>
-      <span className={`absolute ${flagPosition} z-20 rounded-lg border bg-white shadow-sm`}>
+      <span className="absolute bottom-[5%] right-[5%] z-20 rounded-lg border bg-white shadow-sm">
         <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "md" : "sm"} />
       </span>
     </span>
