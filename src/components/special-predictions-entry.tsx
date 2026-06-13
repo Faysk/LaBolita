@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CalendarClock, CheckCircle2, Sparkles } from "lucide-react";
+import { LinkPendingLabel, LinkPendingOverlay } from "@/components/link-pending-feedback";
 import {
   SPECIAL_LOCK_DATE_LABEL,
   specialMarketDisplay,
@@ -22,7 +23,7 @@ export function SpecialPredictionsEntry({
     <section className="mb-7 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
       <Link
         href="/palpites"
-        className="card interactive flex flex-col justify-between overflow-hidden p-5 hover:border-brand/70"
+        className="card interactive relative flex flex-col justify-between overflow-hidden p-5 hover:border-brand/70"
       >
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-brand/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand">
@@ -36,9 +37,10 @@ export function SpecialPredictionsEntry({
             até o bloqueio de cada partida.
           </p>
         </div>
-        <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-brand">
+        <LinkPendingLabel className="mt-5 justify-start text-sm font-black text-brand" pendingLabel="Abrindo jogos...">
           Ver jogos abaixo <ArrowRight className="size-4" />
-        </span>
+        </LinkPendingLabel>
+        <LinkPendingOverlay label="Abrindo jogos..." className="rounded-[inherit]" />
       </Link>
 
       <div className="card overflow-hidden">
@@ -58,7 +60,9 @@ export function SpecialPredictionsEntry({
             href="/especiais"
             className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
-            Abrir especiais <ArrowRight className="size-4" />
+            <LinkPendingLabel pendingLabel="Abrindo especiais...">
+              Abrir especiais <ArrowRight className="size-4" />
+            </LinkPendingLabel>
           </Link>
         </div>
         <div className="grid gap-3 p-5 lg:grid-cols-[12rem_minmax(0,1fr)]">
@@ -81,7 +85,7 @@ export function SpecialPredictionsEntry({
                 <Link
                   key={market.key}
                   href={specialMarketPath(market.key)}
-                  className="interactive min-h-20 rounded-2xl border bg-surface-muted p-3 hover:border-brand/70"
+                  className="interactive relative min-h-20 overflow-hidden rounded-2xl border bg-surface-muted p-3 hover:border-brand/70"
                 >
                   <div className="flex items-start gap-2">
                     <Icon className="size-4 text-brand" />
@@ -90,9 +94,10 @@ export function SpecialPredictionsEntry({
                     </span>
                     {complete && <CheckCircle2 className="size-4 text-brand" />}
                   </div>
-                  <p className="mt-1 text-[11px] font-bold text-muted">
+                  <LinkPendingLabel className="mt-1 justify-start text-[11px] font-bold text-muted" pendingLabel="Abrindo...">
                     {complete ? "Salvo" : "Pendente"}
-                  </p>
+                  </LinkPendingLabel>
+                  <LinkPendingOverlay label="Abrindo..." className="rounded-2xl" />
                 </Link>
               );
             })}

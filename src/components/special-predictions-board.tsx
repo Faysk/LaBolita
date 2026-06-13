@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkPendingLabel, LinkPendingOverlay } from "@/components/link-pending-feedback";
 import {
   ArrowRight,
   CheckCircle2,
@@ -90,10 +91,12 @@ export function SpecialPredictionsBoard({
           </p>
           <Link
             href={progress.next ? specialMarketPath(progress.next.key) : "/especiais"}
-            className="interactive mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
+            className="interactive relative mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
-            {progress.next ? "Completar agora" : "Revisar escolhas"}
-            <ArrowRight className="size-4" />
+            <LinkPendingLabel pendingLabel="Abrindo especiais...">
+              {progress.next ? "Completar agora" : "Revisar escolhas"}
+              <ArrowRight className="size-4" />
+            </LinkPendingLabel>
           </Link>
         </div>
       </section>
@@ -148,7 +151,7 @@ function MarketCard({ market }: { market: SpecialMarketView }) {
   return (
     <Link
       href={specialMarketPath(market.key)}
-      className="interactive card group flex min-h-56 flex-col overflow-hidden p-5 hover:border-brand/70"
+      className="interactive card group relative flex min-h-56 flex-col overflow-hidden p-5 hover:border-brand/70"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-brand/10 text-brand">
@@ -173,9 +176,10 @@ function MarketCard({ market }: { market: SpecialMarketView }) {
           {market.predictions.map((pick) => pick.label).join(", ")}
         </p>
       )}
-      <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-brand">
+      <LinkPendingLabel className="mt-5 justify-start text-sm font-black text-brand" pendingLabel="Abrindo palpite...">
         Abrir palpite <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
-      </span>
+      </LinkPendingLabel>
+      <LinkPendingOverlay label="Abrindo palpite..." className="rounded-[inherit]" />
     </Link>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight, Clock3, MapPin, Radio } from "lucide-react";
+import { LinkPendingLabel } from "@/components/link-pending-feedback";
 import { TeamFlag } from "@/components/team-flag";
 import { useLocalResults } from "@/lib/local-state";
 import type { DemoMatch } from "@/lib/types";
@@ -121,8 +122,10 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
           href="/palpites"
           className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-extrabold text-brand-strong transition hover:brightness-95"
         >
-          {action}
-          <ArrowRight className="size-4" />
+          <LinkPendingLabel pendingLabel="Abrindo palpites...">
+            {action}
+            <ArrowRight className="size-4" />
+          </LinkPendingLabel>
         </Link>
       </div>
     </div>

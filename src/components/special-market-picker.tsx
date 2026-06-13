@@ -16,6 +16,7 @@ import {
   SpecialOptionAvatar,
   SpecialOptionSticker,
 } from "@/components/special-sticker";
+import { LinkPendingLabel } from "@/components/link-pending-feedback";
 import {
   highlightSpecialOptions,
   localSpecialDateTime,
@@ -138,8 +139,10 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           href="/especiais"
           className="interactive inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/80"
         >
-          <ArrowLeft className="size-3.5" />
-          Voltar aos especiais
+          <LinkPendingLabel pendingLabel="Voltando...">
+            <ArrowLeft className="size-3.5" />
+            Voltar aos especiais
+          </LinkPendingLabel>
         </Link>
         <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:items-center">
           <div className="flex flex-col justify-center py-1">

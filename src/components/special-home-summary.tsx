@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { LinkPendingLabel } from "@/components/link-pending-feedback";
 import {
   SPECIAL_LOCK_DATE_LABEL,
   specialMarketDisplay,
@@ -35,7 +36,9 @@ export function SpecialHomeSummary({
             href="/entrar?next=%2Fespeciais"
             className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
-            Entrar e palpitar <ArrowRight className="size-4" />
+            <LinkPendingLabel pendingLabel="Abrindo login...">
+              Entrar e palpitar <ArrowRight className="size-4" />
+            </LinkPendingLabel>
           </Link>
         </div>
       </section>
@@ -71,8 +74,10 @@ export function SpecialHomeSummary({
           href={next ? specialMarketPath(next.key) : "/especiais"}
           className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
         >
-          {next ? "Completar pendente" : "Revisar especiais"}
-          <ArrowRight className="size-4" />
+          <LinkPendingLabel pendingLabel="Abrindo especiais...">
+            {next ? "Completar pendente" : "Revisar especiais"}
+            <ArrowRight className="size-4" />
+          </LinkPendingLabel>
         </Link>
       </div>
     </section>
