@@ -6,15 +6,20 @@ import { TeamFlag } from "@/components/team-flag";
 import { useLocalResults } from "@/lib/local-state";
 import type { DemoMatch } from "@/lib/types";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
-import { hasSavedPrediction, isLiveMatch, prioritizeHomeMatches } from "@/lib/match-display";
+import {
+  hasSavedPrediction,
+  isLiveMatch,
+  selectHomeTimelineMatches,
+} from "@/lib/match-display";
 
 export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
   const results = useLocalResults();
-  const candidateMatches = prioritizeHomeMatches(
+  const candidateMatches = selectHomeTimelineMatches(
     matches.filter((match) => !results[match.id]),
+    matches.length,
   );
   const liveMatch = candidateMatches.find(isLiveMatch);
-  const nextMatch = liveMatch ?? candidateMatches.find((match) => !match.result);
+  const nextMatch = liveMatch ?? candidateMatches[0];
   const heading = liveMatch
     ? "Agora ao vivo"
     : nextMatch

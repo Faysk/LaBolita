@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isRecoverableAuthError } from "@/lib/supabase/auth";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 
 export async function proxy(request: NextRequest) {
@@ -22,7 +23,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  const { error } = await supabase.auth.getUser();
+  if (error && !isRecoverableAuthError(error)) throw error;
+
   return response;
 }
 
