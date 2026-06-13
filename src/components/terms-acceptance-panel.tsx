@@ -34,6 +34,14 @@ export function TermsAcceptancePanel({
       return;
     }
 
+    const { error: officialPoolError } = await supabase.rpc("ensure_official_pool_membership");
+    if (officialPoolError) {
+      console.error("Official pool membership synchronization failed after terms acceptance", {
+        code: officialPoolError.code,
+        message: officialPoolError.message,
+      });
+    }
+
     navigator.vibrate?.(25);
     router.replace(nextPath);
     router.refresh();

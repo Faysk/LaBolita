@@ -1,5 +1,6 @@
 import "server-only";
 import { demoPools, demoRanking } from "@/lib/demo-data";
+import { ensureOfficialPoolMembership } from "@/lib/official-pool";
 import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { PoolSummary, RankingEntry } from "@/lib/types";
@@ -12,6 +13,7 @@ type MyPoolRow = {
   invite_code: string;
   is_public: boolean;
   flag_code: string;
+  is_official?: boolean;
   archived_at: string | null;
   member_role: "owner" | "admin" | "member";
   member_count: number;
@@ -70,6 +72,8 @@ export async function getPoolsOverview({
   if (!supabase) return demoOverview();
 
   const user = await getOptionalUser(supabase);
+  if (user) await ensureOfficialPoolMembership(supabase);
+
   const safePage = Math.max(1, Math.trunc(publicPage) || 1);
   const cleanSearch = publicSearch.trim().slice(0, 60);
 
@@ -108,6 +112,7 @@ export async function getPoolsOverview({
         members: Number(pool.member_count),
         position: 1,
         isPublic: pool.is_public,
+        isOfficial: Boolean(pool.is_official),
         isOwner: pool.member_role === "owner",
         isArchived: Boolean(pool.archived_at),
       }) satisfies PoolSummary,
@@ -173,6 +178,7 @@ export async function getPublicGlobalRanking(): Promise<RankingEntry[]> {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return demoRanking.slice(0, 3);
   const user = await getOptionalUser(supabase);
+  if (user) await ensureOfficialPoolMembership(supabase);
 
   const { data, error } = await supabase.rpc("get_public_global_ranking", {
     p_limit: 3,
@@ -199,6 +205,8 @@ export async function getPublicPoolHighlights(limit = 3): Promise<PublicPoolHigh
   }
 
   const user = await getOptionalUser(supabase);
+  if (user) await ensureOfficialPoolMembership(supabase);
+
   const { data: publicData, error: publicError } = await supabase.rpc("get_public_pools", {
     p_search: null,
     p_limit: 12,

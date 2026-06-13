@@ -798,6 +798,43 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     );
   });
 
+  const officialPoolId = await scalar(
+    `insert into public.pools (owner_id, name, invite_code, is_public, flag_code, is_official)
+     values ($1, 'LaBolão Oficial', 'OFICIAL2026', true, 'br', true)
+     returning id`,
+    [USER_ONE],
+  );
+  await db.query(
+    `insert into public.pool_members (pool_id, user_id, role, eligible_from)
+     values ($1, $2, 'owner', timestamptz '1900-01-01 00:00:00+00')`,
+    [officialPoolId, USER_ONE],
+  );
+
+  await asUser(USER_THREE, async () => {
+    assert.equal(
+      await scalar("select public.ensure_official_pool_membership()"),
+      officialPoolId,
+      "logged users must be linked to the official pool automatically",
+    );
+    assert.equal(
+      await scalar("select pool_id from public.get_my_pools() limit 1"),
+      officialPoolId,
+      "the official pool must be the first active pool in the user overview",
+    );
+    const officialRanking = await db.query(
+      "select display_name, total_points::integer as total_points from public.get_pool_ranking($1)",
+      [officialPoolId],
+    );
+    const officialLateMember = officialRanking.rows.find(
+      (row) => row.display_name === "Late Member",
+    );
+    assert.equal(
+      officialLateMember?.total_points,
+      5,
+      "the official pool must count existing predictions even after finished matches",
+    );
+  });
+
   await asUser(USER_THREE, async () => {
     await db.query("select public.join_pool($1)", [inviteCode]);
     assert.equal(
@@ -821,7 +858,8 @@ async function verifyPredictionPrivacyAndResultCorrection() {
 
   await asUser(USER_ONE, async () => {
     const ranking = await db.query(
-      "select display_name, total_points::integer as total_points from public.get_pool_ranking((select id from public.pools limit 1))",
+      "select display_name, total_points::integer as total_points from public.get_pool_ranking($1)",
+      [publicPoolId],
     );
     const lateMember = ranking.rows.find((row) => row.display_name === "Late Member");
     const owner = ranking.rows.find((row) => row.display_name === "Owner");

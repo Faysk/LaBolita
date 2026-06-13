@@ -374,6 +374,11 @@ function PoolCard({
       <div className="relative flex items-start justify-between">
         <PoolFlag code={pool.flagCode} size={selected ? "lg" : "md"} />
         <div className="flex items-center gap-2">
+          {pool.isOfficial && (
+            <span className="rounded-full bg-accent px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-brand-strong">
+              Oficial
+            </span>
+          )}
           {pool.isPublic && <Globe2 className="size-4 opacity-60" aria-label="Bolão público" />}
           {onManage && (
             <button type="button" aria-label={`Gerenciar ${pool.name}`} onClick={onManage} className="interactive rounded-xl p-2">
@@ -669,7 +674,17 @@ async function createPool(name: string, isPublic: boolean, flagCode: string): Pr
     });
     if (error) throw error;
     const pool = normalizeRpcPool(data);
-    return { id: pool.id, name: pool.name, flagCode, code: pool.invite_code, members: 1, position: 1, isPublic, isOwner: true };
+    return {
+      id: pool.id,
+      name: pool.name,
+      flagCode: pool.flag_code ?? flagCode,
+      code: pool.invite_code,
+      members: 1,
+      position: 1,
+      isPublic,
+      isOfficial: Boolean(pool.is_official),
+      isOwner: true,
+    };
   }
   return { id: crypto.randomUUID(), name: cleanName, flagCode, code: createInviteCode(), members: 1, position: 1, eligibleFrom: new Date().toISOString(), isOwner: true, isPublic };
 }
@@ -704,7 +719,16 @@ async function joinPool(inviteCode: string): Promise<PoolSummary> {
     const { data, error } = await supabase.rpc("join_pool", { p_invite_code: code });
     if (error) throw error;
     const pool = normalizeRpcPool(data);
-    return { id: pool.id, name: pool.name, code: pool.invite_code, members: 1, position: 1 };
+    return {
+      id: pool.id,
+      name: pool.name,
+      flagCode: pool.flag_code,
+      code: pool.invite_code,
+      members: 1,
+      position: 1,
+      isPublic: Boolean(pool.is_public),
+      isOfficial: Boolean(pool.is_official),
+    };
   }
   const knownPool = demoPools.find((pool) => pool.code === code);
   if (knownPool) return knownPool;
@@ -720,7 +744,14 @@ function normalizeRpcPool(data: unknown) {
   if (!value || typeof value !== "object" || !("id" in value) || !("name" in value) || !("invite_code" in value)) {
     throw new Error("O servidor não retornou os dados do bolão.");
   }
-  return value as { id: string; name: string; invite_code: string };
+  return value as {
+    id: string;
+    name: string;
+    invite_code: string;
+    flag_code?: string;
+    is_public?: boolean;
+    is_official?: boolean;
+  };
 }
 
 function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {

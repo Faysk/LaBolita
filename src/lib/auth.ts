@@ -1,6 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
+import { ensureOfficialPoolMembership } from "@/lib/official-pool";
 import { getOptionalUser } from "@/lib/supabase/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -52,6 +53,8 @@ export async function requireUser(nextPath: string) {
   ) {
     redirect(`/aceitar-termos?next=${encodeURIComponent(nextPath)}`);
   }
+
+  await ensureOfficialPoolMembership(supabase);
 
   return { supabase, user, profile };
 }

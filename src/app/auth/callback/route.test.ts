@@ -16,11 +16,13 @@ describe("OAuth callback", () => {
   });
 
   it("redirects returning users with current terms directly to the requested page", async () => {
-    mocks.createServerSupabaseClient.mockResolvedValue(client());
+    const supabase = client();
+    mocks.createServerSupabaseClient.mockResolvedValue(supabase);
 
     const response = await GET(callbackRequest());
 
     expect(response.headers.get("location")).toBe("https://labolita.test/palpites");
+    expect(supabase.rpc).toHaveBeenCalledWith("ensure_official_pool_membership");
   });
 
   it("keeps an authenticated user in the terms flow when the profile cannot be loaded", async () => {
@@ -119,5 +121,6 @@ function client({
       }),
     },
     from: vi.fn(() => profileBuilder),
+    rpc: vi.fn().mockResolvedValue({ data: "pool-1", error: null }),
   };
 }

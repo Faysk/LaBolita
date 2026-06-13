@@ -73,6 +73,7 @@ export type PoolSummary = {
   eligibleFrom?: string;
   ownerName?: string;
   isPublic?: boolean;
+  isOfficial?: boolean;
   isOwner?: boolean;
   isArchived?: boolean;
   isMember?: boolean;
