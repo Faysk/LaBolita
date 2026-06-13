@@ -255,13 +255,14 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               {highlighted.length} destaques
             </span>
           </div>
-          <div className="mt-4 grid gap-3 2xl:grid-cols-2">
+          <div className="mt-4 grid gap-3">
             {highlighted.map((option) => (
               <OptionCard
                 key={option.key}
                 option={option}
                 selected={selectedKeys.includes(option.key)}
                 disabled={market.locked || Boolean(sync.busy)}
+                density="highlight"
                 onSelect={() => chooseOption(option)}
               />
             ))}
@@ -325,33 +326,44 @@ function OptionCard({
   option,
   selected,
   disabled,
+  density = "default",
   onSelect,
 }: {
   option: SpecialOption;
   selected: boolean;
   disabled: boolean;
+  density?: "default" | "highlight";
   onSelect: () => void;
 }) {
+  const highlight = density === "highlight";
+  const layoutClass = highlight
+    ? "min-h-24 grid-cols-[4.25rem_minmax(0,1fr)_auto] gap-3 p-3"
+    : "min-h-32 grid-cols-[5.75rem_minmax(0,1fr)] gap-4 p-3 pr-10 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:pr-3";
+
   return (
     <button
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className={`interactive relative grid min-h-32 w-full grid-cols-[5.75rem_minmax(0,1fr)] items-center gap-4 overflow-hidden rounded-2xl border p-3 pr-10 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:pr-3 ${
+      className={`interactive relative grid w-full items-center overflow-hidden rounded-2xl border text-left disabled:cursor-not-allowed disabled:opacity-60 ${layoutClass} ${
         selected
           ? "border-brand bg-success-bg text-success-fg"
           : "bg-surface-muted hover:border-brand/70"
       }`}
     >
-      <SpecialOptionSticker option={option} variant="thumb" selected={selected} />
+      <SpecialOptionSticker
+        option={option}
+        variant={highlight ? "avatar" : "thumb"}
+        selected={selected}
+      />
       <span className="min-w-0 flex-1">
-        <span className="line-clamp-2 text-sm font-black leading-tight text-foreground">
+        <span className={`${highlight ? "line-clamp-1" : "line-clamp-2"} text-sm font-black leading-tight text-foreground`}>
           {option.label}
         </span>
-        <span className="mt-1 block line-clamp-1 text-xs font-bold text-muted">
+        <span className={`${highlight ? "mt-0.5" : "mt-1"} block line-clamp-2 text-xs font-bold leading-4 text-muted`}>
           {option.description}
         </span>
-        <span className="mt-2 flex flex-wrap gap-1.5">
+        <span className={`${highlight ? "mt-1.5" : "mt-2"} flex flex-wrap gap-1.5`}>
           {option.position && (
             <Chip>{positionLabel(option.position)}</Chip>
           )}
@@ -365,7 +377,13 @@ function OptionCard({
         </span>
       </span>
       {selected && (
-        <CheckCircle2 className="absolute right-3 top-1/2 size-5 -translate-y-1/2 shrink-0 text-brand sm:static sm:translate-y-0" />
+        <CheckCircle2
+          className={`size-5 shrink-0 text-brand ${
+            highlight
+              ? ""
+              : "absolute right-3 top-1/2 -translate-y-1/2 sm:static sm:translate-y-0"
+          }`}
+        />
       )}
     </button>
   );
