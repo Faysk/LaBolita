@@ -126,6 +126,14 @@ function PlayerSticker({
     feature: "h-80 w-56 rounded-[1.8rem]",
   }[variant];
   const footerTextSize = variant === "feature" ? "text-base" : "text-xs";
+  const yearBadgeClass =
+    variant === "feature"
+      ? "left-3 top-3 px-2.5 py-1 text-xs"
+      : "left-2 top-2 px-2 py-0.5 text-[10px]";
+  const footerClass =
+    variant === "feature"
+      ? "min-h-20 px-3 py-3 pr-14"
+      : "min-h-16 px-2.5 py-2.5 pr-12";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
@@ -142,7 +150,7 @@ function PlayerSticker({
       title={option.fullName ?? option.label}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,0.48),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.18),transparent_45%)]" />
-      <span className="absolute left-2 top-2 rounded-full border border-white/25 bg-black/24 px-2 py-0.5 text-[10px] font-black leading-none text-white/90">
+      <span className={`absolute rounded-full border border-white/25 bg-black/24 font-black leading-none text-white/90 ${yearBadgeClass}`}>
         26
       </span>
       <span className="absolute right-2 top-2 rounded-full border border-white/35 bg-white/75 px-1.5 py-0.5 text-[8px] font-black text-brand-strong">
@@ -150,7 +158,7 @@ function PlayerSticker({
       </span>
       <span
         className={`relative mt-auto flex flex-1 items-end justify-center ${
-          compact ? "px-1 pb-8 pt-8" : "px-2 pt-11"
+          compact ? "px-1 pb-7 pt-5" : "px-2 pt-10"
         }`}
       >
         <PlayerPortrait option={option} compact={compact} />
@@ -165,11 +173,11 @@ function PlayerSticker({
           </span>
         </span>
       ) : (
-        <span className="relative grid min-h-16 gap-1 border-t border-white/25 bg-black/32 px-2.5 py-2.5 pr-12 text-white">
+        <span className={`relative grid gap-1 border-t border-white/25 bg-black/32 text-white ${footerClass}`}>
           <span className={`line-clamp-1 font-black leading-none ${footerTextSize}`}>
             {option.label}
           </span>
-          <span className="line-clamp-1 text-[9px] font-bold text-white/75">
+          <span className="line-clamp-2 text-[9px] font-bold leading-tight text-white/75">
             {option.club ?? option.teamName}
           </span>
           <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg border bg-white shadow-sm">
@@ -244,7 +252,7 @@ function TeamSticker({
 function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: boolean }) {
   const profile = visualProfile(option);
   const palette = teamPalette(option.teamCode);
-  const scale = compact ? 1.08 : 1.04;
+  const scale = compact ? 1.18 : 1.06;
   const trimColor = palette.accent;
 
   return (
@@ -252,7 +260,7 @@ function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: b
       viewBox="0 0 160 190"
       aria-hidden="true"
       className="h-full w-full drop-shadow-xl"
-      style={{ transform: `scale(${scale}) translateY(${compact ? 13 : 6}px)` }}
+      style={{ transform: `scale(${scale}) translateY(${compact ? -8 : -4}px)` }}
     >
       <ellipse cx="80" cy="183" rx="44" ry="8" fill="rgba(0,0,0,0.18)" />
       <path
@@ -361,7 +369,7 @@ function MiniPlayerPortrait({ option }: { option: SpecialOption }) {
 
   return (
     <span
-      className="flex h-full w-full items-end justify-center"
+      className="flex h-full w-full items-center justify-center overflow-hidden"
       style={{
         background: `linear-gradient(145deg, ${palette.primary}, ${palette.secondary})`,
       }}

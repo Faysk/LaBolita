@@ -133,7 +133,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
 
   return (
     <div className="space-y-7">
-      <section className="card-dark overflow-hidden rounded-[2rem] p-5 text-white md:p-7 lg:p-8">
+      <section className="card-dark overflow-hidden rounded-[2rem] p-5 text-white md:p-6 lg:p-7">
         <Link
           href="/especiais"
           className="interactive inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/80"
@@ -141,13 +141,13 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           <ArrowLeft className="size-3.5" />
           Voltar aos especiais
         </Link>
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.9fr)] lg:items-center">
-          <div className="flex flex-col justify-center py-2 lg:min-h-56">
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:items-center">
+          <div className="flex flex-col justify-center py-1">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-accent">
               <Icon className="size-4" />
               {display.eyebrow}
             </div>
-            <h1 className="mt-4 text-4xl font-black leading-tight tracking-[-0.06em] md:text-6xl">
+            <h1 className="mt-4 text-4xl font-black leading-tight tracking-[-0.06em] md:text-5xl xl:text-6xl">
               {display.heroTitle}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-white/72 md:text-base">
@@ -255,7 +255,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               {highlighted.length} destaques
             </span>
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-3 2xl:grid-cols-2">
             {highlighted.map((option) => (
               <OptionCard
                 key={option.key}
@@ -337,7 +337,7 @@ function OptionCard({
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className={`interactive relative grid min-h-32 w-full grid-cols-[6rem_minmax(0,1fr)] items-center gap-4 overflow-hidden rounded-2xl border p-3 pr-10 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] sm:pr-3 ${
+      className={`interactive relative grid min-h-32 w-full grid-cols-[5.75rem_minmax(0,1fr)] items-center gap-4 overflow-hidden rounded-2xl border p-3 pr-10 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:pr-3 ${
         selected
           ? "border-brand bg-success-bg text-success-fg"
           : "bg-surface-muted hover:border-brand/70"
@@ -496,7 +496,7 @@ function OptionDetail({ option }: { option: SpecialOption }) {
         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
           Dados do atleta
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-3 xl:grid-cols-6">
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
           <DetailStat label="Seleção" value={option.teamName} compact />
           <DetailStat label="Idade" value={option.age ? `${option.age} anos` : "—"} compact />
           <DetailStat label="Altura" value={option.heightCm ? `${option.heightCm} cm` : "—"} compact />

@@ -19,7 +19,7 @@ export function SpecialPredictionsEntry({
   const featured = overview.markets.slice(0, 5);
 
   return (
-    <section className="mb-7 grid gap-4 lg:grid-cols-[1fr_1.25fr]">
+    <section className="mb-7 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
       <Link
         href="/palpites"
         className="card interactive flex flex-col justify-between overflow-hidden p-5 hover:border-brand/70"
@@ -61,7 +61,7 @@ export function SpecialPredictionsEntry({
             Abrir especiais <ArrowRight className="size-4" />
           </Link>
         </div>
-        <div className="grid gap-3 p-5 md:grid-cols-[0.7fr_1.3fr]">
+        <div className="grid gap-3 p-5 lg:grid-cols-[12rem_minmax(0,1fr)]">
           <div className="rounded-2xl border bg-surface-muted p-4">
             <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-muted">
               <CalendarClock className="size-4" />
@@ -72,7 +72,7 @@ export function SpecialPredictionsEntry({
               {progress.completed}/{progress.total} preenchidos
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             {featured.map((market) => {
               const display = specialMarketDisplay(market.key);
               const Icon = display.icon;
@@ -81,11 +81,11 @@ export function SpecialPredictionsEntry({
                 <Link
                   key={market.key}
                   href={specialMarketPath(market.key)}
-                  className="interactive rounded-2xl border bg-surface-muted p-3 hover:border-brand/70"
+                  className="interactive min-h-20 rounded-2xl border bg-surface-muted p-3 hover:border-brand/70"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     <Icon className="size-4 text-brand" />
-                    <span className="min-w-0 flex-1 truncate text-sm font-black">
+                    <span className="min-w-0 flex-1 text-sm font-black leading-tight">
                       {display.shortTitle}
                     </span>
                     {complete && <CheckCircle2 className="size-4 text-brand" />}
