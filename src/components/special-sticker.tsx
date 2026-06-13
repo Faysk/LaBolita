@@ -230,6 +230,10 @@ function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: b
   const scale = compact ? 1.18 : 1.06;
   const trimColor = palette.accent;
 
+  if (isNeymarOption(option)) {
+    return <NeymarPortrait compact={compact} />;
+  }
+
   return (
     <svg
       viewBox="0 0 160 190"
@@ -288,6 +292,69 @@ function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: b
           <circle cx="116" cy="161" r="9" fill={trimColor} stroke="white" strokeWidth="3" />
         </g>
       )}
+    </svg>
+  );
+}
+
+function NeymarPortrait({ compact }: { compact: boolean }) {
+  const scale = compact ? 1.08 : 1;
+
+  return (
+    <svg
+      viewBox="0 0 160 190"
+      aria-hidden="true"
+      className="h-full w-full drop-shadow-xl"
+      style={{ transform: `scale(${scale}) translateY(${compact ? -2 : 0}px)` }}
+    >
+      <ellipse cx="80" cy="184" rx="48" ry="8" fill="rgba(0,0,0,0.18)" />
+      <g fill="none" stroke="#b36f47" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M56 108C39 93 27 71 21 45" strokeWidth="13" />
+        <path d="M104 108c17-15 29-37 35-63" strokeWidth="13" />
+        <path d="M30 42c-8-9-8-24-3-34" strokeWidth="6" />
+        <path d="M24 40c-6-9-6-22-2-31" strokeWidth="5" />
+        <path d="M36 42c-4-10-3-23 3-32" strokeWidth="5" />
+        <path d="M130 42c8-9 8-24 3-34" strokeWidth="6" />
+        <path d="M136 40c6-9 6-22 2-31" strokeWidth="5" />
+        <path d="M124 42c4-10 3-23-3-32" strokeWidth="5" />
+      </g>
+      <path
+        d="M43 184c4-47 17-78 37-78s33 31 37 78H43Z"
+        fill="#f2d844"
+        stroke="rgba(255,255,255,0.58)"
+        strokeWidth="4"
+      />
+      <path d="M50 184h60l6 6H44l6-6Z" fill="#2852a3" />
+      <path d="M55 121c11 8 39 8 50 0" fill="none" stroke="#0f8d54" strokeWidth="6" />
+      <path d="M57 184c2-29 9-48 23-59 14 11 21 30 23 59" fill="none" stroke="#0f8d54" strokeWidth="3" opacity="0.55" />
+      <text
+        x="80"
+        y="156"
+        textAnchor="middle"
+        fontSize="25"
+        fontWeight="900"
+        fill="#1d7d5a"
+        opacity="0.55"
+      >
+        10
+      </text>
+      <path d="M58 105h44v22c0 12-44 12-44 0v-22Z" fill="#c77b50" />
+      <path
+        d="M46 66c0-30 17-49 34-49s34 19 34 49c0 29-15 49-34 49S46 95 46 66Z"
+        fill="#c77b50"
+        stroke="rgba(25,20,18,0.24)"
+        strokeWidth="3"
+      />
+      <ellipse cx="45" cy="73" rx="6" ry="11" fill="#c77b50" />
+      <ellipse cx="115" cy="73" rx="6" ry="11" fill="#c77b50" />
+      <path d="M47 50c6-29 61-33 68-1-23-12-48-12-68 1Z" fill="#241714" />
+      <path d="M63 104c11 12 24 12 34 0" fill="none" stroke="#241714" strokeLinecap="round" strokeWidth="5" opacity="0.62" />
+      <path d="M60 83c3 17 10 26 20 26s17-9 20-26" fill="none" stroke="#241714" strokeLinecap="round" strokeWidth="5" opacity="0.48" />
+      <g stroke="#241714" strokeLinecap="round">
+        <path d="M62 67h10" strokeWidth="4" />
+        <path d="M88 67h10" strokeWidth="4" />
+        <path d="M80 74v15" strokeWidth="2.5" opacity="0.45" />
+      </g>
+      <ellipse cx="80" cy="93" rx="7" ry="5" fill="#241714" opacity="0.72" />
     </svg>
   );
 }
@@ -373,6 +440,10 @@ function visualProfile(option: SpecialOption): VisualProfile {
   };
   const override = PLAYER_STYLE_OVERRIDES[`${option.teamCode}:${option.number}`];
   return { ...base, ...override };
+}
+
+function isNeymarOption(option: SpecialOption) {
+  return option.teamCode === "BRA" && option.number === 10 && option.position === "FW";
 }
 
 function hairShape(style: HairStyle, color: string) {
