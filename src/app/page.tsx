@@ -7,6 +7,7 @@ import { HomeOverview } from "@/components/home-overview";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchCard } from "@/components/match-card";
 import { NextMatchSummary } from "@/components/next-match-summary";
+import { SpecialHomeSummary } from "@/components/special-home-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
 import {
@@ -14,6 +15,7 @@ import {
   getPublicGlobalRanking,
   getPublicPoolHighlights,
 } from "@/lib/data/pools";
+import { getSpecialMarketsOverview } from "@/lib/data/specials";
 import { isLiveMatch, selectHomeTimelineMatches } from "@/lib/match-display";
 
 export default async function HomePage() {
@@ -29,6 +31,9 @@ export default async function HomePage() {
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
   );
+  const specialsOverview = viewer.isAuthenticated
+    ? await getSpecialMarketsOverview({ matches })
+    : null;
 
   return (
     <main className="page-container py-6 md:py-10">
@@ -101,6 +106,11 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      <SpecialHomeSummary
+        overview={specialsOverview}
+        isAuthenticated={viewer.isAuthenticated}
+      />
 
       <HomeOverview
         matches={matches}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSpecialOptions,
   computeAutomaticSuggestions,
+  highlightSpecialOptions,
   playerOptionKey,
   teamOptionKey,
 } from "@/lib/special-markets";
@@ -34,6 +35,21 @@ describe("special markets", () => {
     const options = buildSpecialOptions(teams, "players");
     expect(options.some((option) => option.teamCode === "MEX")).toBe(true);
     expect(options.every((option) => option.teamId === "team-mex" || option.teamId === "team-rsa")).toBe(true);
+    expect(options.find((option) => option.teamCode === "MEX")).toMatchObject({
+      teamFlag: "🇲🇽",
+    });
+  });
+
+  it("highlights candidates with useful player context first", () => {
+    const options = buildSpecialOptions(teams, "players");
+    const highlighted = highlightSpecialOptions("top_scorer", options, 5);
+
+    expect(highlighted).toHaveLength(5);
+    expect(highlighted[0]).toMatchObject({
+      teamCode: expect.any(String),
+      goals: expect.any(Number),
+      caps: expect.any(Number),
+    });
   });
 
   it("suggests team markets from current match scores", () => {

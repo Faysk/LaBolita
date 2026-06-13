@@ -125,6 +125,11 @@ export default function RulesPage() {
               se você acertar a seleção, mas não o atleta exato.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
+              Os especiais ficam abertos até 22 de junho. Cada categoria tem sua
+              própria tela com busca, destaques e dados de elenco para ajudar na
+              escolha.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
               O admin confirma os resultados especiais com fonte ou motivo. Nas
               categorias por seleção, o painel pode sugerir o resultado usando
               os placares já carregados, mas a confirmação final continua

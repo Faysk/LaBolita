@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  attachTeamStats,
   buildSpecialOptions,
   computeAutomaticSuggestions,
   type AutomaticSuggestion,
@@ -173,6 +174,9 @@ export async function getSpecialMarketsOverview(input?: {
       let options = optionsBySource.get(market.option_source);
       if (!options) {
         options = buildSpecialOptions(teams, market.option_source);
+        if (market.option_source === "teams") {
+          options = attachTeamStats(options, matches);
+        }
         optionsBySource.set(market.option_source, options);
       }
 

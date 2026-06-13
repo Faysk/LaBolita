@@ -14,7 +14,16 @@ export type SpecialOption = {
   teamId: string;
   teamCode: string;
   teamName: string;
+  teamFlag?: string;
   position?: SquadPosition;
+  number?: number;
+  fullName?: string;
+  club?: string;
+  age?: number;
+  heightCm?: number;
+  caps?: number;
+  goals?: number;
+  teamStats?: SpecialTeamStats;
 };
 
 export type AutomaticSuggestion = {
@@ -25,6 +34,17 @@ export type AutomaticSuggestion = {
   teamCode: string;
   teamName: string;
   value: number;
+};
+
+export type SpecialTeamStats = {
+  played: number;
+  points: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
 };
 
 export function buildSpecialOptions(
@@ -47,6 +67,7 @@ export function buildSpecialOptions(
         teamId: team.id,
         teamCode: team.code!,
         teamName: team.name,
+        teamFlag: team.flag,
       }))
       .sort((left, right) => left.label.localeCompare(right.label, "pt-BR"));
   }
@@ -64,7 +85,15 @@ export function buildSpecialOptions(
       teamId: databaseTeam.id,
       teamCode: databaseTeam.code,
       teamName: databaseTeam.name,
+      teamFlag: databaseTeam.flag,
       position: player.position,
+      number: player.number,
+      fullName: player.fullName,
+      club: player.club,
+      age: playerAgeFromDob(player.dob),
+      heightCm: player.heightCm,
+      caps: player.caps,
+      goals: player.goals,
     });
   }
 
@@ -72,7 +101,45 @@ export function buildSpecialOptions(
     (left, right) =>
       left.label.localeCompare(right.label, "pt-BR") ||
       left.teamName.localeCompare(right.teamName, "pt-BR"),
-  );
+    );
+}
+
+export function attachTeamStats(options: SpecialOption[], matches: DemoMatch[]) {
+  const stats = new Map<string, SpecialTeamStats>();
+  for (const option of options) {
+    if (!option.teamId) continue;
+    stats.set(option.teamId, emptyTeamStats());
+  }
+
+  for (const match of matches) {
+    const score = match.result ?? match.liveResult;
+    if (!score) continue;
+    const home = stats.get(match.homeTeam.id);
+    const away = stats.get(match.awayTeam.id);
+    if (!home || !away) continue;
+    applyTeamScore(home, score.homeScore, score.awayScore);
+    applyTeamScore(away, score.awayScore, score.homeScore);
+  }
+
+  return options.map((option) => ({
+    ...option,
+    teamStats: option.teamId ? stats.get(option.teamId) : undefined,
+  }));
+}
+
+export function highlightSpecialOptions(
+  marketKey: string,
+  options: SpecialOption[],
+  limit = 12,
+) {
+  return [...options]
+    .sort((left, right) => {
+      const scoreDiff =
+        specialOptionScore(marketKey, right) - specialOptionScore(marketKey, left);
+      if (scoreDiff !== 0) return scoreDiff;
+      return left.label.localeCompare(right.label, "pt-BR");
+    })
+    .slice(0, limit);
 }
 
 export function teamOptionKey(team: Pick<DemoTeam, "code" | "id">) {
@@ -178,4 +245,81 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "")
     .slice(0, 72);
+}
+
+function playerAgeFromDob(dob: string) {
+  const [day, month, year] = dob.split("/").map(Number);
+  const birth = new Date(Date.UTC(year, month - 1, day));
+  const tournamentStart = new Date(Date.UTC(2026, 5, 11));
+  let age = tournamentStart.getUTCFullYear() - birth.getUTCFullYear();
+  const birthdayPassed =
+    tournamentStart.getUTCMonth() > birth.getUTCMonth() ||
+    (tournamentStart.getUTCMonth() === birth.getUTCMonth() &&
+      tournamentStart.getUTCDate() >= birth.getUTCDate());
+  if (!birthdayPassed) age -= 1;
+  return age;
+}
+
+function emptyTeamStats(): SpecialTeamStats {
+  return {
+    played: 0,
+    points: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
+    goalDifference: 0,
+  };
+}
+
+function applyTeamScore(stats: SpecialTeamStats, goalsFor: number, goalsAgainst: number) {
+  stats.played += 1;
+  stats.goalsFor += goalsFor;
+  stats.goalsAgainst += goalsAgainst;
+  stats.goalDifference = stats.goalsFor - stats.goalsAgainst;
+  if (goalsFor > goalsAgainst) {
+    stats.points += 3;
+    stats.wins += 1;
+  } else if (goalsFor === goalsAgainst) {
+    stats.points += 1;
+    stats.draws += 1;
+  } else {
+    stats.losses += 1;
+  }
+}
+
+function specialOptionScore(marketKey: string, option: SpecialOption) {
+  if (option.position) {
+    const caps = option.caps ?? 0;
+    const goals = option.goals ?? 0;
+    const height = option.heightCm ?? 0;
+    const positionBonus = {
+      GK: marketKey === "golden_glove" ? 90 : 8,
+      DF: marketKey === "golden_ball" ? 18 : 4,
+      MF: marketKey === "top_scorer" ? 22 : 36,
+      FW: marketKey === "top_assists" ? 28 : 42,
+    }[option.position];
+
+    if (marketKey === "top_assists") {
+      return caps * 1.35 + goals * 2.1 + positionBonus;
+    }
+    if (marketKey === "golden_glove") {
+      return caps * 1.4 + height * 0.2 + positionBonus;
+    }
+    if (marketKey === "golden_ball") {
+      return caps * 1.15 + goals * 5.5 + positionBonus;
+    }
+    return caps * 0.75 + goals * 7.2 + positionBonus;
+  }
+
+  const stats = option.teamStats;
+  if (!stats) return 0;
+  if (marketKey === "team_most_goals") {
+    return stats.goalsFor * 15 + stats.points * 3 + stats.goalDifference;
+  }
+  if (marketKey === "team_fewest_conceded") {
+    return (stats.played > 0 ? 100 : 0) - stats.goalsAgainst * 14 + stats.points * 2;
+  }
+  return stats.points * 12 + stats.goalDifference * 4 + stats.goalsFor * 2;
 }
