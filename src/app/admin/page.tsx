@@ -100,7 +100,10 @@ export default async function AdminPage({
         })}
       </section>
 
-      <MasterAdminConsole overview={masterOverview} />
+      <MasterAdminConsole
+        key={`${masterOverview.activeTab}-${masterOverview.page}-${masterOverview.search}`}
+        overview={masterOverview}
+      />
 
       <section className="card mt-7 overflow-hidden">
         <div className="flex items-center gap-3 border-b p-5 md:p-6">
