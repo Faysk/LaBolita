@@ -121,10 +121,11 @@ function PlayerSticker({
   const compact = variant === "avatar" || variant === "thumb";
   const sizeClass = {
     avatar: "h-16 w-12 rounded-[0.9rem]",
-    thumb: "h-24 w-[4.75rem] rounded-[1.05rem]",
-    card: "h-40 w-28 rounded-[1.2rem]",
+    thumb: "h-28 w-24 rounded-[1.15rem]",
+    card: "h-44 w-32 rounded-[1.25rem]",
     feature: "h-80 w-56 rounded-[1.8rem]",
   }[variant];
+  const footerTextSize = variant === "feature" ? "text-base" : "text-xs";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
@@ -141,35 +142,41 @@ function PlayerSticker({
       title={option.fullName ?? option.label}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,0.48),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.18),transparent_45%)]" />
-      {!compact && (
-        <span className="absolute inset-x-2 top-8 select-none text-center text-[2.35rem] font-black leading-none tracking-[-0.12em] text-white/18">
-          2026
-        </span>
-      )}
-      {!compact && (
-        <span className="absolute left-2 top-2 rounded-full bg-black/28 px-2 py-0.5 text-[9px] font-black text-white/90">
-          #{option.number ?? "?"}
-        </span>
-      )}
+      <span className="absolute left-2 top-2 rounded-full border border-white/25 bg-black/24 px-2 py-0.5 text-[10px] font-black leading-none text-white/90">
+        26
+      </span>
       <span className="absolute right-2 top-2 rounded-full border border-white/35 bg-white/75 px-1.5 py-0.5 text-[8px] font-black text-brand-strong">
         {option.position}
       </span>
-      <span className="relative mt-auto flex flex-1 items-end justify-center px-1 pt-7">
+      <span
+        className={`relative mt-auto flex flex-1 items-end justify-center ${
+          compact ? "px-1 pb-8 pt-8" : "px-2 pt-11"
+        }`}
+      >
         <PlayerPortrait option={option} compact={compact} />
       </span>
-      <span className="relative grid gap-1 border-t border-white/25 bg-black/30 px-2 py-2 text-white">
-        <span className={`font-black leading-none ${variant === "feature" ? "text-base" : "text-[10px]"}`}>
-          {option.label}
+      {compact ? (
+        <span className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between gap-1 rounded-xl border border-white/20 bg-black/35 px-1.5 py-1 text-white shadow-sm backdrop-blur">
+          <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[9px] font-black leading-none">
+            #{option.number ?? "?"}
+          </span>
+          <span className="rounded-md border bg-white shadow-sm">
+            <TeamFlag team={teamFromSpecialOption(option)} size="sm" />
+          </span>
         </span>
-        {!compact && (
+      ) : (
+        <span className="relative grid min-h-16 gap-1 border-t border-white/25 bg-black/32 px-2.5 py-2.5 pr-12 text-white">
+          <span className={`line-clamp-1 font-black leading-none ${footerTextSize}`}>
+            {option.label}
+          </span>
           <span className="line-clamp-1 text-[9px] font-bold text-white/75">
             {option.club ?? option.teamName}
           </span>
-        )}
-      </span>
-      <span className="absolute bottom-2 right-2 rounded-lg border bg-white shadow-sm">
-        <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "md" : "sm"} />
-      </span>
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg border bg-white shadow-sm">
+            <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "md" : "sm"} />
+          </span>
+        </span>
+      )}
     </span>
   );
 }
@@ -187,10 +194,11 @@ function TeamSticker({
   const compact = variant === "avatar" || variant === "thumb";
   const sizeClass = {
     avatar: "h-14 w-12 rounded-[0.9rem]",
-    thumb: "h-24 w-[4.75rem] rounded-[1.05rem]",
-    card: "h-40 w-28 rounded-[1.2rem]",
+    thumb: "h-28 w-24 rounded-[1.15rem]",
+    card: "h-44 w-32 rounded-[1.25rem]",
     feature: "h-72 w-56 rounded-[1.8rem]",
   }[variant];
+  const footerTextSize = variant === "feature" ? "text-base" : "text-xs";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
@@ -207,26 +215,28 @@ function TeamSticker({
       title={option.teamName}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(255,255,255,0.42),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.16),transparent_45%)]" />
-      {!compact && (
-        <span className="absolute inset-x-2 top-7 select-none text-center text-[2.35rem] font-black leading-none tracking-[-0.12em] text-white/18">
-          2026
-        </span>
-      )}
+      <span className="absolute left-2 top-2 rounded-full border border-white/25 bg-black/24 px-2 py-0.5 text-[10px] font-black leading-none text-white/90">
+        26
+      </span>
       <span className="relative flex flex-1 items-center justify-center px-3">
         <span className="rounded-[1.2rem] border border-white/45 bg-white/90 p-2 shadow-lg">
           <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "lg" : "md"} />
         </span>
       </span>
-      <span className="relative grid gap-1 border-t border-white/25 bg-black/30 px-2 py-2 text-white">
-        <span className={`font-black leading-none ${variant === "feature" ? "text-base" : "text-[10px]"}`}>
-          {option.teamName}
+      {compact ? (
+        <span className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-center rounded-xl border border-white/20 bg-black/35 px-1.5 py-1 text-white shadow-sm backdrop-blur">
+          <span className="text-[10px] font-black leading-none">{option.teamCode}</span>
         </span>
-        {!compact && (
+      ) : (
+        <span className="relative grid min-h-16 gap-1 border-t border-white/25 bg-black/32 px-2.5 py-2.5 text-white">
+          <span className={`line-clamp-1 font-black leading-none ${footerTextSize}`}>
+            {option.teamName}
+          </span>
           <span className="line-clamp-1 text-[9px] font-bold text-white/75">
             {teamStatsLine(option)}
           </span>
-        )}
-      </span>
+        </span>
+      )}
     </span>
   );
 }
@@ -234,7 +244,7 @@ function TeamSticker({
 function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: boolean }) {
   const profile = visualProfile(option);
   const palette = teamPalette(option.teamCode);
-  const scale = compact ? 0.8 : 1;
+  const scale = compact ? 1.08 : 1.04;
   const trimColor = palette.accent;
 
   return (
@@ -242,7 +252,7 @@ function PlayerPortrait({ option, compact }: { option: SpecialOption; compact: b
       viewBox="0 0 160 190"
       aria-hidden="true"
       className="h-full w-full drop-shadow-xl"
-      style={{ transform: `scale(${scale}) translateY(${compact ? 16 : 8}px)` }}
+      style={{ transform: `scale(${scale}) translateY(${compact ? 13 : 6}px)` }}
     >
       <ellipse cx="80" cy="183" rx="44" ry="8" fill="rgba(0,0,0,0.18)" />
       <path

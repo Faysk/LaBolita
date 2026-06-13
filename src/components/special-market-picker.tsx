@@ -133,7 +133,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
 
   return (
     <div className="space-y-7">
-      <section className="card-dark overflow-hidden rounded-[2rem] p-5 text-white md:p-8 lg:p-10">
+      <section className="card-dark overflow-hidden rounded-[2rem] p-5 text-white md:p-7 lg:p-8">
         <Link
           href="/especiais"
           className="interactive inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/80"
@@ -141,8 +141,8 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           <ArrowLeft className="size-3.5" />
           Voltar aos especiais
         </Link>
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:items-stretch">
-          <div className="flex min-h-72 flex-col justify-end">
+        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(340px,0.9fr)] lg:items-center">
+          <div className="flex flex-col justify-center py-2 lg:min-h-56">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-accent">
               <Icon className="size-4" />
               {display.eyebrow}
@@ -154,7 +154,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               {display.teaser} Você pode alterar até {SPECIAL_LOCK_DATE_LABEL}.
             </p>
           </div>
-          <div className="flex min-h-72 flex-col rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10 md:p-5">
+          <div className="flex flex-col rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10 md:p-5">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/55">
                 {display.pickLabel}
@@ -337,7 +337,7 @@ function OptionCard({
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className={`interactive flex min-h-36 w-full items-center gap-4 overflow-hidden rounded-2xl border p-3 text-left disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`interactive relative grid min-h-32 w-full grid-cols-[6rem_minmax(0,1fr)] items-center gap-4 overflow-hidden rounded-2xl border p-3 pr-10 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:grid-cols-[6.5rem_minmax(0,1fr)_auto] sm:pr-3 ${
         selected
           ? "border-brand bg-success-bg text-success-fg"
           : "bg-surface-muted hover:border-brand/70"
@@ -364,7 +364,9 @@ function OptionCard({
           )}
         </span>
       </span>
-      {selected && <CheckCircle2 className="size-5 shrink-0 text-brand" />}
+      {selected && (
+        <CheckCircle2 className="absolute right-3 top-1/2 size-5 -translate-y-1/2 shrink-0 text-brand sm:static sm:translate-y-0" />
+      )}
     </button>
   );
 }
@@ -382,7 +384,7 @@ function SelectedOptionRow({
 }) {
   if (featured) {
     return (
-      <div className="grid gap-4 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+      <div className="relative grid gap-4 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
         <SpecialOptionSticker option={option} variant="card" selected />
         <div className="min-w-0">
           <p className="text-lg font-black leading-tight">{option.label}</p>
@@ -400,7 +402,7 @@ function SelectedOptionRow({
           <button
             type="button"
             onClick={onRemove}
-            className="interactive justify-self-start rounded-full border border-white/15 bg-white/10 p-2 text-white/75 sm:justify-self-auto"
+            className="interactive absolute right-3 top-3 rounded-full border border-white/15 bg-white/10 p-2 text-white/75"
             aria-label={`Remover ${option.label}`}
           >
             <X className="size-3.5" />
@@ -411,7 +413,7 @@ function SelectedOptionRow({
   }
 
   return (
-    <div className="grid gap-3 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 sm:grid-cols-[auto_1fr_auto] sm:items-center">
+    <div className="relative grid gap-3 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
       <SpecialOptionAvatar option={option} size="lg" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black">{option.label}</p>
@@ -424,7 +426,7 @@ function SelectedOptionRow({
         <button
           type="button"
           onClick={onRemove}
-          className="interactive rounded-full border border-white/15 bg-white/10 p-2 text-white/75"
+          className="interactive absolute right-3 top-3 rounded-full border border-white/15 bg-white/10 p-2 text-white/75"
           aria-label={`Remover ${option.label}`}
         >
           <X className="size-3.5" />
@@ -437,27 +439,34 @@ function SelectedOptionRow({
 function OptionDetail({ option }: { option: SpecialOption }) {
   if (!option.position) {
     return (
-      <div className="grid gap-5 rounded-[1.5rem] border bg-surface-muted p-4 md:p-5 xl:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="flex justify-center md:block">
-          <SpecialOptionSticker option={option} variant="feature" />
+      <div className="rounded-[1.5rem] border bg-surface-muted p-4 md:p-5">
+        <div className="grid gap-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
+          <div className="flex justify-center lg:block">
+            <SpecialOptionSticker option={option} variant="feature" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
+              Seleção escolhida
+            </p>
+            <h3 className="mt-1 text-2xl font-black md:text-3xl">{option.teamName}</h3>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              {teamInsight(option)}
+            </p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-brand">
-            Seleção escolhida
+        <div className="mt-5 rounded-2xl border bg-surface p-3 md:p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+            Dados da seleção nesta Copa
           </p>
-          <h3 className="mt-1 text-2xl font-black">{option.teamName}</h3>
-          <p className="mt-2 text-sm leading-6 text-muted">
-            {teamInsight(option)}
-          </p>
-          <div className="mt-5 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
-            <DetailStat label="Pontos" value={option.teamStats?.points ?? 0} />
-            <DetailStat label="Jogos" value={option.teamStats?.played ?? 0} />
-            <DetailStat label="Gols pró" value={option.teamStats?.goalsFor ?? 0} />
-            <DetailStat label="Gols contra" value={option.teamStats?.goalsAgainst ?? 0} />
-            <DetailStat label="Saldo" value={option.teamStats?.goalDifference ?? 0} />
-            <DetailStat label="Vitórias" value={option.teamStats?.wins ?? 0} />
-            <DetailStat label="Empates" value={option.teamStats?.draws ?? 0} />
-            <DetailStat label="Derrotas" value={option.teamStats?.losses ?? 0} />
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
+            <DetailStat label="Pontos" value={option.teamStats?.points ?? 0} compact />
+            <DetailStat label="Jogos" value={option.teamStats?.played ?? 0} compact />
+            <DetailStat label="Gols pró" value={option.teamStats?.goalsFor ?? 0} compact />
+            <DetailStat label="Gols contra" value={option.teamStats?.goalsAgainst ?? 0} compact />
+            <DetailStat label="Saldo" value={option.teamStats?.goalDifference ?? 0} compact />
+            <DetailStat label="Vitórias" value={option.teamStats?.wins ?? 0} compact />
+            <DetailStat label="Empates" value={option.teamStats?.draws ?? 0} compact />
+            <DetailStat label="Derrotas" value={option.teamStats?.losses ?? 0} compact />
           </div>
         </div>
       </div>
@@ -466,8 +475,8 @@ function OptionDetail({ option }: { option: SpecialOption }) {
 
   return (
     <div className="rounded-[1.5rem] border bg-surface-muted p-4 md:p-5">
-      <div className="grid gap-5 xl:grid-cols-[auto_minmax(0,1fr)] xl:items-start">
-        <div className="flex justify-center md:block">
+      <div className="grid gap-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
+        <div className="flex justify-center lg:block">
           <SpecialOptionSticker option={option} variant="feature" selected />
         </div>
         <div className="min-w-0">
@@ -481,14 +490,19 @@ function OptionDetail({ option }: { option: SpecialOption }) {
           <p className="mt-3 text-sm leading-6 text-muted">
             {playerInsight(option)}
           </p>
-          <div className="mt-5 grid grid-cols-2 gap-2 text-sm md:grid-cols-3">
-            <DetailStat label="Seleção" value={option.teamName} />
-            <DetailStat label="Idade" value={option.age ? `${option.age} anos` : "—"} />
-            <DetailStat label="Altura" value={option.heightCm ? `${option.heightCm} cm` : "—"} />
-            <DetailStat label="Gols seleção" value={option.goals ?? 0} />
-            <DetailStat label="Jogos seleção" value={option.caps ?? 0} />
-            <DetailStat label="Clube" value={option.club ?? "—"} />
-          </div>
+        </div>
+      </div>
+      <div className="mt-5 rounded-2xl border bg-surface p-3 md:p-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+          Dados do atleta
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-3 xl:grid-cols-6">
+          <DetailStat label="Seleção" value={option.teamName} compact />
+          <DetailStat label="Idade" value={option.age ? `${option.age} anos` : "—"} compact />
+          <DetailStat label="Altura" value={option.heightCm ? `${option.heightCm} cm` : "—"} compact />
+          <DetailStat label="Gols seleção" value={option.goals ?? 0} compact />
+          <DetailStat label="Jogos seleção" value={option.caps ?? 0} compact />
+          <DetailStat label="Clube" value={option.club ?? "—"} compact />
         </div>
       </div>
       <CurrentPlayerStats />
