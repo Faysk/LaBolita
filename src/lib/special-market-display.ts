@@ -30,7 +30,7 @@ export type SpecialMarketDisplay = {
 
 export const SPECIAL_LOCK_DATE_LABEL = "22 de junho";
 export const SPECIAL_LOCK_RATIONALE =
-  "Prazo pensado para dar tempo de participar sem esperar a terceira rodada, quando a Copa já começa a mostrar tendência demais.";
+  "Prazo pensado para dar tempo de participar antes que a Copa mostre tendências fortes demais.";
 
 type MarketProgressLike = {
   key: string;
@@ -158,7 +158,7 @@ export const SPECIAL_MARKET_DISPLAY: Record<string, SpecialMarketDisplay> = {
     pickLabel: "Meu vice",
     searchPlaceholder: "Buscar seleção",
     emptyDetail: "Escolha uma seleção para ver campanha atual.",
-    dataNote: "O resultado final é confirmado pelo admin após a decisão.",
+    dataNote: "Vale o vice oficial após a decisão.",
   },
   semifinalists: {
     key: "semifinalists",
@@ -191,7 +191,7 @@ export function specialMarketDisplay(marketKey: string) {
     pickLabel: "Minha escolha",
     searchPlaceholder: "Buscar opção",
     emptyDetail: "Escolha uma opção para ver os detalhes.",
-    dataNote: "Resultado corrigível pelo admin.",
+    dataNote: "Resultado final da categoria.",
   };
 }
 

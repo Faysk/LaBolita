@@ -110,6 +110,10 @@ nao sao reaproveitadas.
 
 ## Checklist antes de promover para producao
 
+Antes de qualquer PR para `main`, confirme se existe backup recente da producao.
+Se a mudanca tiver migration, RPC, regra de pontuacao ou alteracao de dados,
+rode o workflow `Supabase backup` manualmente e valide que o artifact foi gerado.
+
 ```bash
 git fetch origin
 npm run check

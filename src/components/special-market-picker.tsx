@@ -134,7 +134,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
 
   return (
     <div className="space-y-7">
-      <section className="card-dark overflow-hidden rounded-[2rem] p-5 text-white md:p-6 lg:p-7">
+      <section className="card-dark overflow-hidden rounded-[2rem] p-4 text-white md:p-5 lg:p-6">
         <Link
           href="/especiais"
           className="interactive inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/80"
@@ -144,9 +144,9 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
             Voltar aos especiais
           </LinkPendingLabel>
         </Link>
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)] lg:items-center">
+        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)] lg:items-center">
           <div className="flex flex-col justify-center py-1">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-accent">
+            <div className="inline-flex self-start items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-accent">
               <Icon className="size-4" />
               {display.eyebrow}
             </div>
@@ -220,7 +220,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
             {market.results.map((pick) => pick.label).join(", ")}
           </h2>
           <p className="mt-2 text-sm text-muted">
-            Resultado já confirmado pelo admin. Correções continuam auditadas.
+            Resultado confirmado. Se houver correção oficial, a pontuação pode ser atualizada.
           </p>
         </section>
       )}
@@ -629,7 +629,7 @@ function teamInsight(option: SpecialOption) {
   if (!stats || stats.played === 0) {
     return `${option.teamName} ainda começa sua campanha nesta Copa. Para especiais de ataque, defesa e caminho até a final, o valor está no potencial antes da tendência ficar clara.`;
   }
-  return `${option.teamName} soma ${stats.points} ponto(s), ${stats.goalsFor} gol(s) pró e ${stats.goalsAgainst} contra em ${stats.played} jogo(s). Esse recorte ajuda a ler ataque, defesa e força de campanha, mas o admin ainda pode corrigir o resultado final.`;
+  return `${option.teamName} soma ${stats.points} ponto(s), ${stats.goalsFor} gol(s) pró e ${stats.goalsAgainst} contra em ${stats.played} jogo(s). Esse recorte ajuda a ler ataque, defesa e força de campanha antes do resultado final.`;
 }
 
 function shortTeamInsight(option: SpecialOption) {

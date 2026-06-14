@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { CheckCircle2, Clock3, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
 import {
   SPECIAL_LOCK_DATE_LABEL,
-  SPECIAL_LOCK_RATIONALE,
 } from "@/lib/special-market-display";
 
 export const metadata: Metadata = {
@@ -127,13 +126,16 @@ export default function RulesPage() {
       </section>
 
       <section className="mt-6 card p-5 md:p-6">
-        <div className="flex items-start gap-3">
-          <span className="rounded-2xl bg-brand/10 p-2 text-brand">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
             <Sparkles className="size-5" />
           </span>
           <div>
             <p className="eyebrow">Extras</p>
             <h2 className="mt-1 text-2xl font-black">Palpites especiais</h2>
+          </div>
+        </div>
+        <div className="mt-4">
             <p className="mt-2 text-sm leading-6 text-muted">
               Artilheiro, assistências, Luva de Ouro, Bola de Ouro, campeão,
               vice, semifinalistas e seleções destaque têm pontuação própria e
@@ -145,15 +147,14 @@ export default function RulesPage() {
               escolha.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              {SPECIAL_LOCK_RATIONALE} A ideia é dar espaço para todos entrarem
-              na brincadeira, mas travar antes que artilharia, defesas e favoritos
-              fiquem óbvios demais.
+              O prazo foi escolhido para dar tempo de participar e, ao mesmo
+              tempo, fechar antes que a Copa mostre tendências fortes demais.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
               Nas categorias por jogador, se você errar o atleta exato mas
-              acertar a seleção dele, ainda pode ganhar pontos parciais. O
-              admin confirma os resultados finais e pode corrigir qualquer
-              divergência com histórico de auditoria.
+              acertar a seleção dele, ainda pode ganhar pontos parciais. Se
+              houver correção oficial de resultado, a pontuação pode ser
+              atualizada.
             </p>
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               {specialRules.map(([name, points, description]) => (
@@ -166,7 +167,6 @@ export default function RulesPage() {
                 </div>
               ))}
             </div>
-          </div>
         </div>
       </section>
     </main>
