@@ -490,6 +490,41 @@ function OptionDetail({ option }: { option: SpecialOption }) {
             <DetailStat label="Derrotas" value={option.teamStats?.losses ?? 0} compact />
           </div>
         </div>
+        <div className="mt-3 rounded-2xl border bg-surface p-3 md:p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+            Elenco oficial
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm md:grid-cols-4">
+            <DetailStat label="Grupo" value={option.groupName ?? "—"} compact />
+            <DetailStat
+              label="Artilheiro elenco"
+              value={
+                option.squadTopScorer && option.squadTopScorerGoals !== undefined
+                  ? `${option.squadTopScorer} · ${option.squadTopScorerGoals}`
+                  : "—"
+              }
+              compact
+            />
+            <DetailStat
+              label="Mais jogos"
+              value={
+                option.squadMostCapped && option.squadMostCappedCaps !== undefined
+                  ? `${option.squadMostCapped} · ${option.squadMostCappedCaps}`
+                  : "—"
+              }
+              compact
+            />
+            <DetailStat
+              label="Médias"
+              value={
+                option.squadAverageAge && option.squadAverageHeight
+                  ? `${option.squadAverageAge} anos · ${option.squadAverageHeight} cm`
+                  : "—"
+              }
+              compact
+            />
+          </div>
+        </div>
       </div>
     );
   }
@@ -596,17 +631,21 @@ function playerInsight(option: SpecialOption) {
   const role = option.position ? positionLabel(option.position).toLowerCase() : "jogador";
   const goals = option.goals ?? 0;
   const caps = option.caps ?? 0;
+  const height = option.heightCm ? `${option.heightCm} cm` : null;
   const shirt = option.number ? `camisa ${option.number}` : "nome do elenco";
-  const opening = `${capitalize(role)} da seleção ${option.teamName}, ${shirt}, chega com ${goals} gols em ${caps} jogos pela seleção.`;
+  const group = option.groupName ? ` no ${option.groupName}` : "";
+  const club = option.club ? ` Atua por ${option.club}.` : "";
+  const heightText = height ? ` Tem ${height}.` : "";
+  const opening = `${capitalize(role)} da seleção ${option.teamName}${group}, ${shirt}, chega com ${goals} gols em ${caps} jogos pela seleção.${club}${heightText}`;
 
   if (option.position === "GK") {
-    return `${opening} Para Luva de Ouro, altura, volume de jogos e uma campanha defensiva forte podem pesar bastante.`;
+    return `${opening} Para Luva de Ouro, minutagem, altura e uma campanha defensiva forte costumam pesar bastante.`;
   }
   if (option.position === "DF") {
-    return `${opening} É uma aposta de segurança e liderança: defensores crescem quando a seleção avança e sofre pouco.`;
+    return `${opening} É uma aposta de segurança e liderança: defensores ganham valor quando a seleção avança e sofre pouco.`;
   }
   if (option.position === "MF") {
-    return `${opening} É perfil de criação: boa escolha para assistências ou Bola de Ouro se a seleção dominar jogos grandes.`;
+    return `${opening} É perfil de criação: pode ser boa escolha para assistências ou Bola de Ouro se a seleção dominar jogos grandes.`;
   }
   if ((option.age ?? 0) >= 33) {
     return `${opening} A experiência pode pesar em jogo grande, principalmente se ele seguir protagonista até o mata-mata.`;
@@ -618,24 +657,42 @@ function shortPlayerInsight(option: SpecialOption) {
   if (!option.position) return shortTeamInsight(option);
   const goals = option.goals ?? 0;
   const caps = option.caps ?? 0;
+  const group = option.groupName ? `${option.groupName}. ` : "";
   if (option.position === "GK") {
-    return `${option.heightCm ?? "—"} cm, ${caps} jogos pela seleção. Boa leitura para Luva de Ouro.`;
+    return `${group}${option.heightCm ?? "—"} cm, ${caps} jogos pela seleção. Boa leitura para Luva de Ouro.`;
   }
-  return `${goals} gols e ${caps} jogos pela seleção. ${positionLabel(option.position)} com peso no palpite.`;
+  return `${group}${goals} gols e ${caps} jogos pela seleção. ${positionLabel(option.position)} com peso no palpite.`;
 }
 
 function teamInsight(option: SpecialOption) {
   const stats = option.teamStats;
+  const group = option.groupName ? `${option.groupName}. ` : "";
+  const squadContext = [
+    option.squadTopScorer && option.squadTopScorerGoals !== undefined
+      ? `Principal artilheiro do elenco: ${option.squadTopScorer}, ${option.squadTopScorerGoals} gols.`
+      : null,
+    option.squadMostCapped && option.squadMostCappedCaps !== undefined
+      ? `Mais experiente: ${option.squadMostCapped}, ${option.squadMostCappedCaps} jogos.`
+      : null,
+    option.squadAverageAge && option.squadAverageHeight
+      ? `Média do elenco: ${option.squadAverageAge} anos e ${option.squadAverageHeight} cm.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
   if (!stats || stats.played === 0) {
-    return `${option.teamName} ainda começa sua campanha nesta Copa. Para especiais de ataque, defesa e caminho até a final, o valor está no potencial antes da tendência ficar clara.`;
+    return `${group}${option.teamName} ainda começa sua campanha nesta Copa. ${squadContext} Para especiais de ataque, defesa e caminho até a final, o valor está no potencial antes da tendência ficar clara.`;
   }
-  return `${option.teamName} soma ${stats.points} ponto(s), ${stats.goalsFor} gol(s) pró e ${stats.goalsAgainst} contra em ${stats.played} jogo(s). Esse recorte ajuda a ler ataque, defesa e força de campanha antes do resultado final.`;
+  return `${group}${option.teamName} soma ${stats.points} ponto(s), ${stats.goalsFor} gol(s) pró e ${stats.goalsAgainst} contra em ${stats.played} jogo(s). ${squadContext} Esse recorte ajuda a ler ataque, defesa e força de campanha antes do resultado final.`;
 }
 
 function shortTeamInsight(option: SpecialOption) {
   const stats = option.teamStats;
-  if (!stats || stats.played === 0) return "Campanha a começar. Palpite baseado em potencial.";
-  return `${stats.goalsFor} gols pró, ${stats.goalsAgainst} contra e ${stats.points} ponto(s).`;
+  const group = option.groupName ? `${option.groupName}. ` : "";
+  if (!stats || stats.played === 0) {
+    return `${group}${option.squadTopScorer ? `${option.squadTopScorer} lidera o elenco em gols.` : "Campanha a começar."}`;
+  }
+  return `${group}${stats.goalsFor} gols pró, ${stats.goalsAgainst} contra e ${stats.points} ponto(s).`;
 }
 
 function visibleSpecialOptions(

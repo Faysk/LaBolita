@@ -1,4 +1,11 @@
-import { allPlayers, positionLabel, type SquadPosition } from "@/lib/squads";
+import scheduleData from "../../data/world-cup-2026.json";
+import {
+  allPlayers,
+  getSquadByCode,
+  positionLabel,
+  squadSummary,
+  type SquadPosition,
+} from "@/lib/squads";
 import type { DemoMatch, DemoTeam } from "@/lib/types";
 
 export type SpecialMarketValueType = "player" | "team" | "team_set";
@@ -15,6 +22,7 @@ export type SpecialOption = {
   teamCode: string;
   teamName: string;
   teamFlag?: string;
+  groupName?: string;
   position?: SquadPosition;
   number?: number;
   fullName?: string;
@@ -23,6 +31,12 @@ export type SpecialOption = {
   heightCm?: number;
   caps?: number;
   goals?: number;
+  squadTopScorer?: string;
+  squadTopScorerGoals?: number;
+  squadMostCapped?: string;
+  squadMostCappedCaps?: number;
+  squadAverageAge?: number;
+  squadAverageHeight?: number;
   teamStats?: SpecialTeamStats;
 };
 
@@ -60,15 +74,27 @@ export function buildSpecialOptions(
   if (source === "teams") {
     return teams
       .filter((team) => team.code)
-      .map((team) => ({
-        key: teamOptionKey(team),
-        label: team.name,
-        description: "Seleção",
-        teamId: team.id,
-        teamCode: team.code!,
-        teamName: team.name,
-        teamFlag: team.flag,
-      }))
+      .map((team) => {
+        const teamCode = team.code!;
+        const squad = getSquadByCode(teamCode);
+        const summary = squad ? squadSummary(squad) : null;
+        return {
+          key: teamOptionKey(team),
+          label: team.name,
+          description: teamOptionDescription(teamCode, summary),
+          teamId: team.id,
+          teamCode,
+          teamName: team.name,
+          teamFlag: team.flag,
+          groupName: groupNameForTeam(teamCode),
+          squadTopScorer: summary?.topScorer.name,
+          squadTopScorerGoals: summary?.topScorer.goals,
+          squadMostCapped: summary?.mostCapped.name,
+          squadMostCappedCaps: summary?.mostCapped.caps,
+          squadAverageAge: summary?.averageAge,
+          squadAverageHeight: summary?.averageHeight,
+        };
+      })
       .sort((left, right) => left.label.localeCompare(right.label, "pt-BR"));
   }
 
@@ -81,11 +107,18 @@ export function buildSpecialOptions(
     playerOptions.push({
       key: playerOptionKey(player.team.code, player.number, player.fullName),
       label: player.name,
-      description: `${databaseTeam.name} · ${positionLabel(player.position)}`,
+      description: playerOptionDescription({
+        teamName: databaseTeam.name,
+        teamCode: player.team.code,
+        position: player.position,
+        caps: player.caps,
+        goals: player.goals,
+      }),
       teamId: databaseTeam.id,
       teamCode: databaseTeam.code,
       teamName: databaseTeam.name,
       teamFlag: databaseTeam.flag,
+      groupName: groupNameForTeam(player.team.code),
       position: player.position,
       number: player.number,
       fullName: player.fullName,
@@ -322,4 +355,50 @@ function specialOptionScore(marketKey: string, option: SpecialOption) {
     return (stats.played > 0 ? 100 : 0) - stats.goalsAgainst * 14 + stats.points * 2;
   }
   return stats.points * 12 + stats.goalDifference * 4 + stats.goalsFor * 2;
+}
+
+type ScheduleDataset = {
+  teams: Array<{
+    code: string;
+    group?: string;
+  }>;
+};
+
+type SquadSummary = ReturnType<typeof squadSummary> | null;
+
+const scheduleTeams = (scheduleData as ScheduleDataset).teams;
+
+function groupNameForTeam(code?: string | null) {
+  const group = scheduleTeams.find((team) => team.code === code?.toUpperCase())?.group;
+  return group ? `Grupo ${group}` : undefined;
+}
+
+function teamOptionDescription(teamCode: string, summary: SquadSummary) {
+  const group = groupNameForTeam(teamCode);
+  if (!summary) return [group, "Seleção"].filter(Boolean).join(" · ");
+  return [
+    group,
+    "26 atletas",
+    `referência: ${summary.topScorer.name}, ${summary.topScorer.goals} gols`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function playerOptionDescription(input: {
+  teamName: string;
+  teamCode: string;
+  position: SquadPosition;
+  caps: number;
+  goals: number;
+}) {
+  return [
+    input.teamName,
+    groupNameForTeam(input.teamCode),
+    positionLabel(input.position),
+    `${input.caps} jogos`,
+    `${input.goals} gols`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }

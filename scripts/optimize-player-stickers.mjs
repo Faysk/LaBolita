@@ -14,10 +14,13 @@ const WEBP_QUALITY = 80;
 const MANUAL_ALIASES = new Map([
   ["aymen", { teamCode: "IRQ", number: 18 }],
   ["e-valencia", { teamCode: "ECU", number: 13 }],
+  ["james", { teamCode: "COL", number: 10 }],
   ["j-david", { teamCode: "CAN", number: 10 }],
+  ["larin", { teamCode: "CAN", number: 9 }],
   ["l-martinez", { teamCode: "ARG", number: 22 }],
   ["m-salah", { teamCode: "EGY", number: 10 }],
   ["mane", { teamCode: "SEN", number: 10 }],
+  ["modric", { teamCode: "CRO", number: 10 }],
   ["pulisic", { teamCode: "USA", number: 10 }],
   ["raul", { teamCode: "MEX", number: 9 }],
   ["wood", { teamCode: "NZL", number: 9 }],

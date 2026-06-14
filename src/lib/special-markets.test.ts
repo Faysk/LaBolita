@@ -37,7 +37,28 @@ describe("special markets", () => {
     expect(options.every((option) => option.teamId === "team-mex" || option.teamId === "team-rsa")).toBe(true);
     expect(options.find((option) => option.teamCode === "MEX")).toMatchObject({
       teamFlag: "🇲🇽",
+      groupName: "Grupo A",
     });
+    expect(options.find((option) => option.teamCode === "MEX")?.description).toContain("Grupo A");
+    expect(options.find((option) => option.teamCode === "MEX")?.description).toContain("jogos");
+    expect(options.find((option) => option.teamCode === "MEX")?.description).toContain("gols");
+  });
+
+  it("builds team options with official squad context", () => {
+    const options = buildSpecialOptions(teams, "teams");
+    const mexico = options.find((option) => option.teamCode === "MEX");
+
+    expect(mexico).toMatchObject({
+      groupName: "Grupo A",
+      squadTopScorer: expect.any(String),
+      squadTopScorerGoals: expect.any(Number),
+      squadMostCapped: expect.any(String),
+      squadMostCappedCaps: expect.any(Number),
+      squadAverageAge: expect.any(Number),
+      squadAverageHeight: expect.any(Number),
+    });
+    expect(mexico?.description).toContain("Grupo A");
+    expect(mexico?.description).toContain("26 atletas");
   });
 
   it("highlights candidates with useful player context first", () => {
