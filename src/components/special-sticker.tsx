@@ -77,7 +77,7 @@ export function SpecialOptionAvatar({
   size?: "sm" | "md" | "lg";
 }) {
   if (!option.position) {
-    return <TeamFlag team={teamFromSpecialOption(option)} size={size === "lg" ? "lg" : size} />;
+    return <TeamFlagAvatar option={option} size={size} />;
   }
 
   const asset = playerStickerAsset(option.key);
@@ -253,12 +253,27 @@ function TeamSticker({
   const palette = teamPalette(option.teamCode);
   const compact = variant === "avatar" || variant === "thumb";
   const sizeClass = {
-    avatar: "h-14 w-12 rounded-[0.9rem]",
+    avatar: "h-16 w-14 rounded-[0.95rem]",
     thumb: "h-28 w-24 rounded-[1.15rem]",
     card: "h-44 w-32 rounded-[1.25rem]",
     feature: "h-72 w-56 rounded-[1.8rem]",
   }[variant];
   const footerTextSize = variant === "feature" ? "text-base" : "text-xs";
+  const flagSize =
+    variant === "feature"
+      ? "xl"
+      : variant === "card" || variant === "thumb"
+        ? "lg"
+        : "sm";
+  const flagFrameClass = {
+    avatar: "rounded-xl p-1",
+    thumb: "rounded-[1.15rem] p-1.5",
+    card: "rounded-[1.35rem] p-2",
+    feature: "rounded-[1.65rem] p-3",
+  }[variant];
+  const bodyClass = compact
+    ? "relative flex flex-1 items-center justify-center px-2 pb-7 pt-5"
+    : "relative flex flex-1 items-center justify-center px-3 pb-2 pt-9";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
@@ -275,20 +290,25 @@ function TeamSticker({
       title={option.teamName}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(255,255,255,0.42),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.16),transparent_45%)]" />
-      <span className="absolute left-2 top-2 rounded-full border border-white/25 bg-black/24 px-2 py-0.5 text-[10px] font-black leading-none text-white/90">
+      <span className="absolute left-2 top-2 z-10 rounded-full border border-white/25 bg-black/24 px-2 py-0.5 text-[10px] font-black leading-none text-white/90">
         26
       </span>
-      <span className="relative flex flex-1 items-center justify-center px-3">
-        <span className="rounded-[1.2rem] border border-white/45 bg-white/90 p-2 shadow-lg">
-          <TeamFlag team={teamFromSpecialOption(option)} size={variant === "feature" ? "lg" : "md"} />
+      <span className={bodyClass}>
+        <span
+          className={`relative z-10 inline-flex items-center justify-center border border-white/55 bg-white/92 shadow-xl shadow-black/20 ${flagFrameClass}`}
+        >
+          <span className="absolute inset-1 rounded-[inherit] bg-[linear-gradient(145deg,rgba(255,255,255,0.85),rgba(255,255,255,0.32))]" />
+          <span className="relative">
+            <TeamFlag team={teamFromSpecialOption(option)} size={flagSize} />
+          </span>
         </span>
       </span>
       {compact ? (
-        <span className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-center rounded-xl border border-white/20 bg-black/35 px-1.5 py-1 text-white shadow-sm backdrop-blur">
+        <span className="absolute bottom-1.5 left-1.5 right-1.5 z-20 flex items-center justify-center rounded-xl border border-white/20 bg-black/35 px-1.5 py-1 text-white shadow-sm backdrop-blur">
           <span className="text-[10px] font-black leading-none">{option.teamCode}</span>
         </span>
       ) : (
-        <span className="relative grid min-h-16 gap-1 border-t border-white/25 bg-black/32 px-2.5 py-2.5 text-white">
+        <span className="relative z-20 grid min-h-16 gap-1 border-t border-white/25 bg-black/32 px-2.5 py-2.5 text-white">
           <span className={`line-clamp-1 font-black leading-none ${footerTextSize}`}>
             {option.teamName}
           </span>
@@ -297,6 +317,38 @@ function TeamSticker({
           </span>
         </span>
       )}
+    </span>
+  );
+}
+
+function TeamFlagAvatar({
+  option,
+  size,
+}: {
+  option: SpecialOption;
+  size: "sm" | "md" | "lg";
+}) {
+  const palette = teamPalette(option.teamCode);
+  const dimensions =
+    size === "sm"
+      ? "h-9 w-12 rounded-xl p-1"
+      : size === "md"
+        ? "h-11 w-16 rounded-2xl p-1.5"
+        : "h-14 w-20 rounded-[1.1rem] p-1.5";
+  const flagSize = size === "lg" ? "lg" : size === "md" ? "md" : "sm";
+
+  return (
+    <span
+      className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden border border-white/25 shadow-lg shadow-black/10 ${dimensions}`}
+      style={{
+        background: `linear-gradient(145deg, ${palette.primary}, ${palette.secondary})`,
+      }}
+      title={option.teamName}
+    >
+      <span className="absolute inset-0 bg-[radial-gradient(circle_at_25%_18%,rgba(255,255,255,0.36),transparent_34%)]" />
+      <span className="relative rounded-xl border border-white/50 bg-white/90 p-1 shadow-md">
+        <TeamFlag team={teamFromSpecialOption(option)} size={flagSize} />
+      </span>
     </span>
   );
 }

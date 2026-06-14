@@ -8,7 +8,7 @@ export function TeamFlag({
   size = "md",
 }: {
   team: DemoTeam;
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 }) {
   const source = flagSource(team);
   const [failedSource, setFailedSource] = useState<string | null>(null);
@@ -20,6 +20,8 @@ export function TeamFlag({
       ? "h-5 w-7 rounded-md"
       : size === "lg"
         ? "h-10 w-14 rounded-xl"
+        : size === "xl"
+          ? "h-16 w-24 rounded-2xl"
         : "h-7 w-10 rounded-lg";
   const fallbackClass =
     size === "xs"
@@ -28,6 +30,8 @@ export function TeamFlag({
         ? "text-[8px]"
         : size === "lg"
           ? "text-xs"
+          : size === "xl"
+            ? "text-base"
           : "text-[10px]";
 
   return (
