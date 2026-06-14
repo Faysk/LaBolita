@@ -29,6 +29,7 @@ import {
   specialMarketDisplay,
 } from "@/lib/special-market-display";
 import { playerDetailInsight } from "@/lib/player-insights";
+import { teamDetailInsight } from "@/lib/team-insights";
 import type { SpecialMarketView } from "@/lib/data/specials";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
@@ -235,7 +236,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           <div className="mt-4 grid gap-3">
             {selectedOptions.length > 0 ? (
               selectedOptions.map((option) => (
-                <OptionDetail key={option.key} option={option} />
+                <OptionDetail key={option.key} marketKey={market.key} option={option} />
               ))
             ) : (
               <p className="rounded-2xl border bg-surface-muted p-4 text-sm leading-6 text-muted">
@@ -458,7 +459,13 @@ function SelectedOptionRow({
   );
 }
 
-function OptionDetail({ option }: { option: SpecialOption }) {
+function OptionDetail({
+  marketKey,
+  option,
+}: {
+  marketKey: string;
+  option: SpecialOption;
+}) {
   if (!option.position) {
     return (
       <div className="rounded-[1.5rem] border bg-surface-muted p-4 md:p-5">
@@ -472,7 +479,7 @@ function OptionDetail({ option }: { option: SpecialOption }) {
             </p>
             <h3 className="mt-1 text-2xl font-black md:text-3xl">{option.teamName}</h3>
             <p className="mt-3 text-sm leading-6 text-muted">
-              {teamInsight(option)}
+              {teamDetailInsight(option, marketKey)}
             </p>
           </div>
         </div>
@@ -637,28 +644,6 @@ function shortPlayerInsight(option: SpecialOption) {
     return `${group}${option.heightCm ?? "—"} cm, ${caps} jogos pela seleção. Boa leitura para Luva de Ouro.`;
   }
   return `${group}${goals} gols e ${caps} jogos pela seleção. ${positionLabel(option.position)} com peso no palpite.`;
-}
-
-function teamInsight(option: SpecialOption) {
-  const stats = option.teamStats;
-  const group = option.groupName ? `${option.groupName}. ` : "";
-  const squadContext = [
-    option.squadTopScorer && option.squadTopScorerGoals !== undefined
-      ? `Principal artilheiro do elenco: ${option.squadTopScorer}, ${option.squadTopScorerGoals} gols.`
-      : null,
-    option.squadMostCapped && option.squadMostCappedCaps !== undefined
-      ? `Mais experiente: ${option.squadMostCapped}, ${option.squadMostCappedCaps} jogos.`
-      : null,
-    option.squadAverageAge && option.squadAverageHeight
-      ? `Média do elenco: ${option.squadAverageAge} anos e ${option.squadAverageHeight} cm.`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  if (!stats || stats.played === 0) {
-    return `${group}${option.teamName} ainda começa sua campanha nesta Copa. ${squadContext} Para especiais de ataque, defesa e caminho até a final, o valor está no potencial antes da tendência ficar clara.`;
-  }
-  return `${group}${option.teamName} soma ${stats.points} ponto(s), ${stats.goalsFor} gol(s) pró e ${stats.goalsAgainst} contra em ${stats.played} jogo(s). ${squadContext} Esse recorte ajuda a ler ataque, defesa e força de campanha antes do resultado final.`;
 }
 
 function shortTeamInsight(option: SpecialOption) {
