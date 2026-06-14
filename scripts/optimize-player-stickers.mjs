@@ -23,6 +23,9 @@ const MANUAL_ALIASES = new Map([
   ["modric", { teamCode: "CRO", number: 10 }],
   ["pulisic", { teamCode: "USA", number: 10 }],
   ["raul", { teamCode: "MEX", number: 9 }],
+  ["ryan", { teamCode: "CPV", number: 20 }],
+  ["sarr", { teamCode: "SEN", number: 18 }],
+  ["sorloth", { teamCode: "NOR", number: 7 }],
   ["wood", { teamCode: "NZL", number: 9 }],
 ]);
 
