@@ -469,8 +469,8 @@ function OptionDetail({
   if (!option.position) {
     return (
       <div className="rounded-[1.5rem] border bg-surface-muted p-4 md:p-5">
-        <div className="grid gap-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
-          <div className="flex justify-center lg:block">
+        <div className="grid gap-5 lg:grid-cols-[minmax(18rem,34rem)_minmax(0,1fr)] lg:items-center">
+          <div className="w-full">
             <SpecialOptionSticker option={option} variant="feature" />
           </div>
           <div className="min-w-0">

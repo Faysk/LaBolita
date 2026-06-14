@@ -251,35 +251,32 @@ function TeamSticker({
   selected: boolean;
 }) {
   const palette = teamPalette(option.teamCode);
-  const compact = variant === "avatar" || variant === "thumb";
-  const sizeClass = {
-    avatar: "h-16 w-14 rounded-[0.95rem]",
-    thumb: "h-28 w-24 rounded-[1.15rem]",
-    card: "h-44 w-32 rounded-[1.25rem]",
-    feature: "h-72 w-56 rounded-[1.8rem]",
-  }[variant];
-  const footerTextSize = variant === "feature" ? "text-base" : "text-xs";
-  const flagSize =
-    variant === "feature"
-      ? "xl"
-      : variant === "card" || variant === "thumb"
-        ? "lg"
-        : "sm";
-  const flagFrameClass = {
-    avatar: "rounded-xl p-1",
-    thumb: "rounded-[1.15rem] p-1.5",
-    card: "rounded-[1.35rem] p-2",
-    feature: "rounded-[1.65rem] p-3",
-  }[variant];
-  const bodyClass = compact
-    ? "relative flex flex-1 items-center justify-center px-2 pb-7 pt-5"
-    : "relative flex flex-1 items-center justify-center px-3 pb-2 pt-9";
   const style = {
     "--sticker-primary": palette.primary,
     "--sticker-secondary": palette.secondary,
     "--sticker-accent": palette.accent,
     "--sticker-text": palette.text,
   } as CSSProperties;
+
+  if (variant === "feature") {
+    return <TeamFeatureSticker option={option} selected={selected} style={style} />;
+  }
+
+  const compact = variant === "avatar" || variant === "thumb";
+  const sizeClass = {
+    avatar: "h-16 w-14 rounded-[0.95rem]",
+    thumb: "h-28 w-24 rounded-[1.15rem]",
+    card: "h-44 w-32 rounded-[1.25rem]",
+  }[variant];
+  const flagSize = variant === "card" ? "xl" : variant === "thumb" ? "lg" : "sm";
+  const flagFrameClass = {
+    avatar: "rounded-xl p-1",
+    thumb: "rounded-[1.15rem] p-1.5",
+    card: "rounded-[1.35rem] p-1.5",
+  }[variant];
+  const bodyClass = compact
+    ? "relative flex flex-1 items-center justify-center px-2 pb-7 pt-5"
+    : "relative flex flex-1 items-center justify-center px-3 pb-2 pt-9";
 
   return (
     <span
@@ -309,14 +306,48 @@ function TeamSticker({
         </span>
       ) : (
         <span className="relative z-20 grid min-h-16 gap-1 border-t border-white/25 bg-black/32 px-2.5 py-2.5 text-white">
-          <span className={`line-clamp-1 font-black leading-none ${footerTextSize}`}>
-            {option.teamName}
-          </span>
+          <span className="line-clamp-1 text-xs font-black leading-none">{option.teamName}</span>
           <span className="line-clamp-1 text-[9px] font-bold text-white/75">
             {teamStatsLine(option)}
           </span>
         </span>
       )}
+    </span>
+  );
+}
+
+function TeamFeatureSticker({
+  option,
+  selected,
+  style,
+}: {
+  option: SpecialOption;
+  selected: boolean;
+  style: CSSProperties;
+}) {
+  return (
+    <span
+      className={`relative inline-grid w-full max-w-[34rem] overflow-hidden rounded-[1.8rem] border border-white/25 bg-[linear-gradient(145deg,var(--sticker-primary),var(--sticker-secondary))] shadow-xl shadow-black/15 ${
+        selected ? "ring-2 ring-accent" : ""
+      }`}
+      style={style}
+      title={option.teamName}
+    >
+      <span className="absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(255,255,255,0.32),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.14),transparent_48%)]" />
+      <span className="absolute left-4 top-4 z-20 rounded-full border border-white/35 bg-black/25 px-2.5 py-1 text-xs font-black leading-none text-white/90 shadow-sm">
+        26
+      </span>
+      <span className="relative z-10 block p-3 pb-0 sm:p-4 sm:pb-0">
+        <span className="block overflow-hidden rounded-[1.35rem] border border-white/35 bg-white/10 shadow-xl shadow-black/20">
+          <span className="block aspect-[16/10] w-full">
+            <TeamFlag team={teamFromSpecialOption(option)} size="hero" />
+          </span>
+        </span>
+      </span>
+      <span className="relative z-20 flex min-h-20 flex-col justify-center gap-1 border-t border-white/25 bg-black/38 px-5 py-4 text-white sm:flex-row sm:items-end sm:justify-between">
+        <span className="text-xl font-black leading-tight">{option.teamName}</span>
+        <span className="text-sm font-bold text-white/80">{teamStatsLine(option)}</span>
+      </span>
     </span>
   );
 }
