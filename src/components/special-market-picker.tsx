@@ -28,6 +28,7 @@ import {
   SPECIAL_LOCK_DATE_LABEL,
   specialMarketDisplay,
 } from "@/lib/special-market-display";
+import { playerDetailInsight } from "@/lib/player-insights";
 import type { SpecialMarketView } from "@/lib/data/specials";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
@@ -544,7 +545,7 @@ function OptionDetail({ option }: { option: SpecialOption }) {
           </h3>
           <p className="mt-1 text-sm font-bold text-muted">{option.club}</p>
           <p className="mt-3 text-sm leading-6 text-muted">
-            {playerInsight(option)}
+            {playerDetailInsight(option)}
           </p>
         </div>
       </div>
@@ -625,32 +626,6 @@ function Chip({ children }: { children: ReactNode }) {
       {children}
     </span>
   );
-}
-
-function playerInsight(option: SpecialOption) {
-  const role = option.position ? positionLabel(option.position).toLowerCase() : "jogador";
-  const goals = option.goals ?? 0;
-  const caps = option.caps ?? 0;
-  const height = option.heightCm ? `${option.heightCm} cm` : null;
-  const shirt = option.number ? `camisa ${option.number}` : "nome do elenco";
-  const group = option.groupName ? ` no ${option.groupName}` : "";
-  const club = option.club ? ` Atua por ${option.club}.` : "";
-  const heightText = height ? ` Tem ${height}.` : "";
-  const opening = `${capitalize(role)} da seleção ${option.teamName}${group}, ${shirt}, chega com ${goals} gols em ${caps} jogos pela seleção.${club}${heightText}`;
-
-  if (option.position === "GK") {
-    return `${opening} Para Luva de Ouro, minutagem, altura e uma campanha defensiva forte costumam pesar bastante.`;
-  }
-  if (option.position === "DF") {
-    return `${opening} É uma aposta de segurança e liderança: defensores ganham valor quando a seleção avança e sofre pouco.`;
-  }
-  if (option.position === "MF") {
-    return `${opening} É perfil de criação: pode ser boa escolha para assistências ou Bola de Ouro se a seleção dominar jogos grandes.`;
-  }
-  if ((option.age ?? 0) >= 33) {
-    return `${opening} A experiência pode pesar em jogo grande, principalmente se ele seguir protagonista até o mata-mata.`;
-  }
-  return `${opening} Perfil de finalizador: quanto mais longe a seleção for, maior a chance de transformar volume em artilharia.`;
 }
 
 function shortPlayerInsight(option: SpecialOption) {
@@ -741,8 +716,4 @@ function normalizeSearch(value: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-}
-
-function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
