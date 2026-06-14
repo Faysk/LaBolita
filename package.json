@@ -32,7 +32,8 @@
     "schedule:import": "node --env-file=.env.local scripts/import-schedule.mjs",
     "results:smoke:remote": "node --env-file=.env.local scripts/test-results-route.mjs",
     "results:smoke:fallback": "node --env-file=.env.local scripts/test-results-fallback.mjs",
-    "stickers:optimize": "node scripts/optimize-player-stickers.mjs"
+    "stickers:optimize": "node scripts/optimize-player-stickers.mjs",
+    "stickers:album": "node scripts/generate-sticker-album.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",

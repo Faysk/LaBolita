@@ -86,6 +86,7 @@ docs/                documentacao de produto, operacao e roadmap
 - [Arquitetura](docs/ARCHITECTURE.md)
 - [Ambiente de homologacao](docs/HOMOLOGATION_ENVIRONMENT.md)
 - [Backups](docs/DATABASE_BACKUPS.md)
+- [Album de figurinhas](docs/STICKER_ALBUM.md)
 - [Roadmap](docs/ROADMAP.md)
 
 ## Principios

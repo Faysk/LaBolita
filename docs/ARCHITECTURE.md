@@ -30,3 +30,7 @@ recebe apenas o que passou por validacao funcional, visual e operacional.
 As bandeiras ficam em `public/flags/`. As figurinhas de jogadores ficam em
 `public/stickers/players/` em formato otimizado. Quando uma figurinha ainda nao
 existe, o app usa uma arte gerada por componente para manter a tela completa.
+
+As artes brutas das figurinhas ficam fora do repositorio. Para publicar novas
+artes, use `npm run stickers:optimize` e depois `npm run stickers:album`. O album
+em `docs/STICKER_ALBUM.md` lista apenas as imagens otimizadas que entram no app.

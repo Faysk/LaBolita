@@ -146,8 +146,8 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
             Voltar aos especiais
           </LinkPendingLabel>
         </Link>
-        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)] lg:items-center">
-          <div className="flex flex-col justify-center py-1">
+        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)] lg:items-start">
+          <div className="flex flex-col pt-1 lg:pt-2">
             <div className="inline-flex self-start items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-accent">
               <Icon className="size-4" />
               {display.eyebrow}
@@ -159,7 +159,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               {display.teaser} Você pode alterar até {SPECIAL_LOCK_DATE_LABEL}.
             </p>
           </div>
-          <div className="flex flex-col rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10 md:p-5">
+          <div className="flex flex-col self-start rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10 md:p-5">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-black uppercase tracking-[0.14em] text-white/55">
                 {display.pickLabel}

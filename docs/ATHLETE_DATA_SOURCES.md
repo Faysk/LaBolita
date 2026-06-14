@@ -18,6 +18,8 @@ LaBolita usa elencos e dados de apoio para enriquecer os palpites especiais.
 - Eventos desta Copa entram apenas quando houver fonte confiavel.
 - Quando o dado nao existe, a interface evita inventar estatistica.
 - Figurinhas novas podem ser adicionadas aos poucos sem quebrar a experiencia.
+- O repositorio guarda apenas as figurinhas otimizadas para web; artes brutas e
+  arquivos de trabalho ficam fora do Git.
 
 ## Objetivo
 
