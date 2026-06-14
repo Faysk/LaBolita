@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import type { CSSProperties } from "react";
 import { TeamFlag } from "@/components/team-flag";
+import { playerStickerAsset, type PlayerStickerAsset } from "@/lib/player-sticker-assets";
 import type { SpecialOption } from "@/lib/special-markets";
 import type { DemoTeam } from "@/lib/types";
 
@@ -78,6 +80,7 @@ export function SpecialOptionAvatar({
     return <TeamFlag team={teamFromSpecialOption(option)} size={size === "lg" ? "lg" : size} />;
   }
 
+  const asset = playerStickerAsset(option.key);
   const dimensions =
     size === "sm"
       ? "size-10 rounded-xl"
@@ -85,6 +88,24 @@ export function SpecialOptionAvatar({
         ? "size-12 rounded-2xl"
         : "size-16 rounded-[1.25rem]";
   const flagSize = size === "lg" ? "sm" : "xs";
+
+  if (asset) {
+    return (
+      <span
+        className={`relative inline-flex shrink-0 overflow-hidden border border-white/20 bg-surface-muted shadow-lg shadow-black/10 ${dimensions}`}
+        title={option.fullName ?? option.label}
+      >
+        <Image
+          src={asset.src}
+          width={asset.width}
+          height={asset.height}
+          alt={`Figurinha autoral de ${option.label}`}
+          className="h-full w-full object-cover"
+          sizes={size === "lg" ? "64px" : size === "md" ? "48px" : "40px"}
+        />
+      </span>
+    );
+  }
 
   return (
     <span
@@ -118,6 +139,18 @@ function PlayerSticker({
   variant: StickerVariant;
   selected: boolean;
 }) {
+  const asset = playerStickerAsset(option.key);
+  if (asset) {
+    return (
+      <PlayerImageSticker
+        option={option}
+        asset={asset}
+        variant={variant}
+        selected={selected}
+      />
+    );
+  }
+
   const palette = teamPalette(option.teamCode);
   const sizeClass = {
     avatar: "w-12 rounded-[0.9rem]",
@@ -160,6 +193,50 @@ function PlayerSticker({
       <span className="absolute bottom-[5%] right-[5%] z-20 rounded-md bg-white shadow-sm">
         <TeamFlag team={teamFromSpecialOption(option)} size={flagSize} />
       </span>
+    </span>
+  );
+}
+
+function PlayerImageSticker({
+  option,
+  asset,
+  variant,
+  selected,
+}: {
+  option: SpecialOption;
+  asset: PlayerStickerAsset;
+  variant: StickerVariant;
+  selected: boolean;
+}) {
+  const sizeClass = {
+    avatar: "w-12 rounded-[0.9rem]",
+    thumb: "w-24 rounded-[1.15rem]",
+    card: "w-32 rounded-[1.25rem]",
+    feature: "w-56 rounded-[1.8rem]",
+  }[variant];
+  const sizes = {
+    avatar: "48px",
+    thumb: "96px",
+    card: "128px",
+    feature: "(max-width: 768px) 48vw, 224px",
+  }[variant];
+
+  return (
+    <span
+      className={`relative inline-flex aspect-[2/3] shrink-0 overflow-hidden border border-white/25 bg-surface-muted shadow-xl shadow-black/15 ${sizeClass} ${
+        selected ? "ring-2 ring-accent" : ""
+      }`}
+      title={option.fullName ?? option.label}
+    >
+      <Image
+        src={asset.src}
+        width={asset.width}
+        height={asset.height}
+        alt={`Figurinha autoral de ${option.label}`}
+        className="h-full w-full object-cover"
+        sizes={sizes}
+        priority={variant === "feature"}
+      />
     </span>
   );
 }

@@ -31,7 +31,8 @@
     "schedule:verify:sources": "node scripts/verify-schedule-sources.mjs",
     "schedule:import": "node --env-file=.env.local scripts/import-schedule.mjs",
     "results:smoke:remote": "node --env-file=.env.local scripts/test-results-route.mjs",
-    "results:smoke:fallback": "node --env-file=.env.local scripts/test-results-fallback.mjs"
+    "results:smoke:fallback": "node --env-file=.env.local scripts/test-results-fallback.mjs",
+    "stickers:optimize": "node scripts/optimize-player-stickers.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -53,6 +54,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "playwright-core": "^1.60.0",
+    "sharp": "0.34.5",
     "supabase": "^2.105.0",
     "tailwindcss": "^4",
     "typescript": "^5",
