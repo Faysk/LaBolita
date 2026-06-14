@@ -264,15 +264,14 @@ function TeamSticker({
 
   const compact = variant === "avatar" || variant === "thumb";
   const sizeClass = {
-    avatar: "h-14 w-16 rounded-[0.95rem]",
-    thumb: "h-24 w-28 rounded-[1.15rem]",
-    card: "h-40 w-36 rounded-[1.25rem]",
+    avatar: "h-14 w-20 rounded-[0.95rem]",
+    thumb: "h-24 w-32 rounded-[1.15rem]",
+    card: "h-40 w-40 rounded-[1.25rem]",
   }[variant];
-  const flagSize = variant === "avatar" ? "md" : "xl";
-  const flagFrameClass = {
-    avatar: "rounded-xl p-1.5",
-    thumb: "rounded-[1.15rem] p-1.5",
-    card: "rounded-[1.35rem] p-2",
+  const flagContainerClass = {
+    avatar: "aspect-[16/10] w-[4.6rem] rounded-xl",
+    thumb: "aspect-[16/10] w-[7.2rem] rounded-[1.15rem]",
+    card: "aspect-[16/10] w-[8.6rem] rounded-[1.35rem]",
   }[variant];
   const bodyClass = compact
     ? "relative flex flex-1 items-center justify-center p-2"
@@ -289,11 +288,11 @@ function TeamSticker({
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(255,255,255,0.42),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.16),transparent_45%)]" />
       <span className={bodyClass}>
         <span
-          className={`relative z-10 inline-flex items-center justify-center border border-white/55 bg-white/92 shadow-xl shadow-black/20 ${flagFrameClass}`}
+          className={`relative z-10 block overflow-hidden border border-white/40 shadow-xl shadow-black/20 ${flagContainerClass}`}
         >
-          <span className="absolute inset-1 rounded-[inherit] bg-[linear-gradient(145deg,rgba(255,255,255,0.85),rgba(255,255,255,0.32))]" />
-          <span className="relative">
-            <TeamFlag team={teamFromSpecialOption(option)} size={flagSize} />
+          <span className="absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(255,255,255,0.22),transparent_36%)]" />
+          <span className="relative block h-full w-full">
+            <TeamFlag team={teamFromSpecialOption(option)} size="hero" />
           </span>
         </span>
       </span>
