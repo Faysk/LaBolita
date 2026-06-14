@@ -342,8 +342,8 @@ function OptionCard({
 }) {
   const highlight = density === "highlight";
   const layoutClass = highlight
-    ? "min-h-24 grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-4 p-3"
-    : "min-h-32 grid-cols-[9rem_minmax(0,1fr)] gap-5 p-3 pr-10 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:pr-3";
+    ? "min-h-24 grid-cols-[auto_minmax(0,1fr)_auto] gap-3 p-3"
+    : "min-h-32 grid-cols-[auto_minmax(0,1fr)] gap-4 p-3 pr-10 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:pr-3";
 
   return (
     <button
@@ -407,7 +407,7 @@ function SelectedOptionRow({
 }) {
   if (featured) {
     return (
-      <div className="relative grid gap-4 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
+      <div className="relative grid gap-3 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
         <SpecialOptionSticker option={option} variant="card" selected />
         <div className="min-w-0">
           <p className="text-lg font-black leading-tight">{option.label}</p>

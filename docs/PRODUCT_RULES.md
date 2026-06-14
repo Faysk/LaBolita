@@ -1,78 +1,75 @@
-# Regras do LaBolita
+# Regras Do Produto
 
-## Palpites
+Este documento descreve as regras visiveis para jogadores e administradores do
+LaBolita.
 
-- Cada usuário possui um palpite universal por partida.
-- O mesmo palpite vale em todos os bolões dos quais o usuário participa.
-- O palpite pode ser criado ou alterado até `prediction_lock_at`.
-- O horário do PostgreSQL decide o bloqueio; o relógio do navegador não vale.
-- Palpites de outros participantes só ficam visíveis depois do bloqueio.
-- O placar considerado é o resultado após prorrogação, sem cobranças de pênaltis.
-- Na fase de grupos não existe disputa por pênaltis; partidas podem terminar empatadas.
-- No mata-mata, quem avança ou vence é informado separadamente.
-- Os participantes da fase de 32 são atribuídos pelo administrador após a
-  classificação oficial. Vencedores e perdedores das fases seguintes são
-  propagados automaticamente.
+## Palpites De Partidas
 
-## Pontuação base
+- Cada partida aceita um placar por usuario.
+- O mesmo palpite vale para todos os boloes em que a pessoa participa.
+- O palpite pode ser alterado ate o horario de bloqueio da partida.
+- Depois do bloqueio, o palpite fica somente para consulta.
+- Palpites de outras pessoas aparecem apenas quando a partida ja nao permite
+  alteracao.
 
-Somente a melhor categoria é aplicada:
+## Pontuacao Por Partida
 
-| Categoria | Pontos | Condição |
-| --- | ---: | --- |
-| Placar exato | 10 | Gols das duas seleções corretos |
-| Resultado refinado | 7 | Vencedor correto e saldo correto ou gols de uma seleção corretos |
-| Resultado correto | 5 | Vitória, derrota ou empate corretos |
-| Um placar correto | 2 | Gols de uma seleção corretos, mas resultado errado |
-| Erro | 0 | Nenhuma condição atendida |
+- Placar exato: 10 pontos.
+- Resultado refinado: 7 pontos.
+- Resultado correto: 5 pontos.
+- Gol de uma selecao: 2 pontos.
+- Errou tudo: 0 ponto.
 
-Empate não exato vale 5 pontos. Saldo zero não transforma automaticamente um
-empate em resultado refinado.
+Os pesos de fase aumentam a emocao no mata-mata. O app mostra a regra de cada
+fase na tela de regras.
 
-## Multiplicadores
+## Boloes
 
-| Fase | Multiplicador |
-| --- | ---: |
-| Grupos | x1 |
-| Fase de 32 | x1 |
-| Oitavas | x2 |
-| Quartas | x3 |
-| Semifinais | x4 |
-| Terceiro lugar | x2 |
-| Final | x5 |
+- Todo usuario autenticado participa do bolao oficial.
+- Boloes publicos podem aparecer na vitrine para novas pessoas entrarem.
+- Boloes privados dependem de convite ou codigo.
+- Cada bolao tem ranking proprio.
+- Entrar em um bolao comum nao da pontos retroativos de partidas ja bloqueadas.
+- O bolao oficial considera palpites que o usuario ja tinha feito antes de
+  entrar nele, porque ele funciona como a disputa geral do app.
 
-Acertar quem avança no mata-mata rende mais 3 pontos, sem multiplicador. O
-bônus não existe na fase de grupos nem na disputa de terceiro lugar, que define
-um vencedor mas não classifica ninguém para outra fase.
+## Palpites Especiais
 
-## Bolões e ranking
+Os palpites especiais ficam separados dos placares e possuem ranking proprio.
 
-- Ao entrar em um bolão, o participante começa a pontuar nas partidas que ainda
-  não estavam bloqueadas naquele instante.
-- Pontos antigos não entram retroativamente.
-- Desempate: pontos totais, placares exatos, resultados corretos e, por último,
-  nome para ordenação determinística.
-- Correções de resultado recalculam o ranking e ficam registradas no histórico.
-- Cada usuário pode participar de até 100 bolões, criar até 20 e cada bolão
-  aceita até 500 participantes para proteger a operação gratuita.
-- Visitantes podem descobrir bolões públicos em páginas de 9 resultados e ver
-  o ranking sem receber códigos de convite ou identificadores privados.
-- O dono pode editar, mudar a visibilidade, remover membros e arquivar o próprio
-  bolão. Arquivamento nunca apaga o histórico.
-- Administradores globais podem recuperar bolões arquivados, suspender contas e
-  promover outros administradores. O master principal é único e não pode ser
-  alterado, suspenso ou rebaixado.
-- A primeira entrada exige aceite versionado dos Termos de Serviço e da Política
-  de Privacidade.
+Categorias atuais:
 
-## Casos operacionais
+- Artilheiro da Copa.
+- Lider em assistencias.
+- Luva de Ouro.
+- Bola de Ouro.
+- Selecao com mais gols.
+- Defesa menos vazada.
+- Campeao.
+- Vice.
+- Semifinalistas.
 
-- Jogo adiado: o administrador deve atualizar `scheduled_at` e
-  `prediction_lock_at` antes do horário original. Se o bloqueio já ocorreu, a
-  reabertura exige `allow_reopen = true`, justificativa auditável e comunicação.
-- Jogo cancelado: status `cancelled`; não pontuar.
-- Resultado corrigido: usar `finalize_match` novamente com justificativa.
-- Partida mata-mata empatada nos pênaltis: salvar o empate após prorrogação e a
-  seleção classificada separadamente.
-- Participantes do mata-mata: não podem ser alterados após o bloqueio ou depois
-  que houver palpites para a partida.
+Eles ficam abertos ate 22 de junho, 23:59 no horario exibido para o usuario. O
+objetivo e dar tempo para todos participarem sem esperar tanto que as tendencias
+da Copa fiquem obvias demais.
+
+Pontuacao:
+
+- Categorias por jogador podem ter pontos parciais quando a selecao do jogador
+  esta correta.
+- Categorias por selecao pontuam quando a selecao escolhida corresponde ao
+  resultado final da categoria.
+- Semifinalistas pontuam por acerto individual de selecao.
+
+## Privacidade
+
+- A foto publica e uma preferencia global da conta.
+- Quando a pessoa oculta a foto, rankings e boloes exibem apenas identificacao
+  simplificada.
+- Quando permite, a foto pode aparecer em rankings, boloes e destaques publicos.
+
+## Administracao
+
+Administradores acompanham resultados, participantes, boloes, usuarios e
+historico de alteracoes. A interface prioriza correcao simples e rastreavel, sem
+interromper a experiencia dos jogadores.
