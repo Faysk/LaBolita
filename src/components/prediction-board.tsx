@@ -32,7 +32,7 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
     ["saved", "Salvos"],
     ["group", "Grupos"],
     ["knockout", "Mata-mata"],
-    ["locked", "Bloqueados"],
+    ["locked", "Finalizados"],
   ];
 
   const visibleMatches = matches.filter((match) => {
