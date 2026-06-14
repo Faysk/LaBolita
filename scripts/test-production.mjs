@@ -51,8 +51,18 @@ try {
       ...(allowPendingDeploy ? [] : ["/privacidade", "/termos"]),
     ];
     for (const path of pagePaths) {
+      const httpResponse = await fetch(`${BASE_URL}${path}`, { headers: smokeHeaders });
+      assert.equal(httpResponse.status, 200, `${path} must respond successfully`);
       const response = await gotoProductionPage(page, path);
-      assert.equal(response?.status(), 200, `${path} must respond successfully`);
+      if (response) {
+        assert.equal(response.status(), 200, `${path} must respond successfully in browser`);
+      } else {
+        assert.equal(
+          new URL(page.url()).pathname,
+          path,
+          `${path} must complete browser navigation`,
+        );
+      }
       assert.equal(
         await page.evaluate(
           () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
