@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
+import { LinkPendingOverlay } from "@/components/link-pending-feedback";
 import { UserAvatar } from "@/components/user-avatar";
 
 export function StatCard({
@@ -55,8 +56,9 @@ export function StatCard({
   if (!href) return content;
 
   return (
-    <Link href={href} className="interactive block rounded-[1.5rem]">
+    <Link href={href} className="interactive relative block overflow-hidden rounded-[1.5rem]">
       {content}
+      <LinkPendingOverlay label="Abrindo..." className="rounded-[1.5rem]" />
     </Link>
   );
 }

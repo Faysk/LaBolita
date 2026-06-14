@@ -8,25 +8,43 @@ export function TeamFlag({
   size = "md",
 }: {
   team: DemoTeam;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "hero";
 }) {
   const source = flagSource(team);
   const [failedSource, setFailedSource] = useState<string | null>(null);
   const imageAvailable = Boolean(source && source !== failedSource);
   const sizeClass =
-    size === "sm"
+    size === "xs"
+      ? "h-3.5 w-5 rounded-[0.3rem]"
+      : size === "sm"
       ? "h-5 w-7 rounded-md"
       : size === "lg"
         ? "h-10 w-14 rounded-xl"
+        : size === "xl"
+          ? "h-16 w-24 rounded-2xl"
+          : size === "hero"
+            ? "h-full w-full rounded-[1.35rem]"
         : "h-7 w-10 rounded-lg";
   const fallbackClass =
-    size === "sm" ? "text-[8px]" : size === "lg" ? "text-xs" : "text-[10px]";
+    size === "xs"
+      ? "text-[6px]"
+      : size === "sm"
+        ? "text-[8px]"
+        : size === "lg"
+          ? "text-xs"
+          : size === "xl"
+            ? "text-base"
+            : size === "hero"
+              ? "text-4xl"
+          : "text-[10px]";
+  const chromeClass =
+    size === "hero" ? "border-0 bg-transparent shadow-none" : "border bg-white shadow-sm";
 
   return (
     <span
       data-testid="team-flag"
       data-team={team.code ?? team.id}
-      className={`team-flag inline-flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden border bg-white shadow-sm`}
+      className={`team-flag inline-flex ${sizeClass} ${chromeClass} shrink-0 items-center justify-center overflow-hidden`}
       title={team.name}
       role="img"
       aria-label={`Bandeira de ${team.name}`}

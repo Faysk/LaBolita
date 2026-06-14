@@ -90,3 +90,5 @@ set
   scheduled_at = excluded.scheduled_at,
   prediction_lock_at = excluded.prediction_lock_at,
   venue = excluded.venue;
+
+select public.ensure_default_special_markets();

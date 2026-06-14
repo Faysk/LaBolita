@@ -28,9 +28,9 @@ export default function PrivacyPage() {
         <h2>2. Dados tratados</h2>
         <ul>
           <li>Nome, e-mail, identificador e foto fornecidos pelo login Google.</li>
-          <li>Palpites, participação em bolões, pontuação e ações administrativas.</li>
+          <li>Palpites, participação em bolões, pontuação e preferências da conta.</li>
           <li>Data e versão do aceite dos Termos de Serviço.</li>
-          <li>Registros de arquivamento, recuperação e suspensão reversível.</li>
+          <li>Registros necessários para segurança, suporte e integridade dos bolões.</li>
           <li>
             Dados técnicos essenciais, como sessão, endereço IP e registros de
             segurança mantidos pelos provedores de infraestrutura.
@@ -46,7 +46,7 @@ export default function PrivacyPage() {
         <h2>3. Finalidades e bases legais</h2>
         <p>
           Os dados são usados para autenticar contas, registrar palpites, calcular
-          rankings, administrar bolões, prevenir abuso, investigar erros e cumprir
+          rankings, permitir a gestão dos bolões, prevenir abuso, investigar erros e cumprir
           obrigações legais. O tratamento ocorre para executar o serviço solicitado
           pelo usuário e com base no legítimo interesse de manter a plataforma
           segura e funcional.
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
         <h2>6. Retenção, segurança e transferências</h2>
         <p>
           Os dados são mantidos enquanto a conta ou o bolão estiver ativo e pelo
-          período necessário para segurança, auditoria e obrigações legais. São
+          período necessário para segurança, suporte e obrigações legais. São
           aplicados controles de acesso, políticas por linha no banco e conexões
           criptografadas. Como os provedores podem operar fora do Brasil, pode
           ocorrer transferência internacional de dados com as proteções adotadas
@@ -97,9 +97,9 @@ export default function PrivacyPage() {
         <h2>7. Seus direitos</h2>
         <p>
           Nos termos da LGPD, você pode solicitar confirmação de tratamento,
-          acesso, correção, portabilidade, informação sobre compartilhamento e
-          exclusão quando aplicável. Também pode revogar permissões do Google na
-          sua conta Google.
+          acesso, correção, portabilidade, informação sobre compartilhamento,
+          exclusão ou anonimização quando aplicável. Também pode revogar
+          permissões do Google na sua conta Google.
         </p>
       </section>
 

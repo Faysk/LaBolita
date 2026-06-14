@@ -254,8 +254,8 @@ export function MatchCard({
       </div>
 
       <div className={`mt-5 rounded-2xl border bg-surface-muted/65 px-3 py-4 ${compact ? "" : "md:px-4"}`}>
-        <div className="mx-auto grid w-full max-w-[34rem] grid-cols-[minmax(4.8rem,1fr)_auto_minmax(4.8rem,1fr)] items-start gap-2 sm:grid-cols-[minmax(6rem,1fr)_auto_minmax(6rem,1fr)] sm:gap-4">
-        <Team team={match.homeTeam} align="right" compact={compact} />
+        <div className="mx-auto grid w-fit max-w-full grid-cols-[minmax(4.75rem,5.75rem)_auto_minmax(4.75rem,5.75rem)] items-start justify-center gap-2 sm:grid-cols-[minmax(5.5rem,6.75rem)_auto_minmax(5.5rem,6.75rem)] sm:gap-4">
+        <Team team={match.homeTeam} compact={compact} />
         <div className="grid grid-cols-[2.5rem_0.75rem_2.5rem] items-center justify-center gap-1 pt-2 sm:grid-cols-[2.75rem_1rem_2.75rem] sm:gap-2 md:grid-cols-[3rem_1rem_3rem]">
           <ScoreInput
             value={homeScore}
@@ -271,7 +271,7 @@ export function MatchCard({
             onChange={(value) => updatePrediction("away", value)}
           />
         </div>
-        <Team team={match.awayTeam} align="left" compact={compact} />
+        <Team team={match.awayTeam} compact={compact} />
         </div>
       </div>
       {requiresAdvancingTeam && (
@@ -421,19 +421,17 @@ function scoreWinnerId(match: DemoMatch, score: ScorePrediction) {
 
 function Team({
   team,
-  align,
   compact,
 }: {
   team: DemoMatch["homeTeam"];
-  align: "left" | "right";
   compact: boolean;
 }) {
   return (
-    <div className={`grid min-w-0 justify-items-center gap-2 text-center ${align === "right" ? "md:justify-items-end md:text-right" : "md:justify-items-start md:text-left"}`}>
+    <div className="grid min-w-0 justify-items-center gap-2 text-center">
       <span className="flex h-12 items-center justify-center">
         <TeamFlag team={team} size={compact ? "md" : "lg"} />
       </span>
-      <p className={`line-clamp-2 flex min-h-8 w-full max-w-[7.25rem] items-start justify-center text-center font-black leading-4 tracking-tight ${align === "right" ? "md:justify-end md:text-right" : "md:justify-start md:text-left"} ${compact ? "text-xs" : "text-sm"}`}>
+      <p className={`line-clamp-2 flex min-h-8 w-full max-w-[7.25rem] items-start justify-center text-center font-black leading-4 tracking-tight ${compact ? "text-xs" : "text-sm"}`}>
         {team.shortName}
       </p>
     </div>

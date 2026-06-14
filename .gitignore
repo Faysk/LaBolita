@@ -38,9 +38,19 @@ yarn-error.log*
 # vercel
 .vercel
 
-# local visual audit artifacts
+# local visual audit artifacts and generated source material
 .server-*.log
 .ui-*.png
+/output/
+/backups/
+*.dump
+*.backup
+*.sql.gz
+*.sql.zip
+*.psd
+*.xcf
+*.ai
+*.sketch
 
 # typescript
 *.tsbuildinfo

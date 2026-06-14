@@ -1,0 +1,95 @@
+import { describe, expect, it } from "vitest";
+import {
+  buildSpecialOptions,
+  computeAutomaticSuggestions,
+  highlightSpecialOptions,
+  playerOptionKey,
+  teamOptionKey,
+} from "@/lib/special-markets";
+import type { DemoMatch, DemoTeam } from "@/lib/types";
+
+const teams: DemoTeam[] = [
+  {
+    id: "team-mex",
+    code: "MEX",
+    name: "México",
+    shortName: "México",
+    flag: "🇲🇽",
+  },
+  {
+    id: "team-rsa",
+    code: "RSA",
+    name: "África do Sul",
+    shortName: "África do Sul",
+    flag: "🇿🇦",
+  },
+];
+
+describe("special markets", () => {
+  it("builds stable team and player option keys", () => {
+    expect(teamOptionKey(teams[0])).toBe("team:MEX");
+    expect(playerOptionKey("MEX", 10, "João Teste")).toBe("player:MEX:10:joao-teste");
+  });
+
+  it("maps squad players to database teams by code", () => {
+    const options = buildSpecialOptions(teams, "players");
+    expect(options.some((option) => option.teamCode === "MEX")).toBe(true);
+    expect(options.every((option) => option.teamId === "team-mex" || option.teamId === "team-rsa")).toBe(true);
+    expect(options.find((option) => option.teamCode === "MEX")).toMatchObject({
+      teamFlag: "🇲🇽",
+      groupName: "Grupo A",
+    });
+    expect(options.find((option) => option.teamCode === "MEX")?.description).toContain("Grupo A");
+    expect(options.find((option) => option.teamCode === "MEX")?.description).toContain("jogos");
+    expect(options.find((option) => option.teamCode === "MEX")?.description).toContain("gols");
+  });
+
+  it("builds team options with official squad context", () => {
+    const options = buildSpecialOptions(teams, "teams");
+    const mexico = options.find((option) => option.teamCode === "MEX");
+
+    expect(mexico).toMatchObject({
+      groupName: "Grupo A",
+      squadTopScorer: expect.any(String),
+      squadTopScorerGoals: expect.any(Number),
+      squadMostCapped: expect.any(String),
+      squadMostCappedCaps: expect.any(Number),
+      squadAverageAge: expect.any(Number),
+      squadAverageHeight: expect.any(Number),
+    });
+    expect(mexico?.description).toContain("Grupo A");
+    expect(mexico?.description).toContain("26 atletas");
+  });
+
+  it("highlights candidates with useful player context first", () => {
+    const options = buildSpecialOptions(teams, "players");
+    const highlighted = highlightSpecialOptions("top_scorer", options, 5);
+
+    expect(highlighted).toHaveLength(5);
+    expect(highlighted[0]).toMatchObject({
+      teamCode: expect.any(String),
+      goals: expect.any(Number),
+      caps: expect.any(Number),
+    });
+  });
+
+  it("suggests team markets from current match scores", () => {
+    const matches: DemoMatch[] = [
+      {
+        id: "match-1",
+        stage: "group",
+        stageLabel: "Grupo A",
+        dateLabel: "11 jun",
+        timeLabel: "20:00",
+        venue: "Teste",
+        locked: true,
+        homeTeam: teams[0],
+        awayTeam: teams[1],
+        result: { homeScore: 2, awayScore: 0 },
+      },
+    ];
+
+    expect(computeAutomaticSuggestions("team_most_goals", matches, teams)[0]?.key).toBe("team:MEX");
+    expect(computeAutomaticSuggestions("team_fewest_conceded", matches, teams)[0]?.key).toBe("team:MEX");
+  });
+});

@@ -1,56 +1,39 @@
-# Roadmap de lançamento
+# Roadmap
 
-A Copa começa em **11 de junho de 2026** e termina em **19 de julho de 2026**.
-O plano abaixo prioriza um bolão privado confiável antes de recursos sociais.
+O roadmap prioriza estabilidade de jogo, clareza para o usuario e evolucao do
+produto sem comprometer a producao.
 
-## 6 de junho
+## Agora
 
-- Base Next.js mobile-first, regras e fluxos de demonstração.
-- Modelo Supabase, RLS, RPCs, histórico e testes.
-- Build, CI e documentação operacional.
+- Validar em homologacao antes de promover para producao.
+- Manter backup recente antes de mudancas com impacto em banco.
+- Melhorar continuamente a experiencia mobile.
+- Completar o acervo de figurinhas autorais dos jogadores.
+- Refinar a apresentacao dos palpites especiais.
+- Garantir que o bolao oficial seja claro para novos usuarios.
 
-## 7 de junho
+## Proximas Etapas
 
-- Projeto Supabase, Google OAuth, Vercel e domínio configurados.
-- Migrations aplicadas e criação real de bolão validada.
-- Agenda completa de 48 seleções e 104 jogos importada e validada.
-- Política de Privacidade, Termos e base segura de sincronização implementados.
+- Painel melhor para acompanhar palpites especiais e resultados finais.
+- Mais sinais visuais de carregamento em fluxos administrativos e de escolha.
+- Historico de posicao nos rankings.
+- Notificacoes de palpites pendentes e prazo de especiais.
+- Mais dados publicos de selecoes e jogadores quando forem confiaveis.
+- Melhor acompanhamento de rodada, fase e classificacao.
 
-Critério de saída: login, salvamento de palpite e bloqueio funcionando no banco.
+## Depois
 
-## 8 de junho
+- PWA com leitura offline.
+- Observabilidade mais completa para erros e disponibilidade.
+- Relatorios de bolao para administradores.
+- Mais tipos de palpites especiais, se a interface continuar simples.
+- Importacao gradual de eventos de jogadores quando a fonte for estavel.
 
-- Teste ponta a ponta com pelo menos três contas.
-- Validar criação, convite, entrada tardia, privacidade e ranking.
-- Contratar/ativar provedor de resultados com SLA e configurar Supabase Cron.
+## Criterio Para Produzir
 
-Critério de saída: um jogo fictício finalizado e corrigido sem divergência.
+Uma melhoria so vai para producao quando:
 
-## 9 de junho
-
-- Beta fechado com família e amigos em celulares reais.
-- Corrigir problemas de UX e acessibilidade.
-- Validar domínio, HTTPS, logs e página de saúde.
-
-Critério de saída: grupo beta completa palpites sem ajuda.
-
-## 10 de junho
-
-- Congelar regras e alterações estruturais.
-- Conferência final de horários, seleções, grupos e bloqueios.
-- Backup, plano de correção de resultado e comunicação aos participantes.
-
-Critério de saída: checklist operacional assinado e primeiro jogo pronto.
-
-## 11 de junho
-
-- Monitorar login, bloqueio e volume antes da abertura.
-- Conferir manualmente o bloqueio da partida México x África do Sul.
-- Não lançar funcionalidade nova durante a primeira rodada.
-
-## Depois da estabilidade
-
-- Atualização automática de resultados com revisão humana.
-- Notificações de palpites pendentes.
-- Compartilhamento de ranking e comentários.
-- Palpites especiais e estatísticas avançadas somente após regras aprovadas.
+- Passa nos testes locais.
+- Passa no smoke de homologacao.
+- Foi testada visualmente em desktop e mobile.
+- Nao expande risco desnecessario para login, banco ou pontuacao.

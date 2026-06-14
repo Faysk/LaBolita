@@ -1,43 +1,27 @@
-# Dados de Atletas
+# Dados De Atletas
 
-O produto exibe dados de atletas em duas camadas.
+LaBolita usa elencos e dados de apoio para enriquecer os palpites especiais.
 
-## Elencos oficiais
+## O Que Entra No Produto
 
-A base atual vem da lista oficial da FIFA:
+- Nome do jogador.
+- Selecao.
+- Posicao.
+- Camisa.
+- Clube.
+- Altura, idade e numeros historicos quando disponiveis.
+- Figurinhas autorais otimizadas, sem depender de foto real.
 
-- Fonte: `https://fdp.fifa.org/assetspublic/ce281/pdf/SquadLists-English.pdf`
-- Versão usada: `Friday, 12 June 2026 04:24 UTC | Version 1`
-- Arquivo gerado: `src/data/world-cup-2026-squads.json`
-- Cobertura: 48 seleções, 1.248 jogadores, 26 atletas por seleção.
+## Como Os Dados Sao Tratados
 
-Campos disponíveis:
+- Dados estaticos ajudam o usuario a escolher.
+- Eventos desta Copa entram apenas quando houver fonte confiavel.
+- Quando o dado nao existe, a interface evita inventar estatistica.
+- Figurinhas novas podem ser adicionadas aos poucos sem quebrar a experiencia.
+- O repositorio guarda apenas as figurinhas otimizadas para web; artes brutas e
+  arquivos de trabalho ficam fora do Git.
 
-- número;
-- posição;
-- nome de camisa;
-- nome completo;
-- data de nascimento;
-- clube;
-- altura;
-- jogos pela seleção;
-- gols pela seleção.
+## Objetivo
 
-Esses dados alimentam `/competicao/jogadores` e as páginas individuais de seleção.
-
-## Eventos da Copa
-
-Gols, assistências, cartões, substituições, faltas e estatísticas por partida
-devem entrar como uma segunda camada, porque dependem de feed de eventos ao
-vivo ou pós-jogo.
-
-Critério antes de exibir em produção:
-
-- origem identificada em cada evento;
-- cache server-side;
-- atualização auditável;
-- divergências visíveis para admin;
-- possibilidade de correção manual.
-
-Enquanto essa camada não estiver pronta, a interface não deve prometer
-assistências, cartões ou faltas individuais como dado confirmado.
+Dar contexto suficiente para o palpite ficar divertido, sem transformar a tela em
+uma tabela tecnica pesada.

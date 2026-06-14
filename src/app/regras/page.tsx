@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
-import { CheckCircle2, Clock3, EyeOff, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Clock3, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  SPECIAL_LOCK_DATE_LABEL,
+} from "@/lib/special-market-display";
 
 export const metadata: Metadata = {
   title: "Regras",
@@ -21,6 +24,18 @@ const stages = [
   ["Semifinais", "×4"],
   ["Terceiro lugar", "×2"],
   ["Final", "×5"],
+];
+
+const specialRules = [
+  ["Artilheiro", "30 pts", "5 pts se errar o jogador, mas acertar a seleção."],
+  ["Assistências", "25 pts", "5 pts se errar o jogador, mas acertar a seleção."],
+  ["Luva de Ouro", "25 pts", "5 pts se errar o goleiro, mas acertar a seleção."],
+  ["Bola de Ouro", "30 pts", "5 pts se errar o jogador, mas acertar a seleção."],
+  ["Mais gols", "25 pts", "Seleção que terminar com o melhor ataque."],
+  ["Menos gols sofridos", "25 pts", "Seleção que terminar com a defesa menos vazada."],
+  ["Campeão", "35 pts", "Acertou quem levanta a taça."],
+  ["Vice", "25 pts", "Acertou quem termina em segundo."],
+  ["Semifinalistas", "10 pts cada", "Você escolhe quatro seleções."],
 ];
 
 export default function RulesPage() {
@@ -108,6 +123,51 @@ export default function RulesPage() {
             </div>
           </div>
         </article>
+      </section>
+
+      <section className="mt-6 card p-5 md:p-6">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+            <Sparkles className="size-5" />
+          </span>
+          <div>
+            <p className="eyebrow">Extras</p>
+            <h2 className="mt-1 text-2xl font-black">Palpites especiais</h2>
+          </div>
+        </div>
+        <div className="mt-4">
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Artilheiro, assistências, Luva de Ouro, Bola de Ouro, campeão,
+              vice, semifinalistas e seleções destaque têm pontuação própria e
+              ranking separado. Eles não substituem seus placares dos jogos.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Os especiais ficam abertos até {SPECIAL_LOCK_DATE_LABEL}. Cada categoria tem sua
+              própria tela com busca, destaques e dados de elenco para ajudar na
+              escolha.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              O prazo foi escolhido para dar tempo de participar e, ao mesmo
+              tempo, fechar antes que a Copa mostre tendências fortes demais.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              Nas categorias por jogador, se você errar o atleta exato mas
+              acertar a seleção dele, ainda pode ganhar pontos parciais. Se
+              houver correção oficial de resultado, a pontuação pode ser
+              atualizada.
+            </p>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {specialRules.map(([name, points, description]) => (
+                <div key={name} className="rounded-2xl border bg-surface-muted p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+                    {points}
+                  </p>
+                  <h3 className="mt-1 font-black">{name}</h3>
+                  <p className="mt-2 text-xs leading-5 text-muted">{description}</p>
+                </div>
+              ))}
+            </div>
+        </div>
       </section>
     </main>
   );

@@ -25,7 +25,7 @@ export function LegalPage({
             {intro}
           </p>
           <p className="mt-5 text-xs font-bold text-white/55">
-            Última atualização: 7 de junho de 2026
+            Última atualização: 14 de junho de 2026
           </p>
         </header>
         <div className="legal-content p-6 md:p-10">{children}</div>

@@ -86,6 +86,7 @@ async function applyProjectSql() {
 async function verifySeedAndScoring() {
   assert.equal(await scalar("select count(*)::integer from public.tournaments"), 1);
   assert.equal(await scalar("select count(*)::integer from public.matches"), 1);
+  assert.equal(await scalar("select count(*)::integer from public.special_markets"), 9);
   assert.equal(await scalar("select count(*)::integer from public.results_sync_state"), 1);
   assert.equal(
     await scalar(
@@ -381,6 +382,88 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   assert.match(inviteCode, /^[A-F0-9]{12}$/);
   assert.equal(await scalar("select flag_code from public.pools where id = $1", [publicPoolId]), "pt");
 
+  const teamSpecialOption = JSON.stringify([
+    {
+      key: "team:MEX",
+      label: "México",
+      team_id: HOME_TEAM_ID,
+    },
+  ]);
+  const topScorerPrediction = JSON.stringify([
+    {
+      key: "player:MEX:9:atacante-mexico",
+      label: "Atacante México",
+      team_id: HOME_TEAM_ID,
+    },
+  ]);
+  const topScorerResult = JSON.stringify([
+    {
+      key: "player:MEX:10:outro-atacante",
+      label: "Outro Atacante",
+      team_id: HOME_TEAM_ID,
+    },
+  ]);
+
+  await asUser(USER_ONE, async () => {
+    await db.query("select public.save_special_prediction('team_most_goals', $1::jsonb)", [
+      teamSpecialOption,
+    ]);
+    await db.query("select public.save_special_prediction('top_scorer', $1::jsonb)", [
+      topScorerPrediction,
+    ]);
+    await assert.rejects(
+      db.query(`
+        insert into public.special_predictions (
+          user_id,
+          market_id,
+          position,
+          option_key,
+          option_label,
+          option_team_id
+        )
+        select
+          $1,
+          id,
+          1,
+          'team:RSA',
+          'África do Sul',
+          $2
+        from public.special_markets
+        where key = 'team_most_goals'
+      `, [USER_ONE, AWAY_TEAM_ID]),
+      "direct special prediction writes must be denied",
+    );
+  });
+
+  await asUser(USER_THREE, async () => {
+    await assert.rejects(
+      db.query(
+        "select public.set_special_market_result('team_most_goals', $1::jsonb, 'tentativa indevida', 'manual')",
+        [teamSpecialOption],
+      ),
+      "non-admin users must not set special market results",
+    );
+  });
+
+  await asUser(USER_ONE, async () => {
+    await db.query(
+      "select public.set_special_market_result('team_most_goals', $1::jsonb, 'resultado de teste', 'manual')",
+      [teamSpecialOption],
+    );
+    await db.query(
+      "select public.set_special_market_result('top_scorer', $1::jsonb, 'fonte oficial de teste', 'manual')",
+      [topScorerResult],
+    );
+    const ranking = await db.query(
+      "select display_name, total_points::integer, exact_hits::integer, partial_hits::integer from public.get_special_pool_ranking($1)",
+      [publicPoolId],
+    );
+    const owner = ranking.rows.find((row) => row.display_name === "Owner");
+    assert.equal(owner?.total_points, 30);
+    assert.equal(owner?.exact_hits, 1);
+    assert.equal(owner?.partial_hits, 1);
+  });
+
   await asAnon(async () => {
     await assert.rejects(
       db.query("select provider_payload from public.matches"),
@@ -450,8 +533,8 @@ async function verifyPredictionPrivacyAndResultCorrection() {
         "select avatar_url from public.get_pool_ranking($1) where display_name = 'Owner'",
         [publicPoolId],
       ),
-      "https://accounts.google.com/avatar/private-owner",
-      "members of the same pool can see profile avatars in its private ranking",
+      null,
+      "private pool rankings must respect avatar privacy",
     );
     await db.query("select public.create_pool('Bolão Arquivável', true)");
     secondPoolId = await scalar("select id from public.pools where owner_id = $1", [USER_TWO]);
@@ -484,6 +567,19 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     await assert.rejects(
       db.query("update public.profiles set is_admin = true where id = $1", [USER_TWO]),
       "users must not be able to grant themselves administrator permission",
+    );
+  });
+
+  await db.exec(`update public.profiles set show_avatar_publicly = true where id = '${USER_ONE}'`);
+
+  await asUser(USER_TWO, async () => {
+    assert.equal(
+      await scalar(
+        "select avatar_url from public.get_pool_ranking($1) where display_name = 'Owner'",
+        [publicPoolId],
+      ),
+      "https://accounts.google.com/avatar/private-owner",
+      "private pool rankings can show avatars after explicit public opt-in",
     );
   });
 
@@ -715,6 +811,43 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     );
   });
 
+  const officialPoolId = await scalar(
+    `insert into public.pools (owner_id, name, invite_code, is_public, flag_code, is_official)
+     values ($1, 'LaBolão Oficial', 'OFICIAL2026', true, 'br', true)
+     returning id`,
+    [USER_ONE],
+  );
+  await db.query(
+    `insert into public.pool_members (pool_id, user_id, role, eligible_from)
+     values ($1, $2, 'owner', timestamptz '1900-01-01 00:00:00+00')`,
+    [officialPoolId, USER_ONE],
+  );
+
+  await asUser(USER_THREE, async () => {
+    assert.equal(
+      await scalar("select public.ensure_official_pool_membership()"),
+      officialPoolId,
+      "logged users must be linked to the official pool automatically",
+    );
+    assert.equal(
+      await scalar("select pool_id from public.get_my_pools() limit 1"),
+      officialPoolId,
+      "the official pool must be the first active pool in the user overview",
+    );
+    const officialRanking = await db.query(
+      "select display_name, total_points::integer as total_points from public.get_pool_ranking($1)",
+      [officialPoolId],
+    );
+    const officialLateMember = officialRanking.rows.find(
+      (row) => row.display_name === "Late Member",
+    );
+    assert.equal(
+      officialLateMember?.total_points,
+      5,
+      "the official pool must count existing predictions even after finished matches",
+    );
+  });
+
   await asUser(USER_THREE, async () => {
     await db.query("select public.join_pool($1)", [inviteCode]);
     assert.equal(
@@ -738,7 +871,8 @@ async function verifyPredictionPrivacyAndResultCorrection() {
 
   await asUser(USER_ONE, async () => {
     const ranking = await db.query(
-      "select display_name, total_points::integer as total_points from public.get_pool_ranking((select id from public.pools limit 1))",
+      "select display_name, total_points::integer as total_points from public.get_pool_ranking($1)",
+      [publicPoolId],
     );
     const lateMember = ranking.rows.find((row) => row.display_name === "Late Member");
     const owner = ranking.rows.find((row) => row.display_name === "Owner");

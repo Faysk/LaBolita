@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CURRENT_TERMS_VERSION } from "@/lib/legal";
+import { ensureOfficialPoolMembership } from "@/lib/official-pool";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { safeRedirectPath } from "@/lib/urls";
 
@@ -68,6 +69,8 @@ export async function GET(request: Request) {
   if (!profile?.terms_accepted_at || profile.terms_version !== CURRENT_TERMS_VERSION) {
     return NextResponse.redirect(termsRedirect(url.origin, nextPath));
   }
+
+  await ensureOfficialPoolMembership(supabase);
 
   return NextResponse.redirect(destination);
 }

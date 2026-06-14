@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { PredictionBoard } from "@/components/prediction-board";
 import { LiveRefresh } from "@/components/live-refresh";
+import { SpecialPredictionsEntry } from "@/components/special-predictions-entry";
 import { isLiveMatch } from "@/lib/match-display";
 import { requireUser } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
+import { getSpecialMarketsOverview } from "@/lib/data/specials";
 
 export const metadata: Metadata = {
   title: "Palpites",
@@ -12,7 +14,10 @@ export const metadata: Metadata = {
 
 export default async function PredictionsPage() {
   await requireUser("/palpites");
-  const matches = await getMatches();
+  const [matches, specialsOverview] = await Promise.all([
+    getMatches(),
+    getSpecialMarketsOverview(),
+  ]);
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
   );
@@ -30,6 +35,7 @@ export default async function PredictionsPage() {
           horário de bloqueio de cada partida.
         </p>
       </div>
+      <SpecialPredictionsEntry overview={specialsOverview} />
       <PredictionBoard matches={matches} />
     </main>
   );

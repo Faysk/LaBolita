@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { AlertTriangle, CheckCircle2, Database, RefreshCw } from "lucide-react";
 import { AdminMatchQueue } from "@/components/admin-match-queue";
 import { MasterAdminConsole } from "@/components/master-admin-console";
+import { SpecialAdminPanel } from "@/components/special-admin-panel";
 import { requireAdmin } from "@/lib/auth";
 import { getMasterOverview } from "@/lib/data/admin";
 import type { MasterTab } from "@/lib/data/admin";
 import { getMatches, getResultsSyncState, getTeams } from "@/lib/data/matches";
+import { getSpecialMarketsOverview } from "@/lib/data/specials";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
 export const metadata: Metadata = {
@@ -34,6 +36,11 @@ export default async function AdminPage({
       page: Number(params.master_page ?? 1),
     }),
   ]);
+  const specialsOverview = await getSpecialMarketsOverview({
+    matches,
+    teams,
+    includeAutomatic: true,
+  });
   const databaseConfigured = hasSupabaseConfig();
   const resultsSyncConfigured = Boolean(
     process.env.RESULTS_FEED_URL &&
@@ -104,6 +111,8 @@ export default async function AdminPage({
         key={`${masterOverview.activeTab}-${masterOverview.page}-${masterOverview.search}`}
         overview={masterOverview}
       />
+
+      <SpecialAdminPanel overview={specialsOverview} />
 
       <section className="card mt-7 overflow-hidden">
         <div className="flex items-center gap-3 border-b p-5 md:p-6">
