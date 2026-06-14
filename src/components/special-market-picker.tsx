@@ -342,8 +342,8 @@ function OptionCard({
 }) {
   const highlight = density === "highlight";
   const layoutClass = highlight
-    ? "min-h-24 grid-cols-[5rem_minmax(0,1fr)_auto] gap-4 p-3"
-    : "min-h-32 grid-cols-[8rem_minmax(0,1fr)] gap-4 p-3 pr-10 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:pr-3";
+    ? "min-h-24 grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-4 p-3"
+    : "min-h-32 grid-cols-[9rem_minmax(0,1fr)] gap-5 p-3 pr-10 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:pr-3";
 
   return (
     <button

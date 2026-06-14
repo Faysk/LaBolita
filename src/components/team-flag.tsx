@@ -37,12 +37,14 @@ export function TeamFlag({
             : size === "hero"
               ? "text-4xl"
           : "text-[10px]";
+  const chromeClass =
+    size === "hero" ? "border-0 bg-transparent shadow-none" : "border bg-white shadow-sm";
 
   return (
     <span
       data-testid="team-flag"
       data-team={team.code ?? team.id}
-      className={`team-flag inline-flex ${sizeClass} shrink-0 items-center justify-center overflow-hidden border bg-white shadow-sm`}
+      className={`team-flag inline-flex ${sizeClass} ${chromeClass} shrink-0 items-center justify-center overflow-hidden`}
       title={team.name}
       role="img"
       aria-label={`Bandeira de ${team.name}`}
