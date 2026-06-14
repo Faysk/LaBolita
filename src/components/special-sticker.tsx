@@ -264,19 +264,19 @@ function TeamSticker({
 
   const compact = variant === "avatar" || variant === "thumb";
   const sizeClass = {
-    avatar: "h-16 w-14 rounded-[0.95rem]",
-    thumb: "h-28 w-24 rounded-[1.15rem]",
-    card: "h-44 w-32 rounded-[1.25rem]",
+    avatar: "h-14 w-16 rounded-[0.95rem]",
+    thumb: "h-24 w-28 rounded-[1.15rem]",
+    card: "h-40 w-36 rounded-[1.25rem]",
   }[variant];
-  const flagSize = variant === "card" ? "xl" : variant === "thumb" ? "lg" : "sm";
+  const flagSize = variant === "avatar" ? "md" : "xl";
   const flagFrameClass = {
-    avatar: "rounded-xl p-1",
+    avatar: "rounded-xl p-1.5",
     thumb: "rounded-[1.15rem] p-1.5",
-    card: "rounded-[1.35rem] p-1.5",
+    card: "rounded-[1.35rem] p-2",
   }[variant];
   const bodyClass = compact
-    ? "relative flex flex-1 items-center justify-center px-2 pb-7 pt-5"
-    : "relative flex flex-1 items-center justify-center px-3 pb-2 pt-9";
+    ? "relative flex flex-1 items-center justify-center p-2"
+    : "relative flex flex-1 items-center justify-center px-3 pb-2 pt-4";
 
   return (
     <span
@@ -287,9 +287,6 @@ function TeamSticker({
       title={option.teamName}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_22%_16%,rgba(255,255,255,0.42),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.16),transparent_45%)]" />
-      <span className="absolute left-2 top-2 z-10 rounded-full border border-white/25 bg-black/24 px-2 py-0.5 text-[10px] font-black leading-none text-white/90">
-        26
-      </span>
       <span className={bodyClass}>
         <span
           className={`relative z-10 inline-flex items-center justify-center border border-white/55 bg-white/92 shadow-xl shadow-black/20 ${flagFrameClass}`}
@@ -300,18 +297,14 @@ function TeamSticker({
           </span>
         </span>
       </span>
-      {compact ? (
-        <span className="absolute bottom-1.5 left-1.5 right-1.5 z-20 flex items-center justify-center rounded-xl border border-white/20 bg-black/35 px-1.5 py-1 text-white shadow-sm backdrop-blur">
-          <span className="text-[10px] font-black leading-none">{option.teamCode}</span>
-        </span>
-      ) : (
+      {!compact ? (
         <span className="relative z-20 grid min-h-16 gap-1 border-t border-white/25 bg-black/32 px-2.5 py-2.5 text-white">
           <span className="line-clamp-1 text-xs font-black leading-none">{option.teamName}</span>
           <span className="line-clamp-1 text-[9px] font-bold text-white/75">
             {teamStatsLine(option)}
           </span>
         </span>
-      )}
+      ) : null}
     </span>
   );
 }
@@ -334,9 +327,6 @@ function TeamFeatureSticker({
       title={option.teamName}
     >
       <span className="absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(255,255,255,0.32),transparent_32%),linear-gradient(135deg,rgba(255,255,255,0.14),transparent_48%)]" />
-      <span className="absolute left-4 top-4 z-20 rounded-full border border-white/35 bg-black/25 px-2.5 py-1 text-xs font-black leading-none text-white/90 shadow-sm">
-        26
-      </span>
       <span className="relative z-10 block p-3 pb-0 sm:p-4 sm:pb-0">
         <span className="block overflow-hidden rounded-[1.35rem] border border-white/35 bg-white/10 shadow-xl shadow-black/20">
           <span className="block aspect-[16/10] w-full">
