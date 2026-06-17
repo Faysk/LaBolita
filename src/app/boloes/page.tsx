@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { PoolsWorkspace } from "@/components/pools-workspace";
+import { getMatches } from "@/lib/data/matches";
 import { getPoolsOverview } from "@/lib/data/pools";
+import { selectLiveOrNextMatch } from "@/lib/match-display";
 
 export const metadata: Metadata = {
   title: "Bolões",
@@ -13,10 +15,13 @@ export default async function PoolsPage({
   searchParams: Promise<{ pagina?: string; busca?: string }>;
 }) {
   const params = await searchParams;
-  const overview = await getPoolsOverview({
-    publicPage: Number(params.pagina ?? 1),
-    publicSearch: params.busca ?? "",
-    includePublic: true,
-  });
-  return <PoolsWorkspace {...overview} />;
+  const [overview, matches] = await Promise.all([
+    getPoolsOverview({
+      publicPage: Number(params.pagina ?? 1),
+      publicSearch: params.busca ?? "",
+      includePublic: true,
+    }),
+    getMatches(),
+  ]);
+  return <PoolsWorkspace {...overview} spotlightMatch={selectLiveOrNextMatch(matches)} />;
 }

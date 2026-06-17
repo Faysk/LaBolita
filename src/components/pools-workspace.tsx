@@ -3,12 +3,14 @@
 import {
   Archive,
   ArchiveRestore,
+  CalendarClock,
   Check,
   Copy,
   Globe2,
   LoaderCircle,
   LogIn,
   Plus,
+  Radio,
   Search,
   Settings2,
   UserMinus,
@@ -20,10 +22,12 @@ import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
 import { PoolFlag } from "@/components/pool-flag";
+import { TeamFlag } from "@/components/team-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
 import { COUNTRIES } from "@/lib/countries";
 import type { PoolsOverview } from "@/lib/data/pools";
+import { isLiveMatch } from "@/lib/match-display";
 import {
   storeLocalPool,
   useLocalPools,
@@ -31,7 +35,7 @@ import {
   useLocalResults,
 } from "@/lib/local-state";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import type { PoolSummary, RankingEntry } from "@/lib/types";
+import type { DemoMatch, PoolSummary, RankingEntry } from "@/lib/types";
 import { friendlyServerError } from "@/lib/user-errors";
 import { UserAvatar } from "@/components/user-avatar";
 import { rankingLabel } from "@/lib/ranking-display";
@@ -54,7 +58,8 @@ export function PoolsWorkspace({
   publicPage,
   publicPages,
   publicSearch,
-}: PoolsOverview) {
+  spotlightMatch,
+}: PoolsOverview & { spotlightMatch?: DemoMatch | null }) {
   const router = useRouter();
   const localPools = useLocalPools();
   const localPredictions = useLocalPredictions(demoMatches);
@@ -216,6 +221,8 @@ export function PoolsWorkspace({
         />
       )}
 
+      {spotlightMatch ? <PoolMatchSpotlight match={spotlightMatch} /> : null}
+
       {isAuthenticated && (
         <PoolSection title="Seus bolões" subtitle="Grupos em que você participa ou administra.">
           {activePools.map((pool) => (
@@ -351,6 +358,65 @@ function PoolSection({ title, subtitle, children }: { title: string; subtitle: s
       <p className="mt-1 text-sm text-muted">{subtitle}</p>
       <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{children}</div>
     </section>
+  );
+}
+
+function PoolMatchSpotlight({ match }: { match: DemoMatch }) {
+  const live = isLiveMatch(match);
+  const score = match.liveResult ?? match.result;
+  const scoreLabel = score ? `${score.homeScore} x ${score.awayScore}` : "x";
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-[1.8rem] border border-brand/25 bg-gradient-to-r from-brand-strong via-brand to-brand-soft p-4 text-white shadow-2xl shadow-brand/15 md:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
+            {live ? <Radio className="size-3.5 animate-pulse" /> : <CalendarClock className="size-3.5" />}
+            {live ? "Ao vivo nos bolões" : "Próximo jogo"}
+          </p>
+          <h2 className="mt-3 text-2xl font-black tracking-[-0.05em] md:text-3xl">
+            {live ? "Placar mexendo no ranking" : "Próxima chance de pontuar"}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-white/75">
+            {match.stageLabel} · {match.dateLabel} · {match.timeLabel}
+            {match.venue ? ` · ${match.venue}` : ""}
+          </p>
+        </div>
+        <div className="rounded-[1.4rem] border border-white/15 bg-black/10 p-3 lg:min-w-[26rem]">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <PoolSpotlightTeam team={match.homeTeam} />
+            <div className="rounded-2xl border border-white/15 bg-brand-strong/45 px-4 py-3 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/50">
+                {live ? "Parcial" : "Início"}
+              </p>
+              <p className="mt-1 whitespace-nowrap text-2xl font-black text-accent md:text-3xl">
+                {scoreLabel}
+              </p>
+            </div>
+            <PoolSpotlightTeam team={match.awayTeam} align="right" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PoolSpotlightTeam({
+  team,
+  align = "left",
+}: {
+  team: DemoMatch["homeTeam"];
+  align?: "left" | "right";
+}) {
+  return (
+    <div className={`min-w-0 ${align === "right" ? "text-right" : ""}`}>
+      <div className={`flex items-center gap-2 ${align === "right" ? "justify-end" : ""}`}>
+        <TeamFlag team={team} size="lg" />
+      </div>
+      <p className="mt-2 truncate text-sm font-black md:text-base">
+        {team.shortName || team.name}
+      </p>
+    </div>
   );
 }
 

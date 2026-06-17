@@ -73,6 +73,21 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
     [market.key, market.options, search, selectedKeys],
   );
   const visibleOptions = filteredOptions.slice(0, visibleCount);
+  const saveLabel = market.predictions.length > 0 ? "Salvar alteração" : "Salvar palpite";
+  const canSave = complete && dirty && !market.locked && !sync.busy;
+  const showStickySave = !market.locked && selectedOptions.length > 0;
+  const stickyOption = selectedOptions[0];
+  const remainingChoices = Math.max(market.pickCount - selectedOptions.length, 0);
+  const stickySummary = complete
+    ? selectedOptions.map((option) => option.label).join(", ")
+    : `${remainingChoices} escolha${remainingChoices === 1 ? "" : "s"} pendente${
+        remainingChoices === 1 ? "" : "s"
+      }`;
+  const stickyTitle = !dirty && complete
+    ? "Palpite salvo"
+    : complete
+      ? "Pronto para salvar"
+      : "Complete o palpite";
 
   function chooseOption(option: SpecialOption) {
     if (market.locked || sync.busy) return;
@@ -135,7 +150,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
   }
 
   return (
-    <div className="space-y-7">
+    <div className={showStickySave ? "space-y-7 pb-32 md:pb-28" : "space-y-7"}>
       <section className="card-dark overflow-hidden rounded-[2rem] p-4 text-white md:p-5 lg:p-6">
         <Link
           href="/especiais"
@@ -195,11 +210,11 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
             <button
               type="button"
               onClick={save}
-              disabled={!complete || !dirty || market.locked || sync.busy}
+              disabled={!canSave}
               className="interactive mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong shadow-lg shadow-black/10 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/45 disabled:shadow-none"
             >
               {sync.busy ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
-              {market.predictions.length > 0 ? "Salvar alteração" : "Salvar palpite"}
+              {saveLabel}
             </button>
             {sync.message && (
               <p
@@ -323,6 +338,38 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           </div>
         )}
       </section>
+      {showStickySave && stickyOption ? (
+        <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 px-4 md:bottom-5 md:left-auto md:right-5 md:w-[min(34rem,calc(100vw-2rem))]">
+          <div className="rounded-[1.4rem] border border-white/15 bg-brand-strong/95 p-3 text-white shadow-2xl shadow-black/35 backdrop-blur-xl">
+            <div className="flex items-center gap-3">
+              <SpecialOptionAvatar option={stickyOption} size="sm" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10px] font-black uppercase tracking-[0.14em] text-accent">
+                  {stickyTitle}
+                </p>
+                <p className="truncate text-sm font-black">{stickySummary}</p>
+              </div>
+              <button
+                type="button"
+                onClick={save}
+                disabled={!canSave}
+                className="interactive inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-xs font-black text-brand-strong shadow-lg shadow-black/15 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/45 disabled:shadow-none"
+              >
+                {sync.busy ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
+                Salvar
+              </button>
+            </div>
+            {sync.message ? (
+              <p
+                aria-live="polite"
+                className={`mt-2 text-xs font-bold ${sync.ok ? "text-accent" : "text-orange-200"}`}
+              >
+                {sync.message}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
