@@ -34,6 +34,7 @@ export function SpecialHomeSummary({
           </div>
           <Link
             href="/entrar?next=%2Fespeciais"
+            prefetch={false}
             className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
             <LinkPendingLabel pendingLabel="Abrindo login...">
@@ -72,6 +73,7 @@ export function SpecialHomeSummary({
         </div>
         <Link
           href={next ? specialMarketPath(next.key) : "/especiais"}
+          prefetch={false}
           className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
         >
           <LinkPendingLabel pendingLabel="Abrindo especiais...">

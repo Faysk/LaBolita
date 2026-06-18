@@ -120,6 +120,7 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
 
         <Link
           href="/palpites"
+          prefetch={false}
           className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-extrabold text-brand-strong transition hover:brightness-95"
         >
           <LinkPendingLabel pendingLabel="Abrindo palpites...">

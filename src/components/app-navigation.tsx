@@ -1,12 +1,13 @@
 "use client";
 
-import { BarChart3, CircleHelp, Home, Target, Trophy } from "lucide-react";
+import { BarChart3, CircleHelp, Home, Sparkles, Target, Trophy } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navigation = [
   { href: "/", label: "Início", icon: Home },
   { href: "/palpites", label: "Palpites", icon: Target },
+  { href: "/especiais", label: "Extras", icon: Sparkles },
   { href: "/boloes", label: "Bolões", icon: BarChart3 },
   { href: "/competicao", label: "Copa", icon: Trophy },
   { href: "/regras", label: "Regras", icon: CircleHelp },
@@ -42,7 +43,7 @@ export function MobileNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-5 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl md:hidden">
+    <nav className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-6 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl md:hidden">
       {navigation.map((item) => {
         const active = isActivePath(pathname, item.href);
         return (
@@ -50,7 +51,7 @@ export function MobileNavigation() {
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
-            className={`interactive flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-bold ${
+            className={`interactive flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
               active
                 ? "bg-brand text-white shadow-md shadow-brand/20"
                 : "text-muted hover:bg-surface-muted hover:text-brand"

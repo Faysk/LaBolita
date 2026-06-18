@@ -23,6 +23,7 @@ export function SpecialPredictionsEntry({
     <section className="mb-7 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
       <Link
         href="/palpites"
+        prefetch={false}
         className="card interactive relative flex flex-col justify-between overflow-hidden p-5 hover:border-brand/70"
       >
         <div>
@@ -58,6 +59,7 @@ export function SpecialPredictionsEntry({
           </div>
           <Link
             href="/especiais"
+            prefetch={false}
             className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
             <LinkPendingLabel pendingLabel="Abrindo especiais...">
@@ -85,6 +87,7 @@ export function SpecialPredictionsEntry({
                 <Link
                   key={market.key}
                   href={specialMarketPath(market.key)}
+                  prefetch={false}
                   className="interactive relative min-h-20 overflow-hidden rounded-2xl border bg-surface-muted p-3 hover:border-brand/70"
                 >
                   <div className="flex items-start gap-2">

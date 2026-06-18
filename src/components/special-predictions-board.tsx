@@ -91,6 +91,7 @@ export function SpecialPredictionsBoard({
           </p>
           <Link
             href={progress.next ? specialMarketPath(progress.next.key) : "/especiais"}
+            prefetch={false}
             className="interactive relative mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
             <LinkPendingLabel pendingLabel="Abrindo especiais...">
@@ -151,6 +152,7 @@ function MarketCard({ market }: { market: SpecialMarketView }) {
   return (
     <Link
       href={specialMarketPath(market.key)}
+      prefetch={false}
       className="interactive card group relative flex min-h-56 flex-col overflow-hidden p-5 hover:border-brand/70"
     >
       <div className="flex items-start justify-between gap-3">
