@@ -36,6 +36,7 @@ export default async function PredictionsPage() {
         </p>
       </div>
       <SpecialPredictionsEntry overview={specialsOverview} />
+      <div id="lista-de-jogos" className="scroll-mt-28" aria-hidden="true" />
       <PredictionBoard matches={matches} />
     </main>
   );
