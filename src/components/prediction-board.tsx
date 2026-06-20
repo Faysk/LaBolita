@@ -1,30 +1,89 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, CheckCircle2, CircleDashed, Layers3 } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  CircleDashed,
+  Layers3,
+  ListChecks,
+} from "lucide-react";
 import { MatchCard } from "@/components/match-card";
+import { PoolFlag } from "@/components/pool-flag";
+import { TeamFlag } from "@/components/team-flag";
+import { UserAvatar } from "@/components/user-avatar";
 import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
 import {
   initialPredictionFilter,
   isLiveMatch,
   type PredictionFilter,
 } from "@/lib/match-display";
-import type { DemoMatch } from "@/lib/types";
+import {
+  buildDemoMatchComparisons,
+  predictionLabel,
+  type MatchPoolComparison,
+  type PredictionComparisonOverview,
+  type PredictionComparisonEntry,
+} from "@/lib/prediction-comparisons";
+import { calculateScore } from "@/lib/scoring";
+import type { DemoMatch, MatchResult, ScorePrediction } from "@/lib/types";
 
-export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
+export function PredictionBoard({
+  matches,
+  comparisonOverview,
+}: {
+  matches: DemoMatch[];
+  comparisonOverview: PredictionComparisonOverview;
+}) {
+  const predictions = useLocalPredictions(matches);
+  const results = useLocalResults();
   const [filter, setFilter] = useState<PredictionFilter>(() =>
     initialPredictionFilter(matches),
   );
   const [grouping, setGrouping] = useState<"stage" | "date">("date");
-  const predictions = useLocalPredictions(matches);
-  const results = useLocalResults();
   const isComplete = (match: DemoMatch) =>
     Boolean(match.prediction) || Boolean(predictions[match.id]);
+  const resultForMatch = (match: DemoMatch) => results[match.id] ?? match.result;
   const openMatches = matches.filter(
     (match) => !match.locked && !match.result && !results[match.id],
   );
   const pendingMatches = openMatches.filter((match) => !isComplete(match));
   const liveMatches = matches.filter(isLiveMatch);
+  const finishedMatches = matches.filter(
+    (match) =>
+      match.locked ||
+      Boolean(resultForMatch(match)) ||
+      match.providerStatus === "finished",
+  );
+  const [selectedFinishedMatchId, setSelectedFinishedMatchId] = useState(
+    () => finishedMatches[0]?.id ?? "",
+  );
+  const selectedFinishedMatch =
+    finishedMatches.find((match) => match.id === selectedFinishedMatchId) ??
+    finishedMatches[0] ??
+    null;
+  const selectedFinishedPrediction = selectedFinishedMatch
+    ? predictions[selectedFinishedMatch.id] ?? selectedFinishedMatch.prediction ?? null
+    : null;
+  const selectedFinishedResult = selectedFinishedMatch
+    ? resultForMatch(selectedFinishedMatch) ?? undefined
+    : undefined;
+  const selectedComparisons = useMemo(() => {
+    if (!selectedFinishedMatch) return [];
+    const serverComparisons =
+      comparisonOverview.comparisonsByMatch[selectedFinishedMatch.id] ?? [];
+    if (comparisonOverview.source === "supabase") return serverComparisons;
+    return buildDemoMatchComparisons({
+      match: selectedFinishedMatch,
+      result: selectedFinishedResult,
+      currentPrediction: selectedFinishedPrediction,
+    });
+  }, [
+    comparisonOverview,
+    selectedFinishedMatch,
+    selectedFinishedPrediction,
+    selectedFinishedResult,
+  ]);
   const filters: [PredictionFilter, string][] = [
     ...(liveMatches.length > 0 ? [["live", "Ao vivo"] as [PredictionFilter, string]] : []),
     ["pending", "Pendentes"],
@@ -57,6 +116,18 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
 
   return (
     <>
+      {finishedMatches.length > 0 && selectedFinishedMatch ? (
+        <FinishedMatchesReview
+          matches={finishedMatches}
+          selectedMatch={selectedFinishedMatch}
+          selectedPrediction={selectedFinishedPrediction}
+          selectedResult={selectedFinishedResult}
+          comparisons={selectedComparisons}
+          comparisonSource={comparisonOverview.source}
+          onSelectMatch={setSelectedFinishedMatchId}
+        />
+      ) : null}
+
       <section className="mb-6 grid gap-3 md:grid-cols-[1fr_auto]">
         <div className="card flex gap-2 overflow-x-auto p-2" aria-label="Filtros de palpites">
           {filters.map(([value, label]) => (
@@ -118,6 +189,192 @@ export function PredictionBoard({ matches }: { matches: DemoMatch[] }) {
   );
 }
 
+function FinishedMatchesReview({
+  matches,
+  selectedMatch,
+  selectedPrediction,
+  selectedResult,
+  comparisons,
+  comparisonSource,
+  onSelectMatch,
+}: {
+  matches: DemoMatch[];
+  selectedMatch: DemoMatch;
+  selectedPrediction: ScorePrediction | null;
+  selectedResult?: MatchResult;
+  comparisons: MatchPoolComparison[];
+  comparisonSource: PredictionComparisonOverview["source"];
+  onSelectMatch: (matchId: string) => void;
+}) {
+  const userScore =
+    selectedResult && selectedPrediction
+      ? calculateScore(selectedPrediction, selectedResult, selectedMatch.stage)
+      : null;
+
+  return (
+    <section className="mb-7 overflow-hidden rounded-[1.5rem] border bg-surface/90 shadow-lg shadow-brand/5">
+      <div className="border-b p-4 md:p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="eyebrow">Finalizados e bloqueados</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">
+              Comparar palpites do bolão
+            </h2>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-2xl bg-surface-muted px-3 py-2 text-xs font-black text-muted">
+            <ListChecks className="size-4 text-brand" />
+            {matches.length} jogos disponíveis
+          </span>
+        </div>
+        <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+          {matches.map((match) => (
+            <FinishedMatchButton
+              key={match.id}
+              match={match}
+              selected={match.id === selectedMatch.id}
+              result={selectedResultForButton(match, selectedMatch, selectedResult)}
+              onClick={() => onSelectMatch(match.id)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-4 p-4 md:p-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
+        <div className="rounded-[1.25rem] border bg-surface-muted p-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+            {selectedMatch.stageLabel}
+          </p>
+          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <CompactTeam team={selectedMatch.homeTeam} />
+            <div className="rounded-2xl border bg-surface px-4 py-3 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+                {selectedResult ? "Resultado" : "Status"}
+              </p>
+              <p className="mt-1 whitespace-nowrap text-2xl font-black">
+                {selectedResult
+                  ? `${selectedResult.homeScore} x ${selectedResult.awayScore}`
+                  : "bloqueado"}
+              </p>
+            </div>
+            <CompactTeam team={selectedMatch.awayTeam} align="right" />
+          </div>
+          <div className="mt-4 grid gap-2">
+            <ReviewStat label="Seu palpite" value={predictionLabel(selectedPrediction)} />
+            <ReviewStat
+              label="Sua pontuação"
+              value={userScore ? `${userScore.totalPoints} pts` : "aguardando resultado"}
+              tone={userScore?.category === "exact" ? "success" : "neutral"}
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          {comparisons.length > 0 ? (
+            comparisons.map((comparison) => (
+              <PoolComparisonPanel key={comparison.poolId} comparison={comparison} />
+            ))
+          ) : (
+            <div className="rounded-[1.25rem] border bg-surface-muted p-5 text-sm leading-6 text-muted">
+              {comparisonSource === "supabase"
+                ? "Nenhum palpite de bolão está liberado para este jogo ainda."
+                : "Finalize um resultado no modo demo para comparar este jogo com o ranking."}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FinishedMatchButton({
+  match,
+  selected,
+  result,
+  onClick,
+}: {
+  match: DemoMatch;
+  selected: boolean;
+  result?: MatchResult;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`interactive grid min-w-[14rem] grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[1.2rem] border p-3 text-left ${
+        selected ? "bg-brand text-white" : "bg-surface-muted text-foreground hover:border-brand/70"
+      }`}
+    >
+      <MiniTeam team={match.homeTeam} selected={selected} />
+      <span className={`rounded-xl px-2 py-1 text-center text-xs font-black ${selected ? "bg-white/12" : "bg-surface"}`}>
+        {result ? `${result.homeScore} x ${result.awayScore}` : "bloq."}
+      </span>
+      <MiniTeam team={match.awayTeam} selected={selected} align="right" />
+    </button>
+  );
+}
+
+function PoolComparisonPanel({ comparison }: { comparison: MatchPoolComparison }) {
+  const entries = [...comparison.entries].sort(compareEntriesForPanel).slice(0, 8);
+
+  return (
+    <div className="rounded-[1.25rem] border bg-surface-muted p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <PoolFlag code={comparison.flagCode} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black">{comparison.poolName}</p>
+            <p className="text-xs text-muted">{comparison.memberCount} jogadores</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <MiniMetric label="Cravadas" value={comparison.exactCount} />
+          <MiniMetric label="Acertos" value={comparison.resultCount} />
+          <MiniMetric label="Média" value={comparison.averagePoints ?? "—"} />
+        </div>
+      </div>
+      <div className="mt-4 divide-y rounded-2xl border bg-surface">
+        {entries.map((entry) => (
+          <ComparisonRow key={`${comparison.poolId}-${entry.userId ?? entry.name}`} entry={entry} />
+        ))}
+      </div>
+      {comparison.hiddenCount > 0 ? (
+        <p className="mt-3 text-xs font-bold text-muted">
+          {comparison.hiddenCount} participante{comparison.hiddenCount === 1 ? "" : "s"} sem palpite visível para este jogo.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ComparisonRow({ entry }: { entry: PredictionComparisonEntry }) {
+  return (
+    <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 ${entry.isCurrentUser ? "bg-accent/20" : ""}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        <UserAvatar name={entry.name} initials={entry.initials} avatarUrl={entry.avatarUrl} />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black">
+            {entry.name}
+            {entry.isCurrentUser && (
+              <span className="ml-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">
+                Você
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-muted">{predictionLabel(entry.prediction)}</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-sm font-black text-brand">
+          {entry.score ? `${entry.score.totalPoints} pts` : "—"}
+        </p>
+        <p className="text-[10px] font-bold text-muted">#{entry.position}</p>
+      </div>
+    </div>
+  );
+}
+
 function ViewButton({
   active,
   onClick,
@@ -150,4 +407,93 @@ function groupMatches(matches: DemoMatch[], grouping: "stage" | "date") {
     groups.set(label, [...(groups.get(label) ?? []), match]);
   }
   return [...groups.entries()];
+}
+
+function selectedResultForButton(
+  match: DemoMatch,
+  selectedMatch: DemoMatch,
+  selectedResult?: MatchResult,
+) {
+  if (match.id === selectedMatch.id) return selectedResult ?? match.result;
+  return match.result;
+}
+
+function CompactTeam({
+  team,
+  align = "left",
+}: {
+  team: DemoMatch["homeTeam"];
+  align?: "left" | "right";
+}) {
+  return (
+    <div className={`min-w-0 ${align === "right" ? "text-right" : ""}`}>
+      <div className={`flex ${align === "right" ? "justify-end" : ""}`}>
+        <TeamFlag team={team} size="lg" />
+      </div>
+      <p className="mt-2 truncate text-sm font-black">{team.shortName}</p>
+    </div>
+  );
+}
+
+function MiniTeam({
+  team,
+  selected,
+  align = "left",
+}: {
+  team: DemoMatch["homeTeam"];
+  selected: boolean;
+  align?: "left" | "right";
+}) {
+  return (
+    <span className={`min-w-0 ${align === "right" ? "text-right" : ""}`}>
+      <span className={`block truncate text-xs font-black ${selected ? "text-white" : "text-foreground"}`}>
+        {team.shortName}
+      </span>
+      <span className={`mt-0.5 block truncate text-[10px] font-bold ${selected ? "text-white/60" : "text-muted"}`}>
+        {team.flag}
+      </span>
+    </span>
+  );
+}
+
+function ReviewStat({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "success";
+}) {
+  return (
+    <div className={`rounded-2xl border p-3 ${tone === "success" ? "status-success" : "bg-surface"}`}>
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-black">{value}</p>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border bg-surface px-2 py-1.5">
+      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-black">{value}</p>
+    </div>
+  );
+}
+
+function compareEntriesForPanel(
+  left: PredictionComparisonEntry,
+  right: PredictionComparisonEntry,
+) {
+  if (left.isCurrentUser !== right.isCurrentUser) return left.isCurrentUser ? -1 : 1;
+  return (
+    (right.score?.totalPoints ?? -1) - (left.score?.totalPoints ?? -1) ||
+    left.position - right.position ||
+    left.name.localeCompare(right.name, "pt-BR")
+  );
 }

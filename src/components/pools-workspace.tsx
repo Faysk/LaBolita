@@ -3,6 +3,8 @@
 import {
   Archive,
   ArchiveRestore,
+  ArrowRight,
+  BarChart3,
   CalendarClock,
   Check,
   Copy,
@@ -13,6 +15,9 @@ import {
   Radio,
   Search,
   Settings2,
+  Target,
+  TrendingDown,
+  TrendingUp,
   UserMinus,
   Users,
   X,
@@ -223,6 +228,14 @@ export function PoolsWorkspace({
 
       {spotlightMatch ? <PoolMatchSpotlight match={spotlightMatch} /> : null}
 
+      {activePools.length > 1 && (
+        <PoolQuickSwitch
+          pools={activePools}
+          selectedPoolId={selectedPool?.id ?? ""}
+          onSelect={(pool) => void selectPool(pool)}
+        />
+      )}
+
       {isAuthenticated && (
         <PoolSection title="Seus bolões" subtitle="Grupos em que você participa ou administra.">
           {activePools.map((pool) => (
@@ -348,6 +361,49 @@ export function PoolsWorkspace({
         />
       )}
     </main>
+  );
+}
+
+function PoolQuickSwitch({
+  pools,
+  selectedPoolId,
+  onSelect,
+}: {
+  pools: PoolSummary[];
+  selectedPoolId: string;
+  onSelect: (pool: PoolSummary) => void;
+}) {
+  return (
+    <section className="mt-6 rounded-[1.5rem] border bg-surface/85 p-3">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {pools.map((pool) => {
+          const selected = pool.id === selectedPoolId;
+
+          return (
+            <button
+              key={pool.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onSelect(pool)}
+              className={`interactive flex min-w-[12rem] items-center gap-3 rounded-[1.1rem] border px-3 py-2 text-left ${
+                selected
+                  ? "bg-brand text-white"
+                  : "bg-surface-muted text-foreground hover:border-brand/70"
+              }`}
+            >
+              <PoolFlag code={pool.flagCode} size="sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-black">{pool.name}</span>
+                <span className={`block text-xs font-bold ${selected ? "text-white/62" : "text-muted"}`}>
+                  {pool.members} jogadores
+                </span>
+              </span>
+              <ArrowRight className={`size-4 shrink-0 ${selected ? "text-accent" : "text-brand"}`} />
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -871,6 +927,26 @@ function Ranking({
       entry.provisionalPoints !== undefined &&
       entry.provisionalPoints !== entry.points,
   );
+  const fallbackPlayerKey =
+    entries.find((entry) => entry.isCurrentUser)
+      ? rankingEntryKey(entries.find((entry) => entry.isCurrentUser)!)
+      : entries[0]
+        ? rankingEntryKey(entries[0])
+        : "";
+  const [selectedPlayerKey, setSelectedPlayerKey] = useState(() =>
+    fallbackPlayerKey,
+  );
+  const activePlayerKey = entries.some(
+    (entry) => rankingEntryKey(entry) === selectedPlayerKey,
+  )
+    ? selectedPlayerKey
+    : fallbackPlayerKey;
+  const selectedPlayer =
+    entries.find((entry) => rankingEntryKey(entry) === activePlayerKey) ??
+    entries.find((entry) => entry.isCurrentUser) ??
+    entries[0] ??
+    null;
+
   return (
     <section
       data-testid="pool-ranking"
@@ -892,23 +968,132 @@ function Ranking({
       </div>
       <div className="divide-y">
         {loading && Array.from({ length: 3 }, (_, index) => <div key={index} className="flex items-center gap-3 px-5 py-4"><span className="skeleton size-10 rounded-full" /><span className="skeleton h-4 flex-1 rounded-xl" /><span className="skeleton h-4 w-16 rounded-xl" /></div>)}
-        {!loading && entries.map((player) => (
-          <div key={`${player.position}-${player.name}`} data-testid={player.isCurrentUser ? "ranking-current-user" : undefined} className={`grid grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${player.isCurrentUser ? "bg-accent/20" : ""}`}>
-            <span className="text-center text-sm font-black text-muted">{rankingPositionLabel(player, entries, hasProvisional)}</span>
-            <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name} {player.isCurrentUser && <span className="ml-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">Você</span>}</p><p className="text-xs text-muted md:hidden">{pluralize(player.exact, "cravada", "cravadas")} · {pluralize(player.correct, "resultado", "resultados")}</p></div></div>
-            <span className="text-right text-sm font-black text-brand">
+        {!loading && entries.map((player) => {
+          const selected = selectedPlayer ? rankingEntryKey(player) === rankingEntryKey(selectedPlayer) : false;
+
+          return (
+          <button
+            key={`${player.position}-${player.name}`}
+            type="button"
+            data-testid={player.isCurrentUser ? "ranking-current-user" : undefined}
+            aria-pressed={selected}
+            onClick={() => setSelectedPlayerKey(rankingEntryKey(player))}
+            className={`interactive grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 text-left md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${
+              selected ? "bg-brand text-white" : player.isCurrentUser ? "bg-accent/20" : ""
+            }`}
+          >
+            <span className={`text-center text-sm font-black ${selected ? "text-white/75" : "text-muted"}`}>{rankingPositionLabel(player, entries, hasProvisional)}</span>
+            <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name} {player.isCurrentUser && <span className={`ml-1 rounded-full px-2 py-0.5 text-[9px] font-black ${selected ? "bg-accent text-brand-strong" : "bg-brand text-white"}`}>Você</span>}</p><p className={`text-xs md:hidden ${selected ? "text-white/62" : "text-muted"}`}>{pluralize(player.exact, "cravada", "cravadas")} · {pluralize(player.correct, "resultado", "resultados")}</p></div></div>
+            <span className={`text-right text-sm font-black ${selected ? "text-accent" : "text-brand"}`}>
               {hasProvisional ? player.provisionalPoints ?? player.points : player.points} pts
               {hasProvisional && player.provisionalPoints !== player.points && (
-                <small className="block text-[9px] font-bold text-muted">{player.points} oficial</small>
+                <small className={`block text-[9px] font-bold ${selected ? "text-white/62" : "text-muted"}`}>{player.points} oficial</small>
               )}
             </span>
-            <span className="hidden text-center text-sm text-muted md:block">{pluralize(player.exact, "exato", "exatos")}</span>
-            <span className="hidden text-center text-sm text-muted md:block">{pluralize(player.correct, "resultado", "resultados")}</span>
-          </div>
-        ))}
+            <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.exact, "exato", "exatos")}</span>
+            <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.correct, "resultado", "resultados")}</span>
+          </button>
+        )})}
         {!loading && entries.length === 0 && <p className="p-6 text-center text-sm text-muted">O ranking aparece assim que o bolão tiver participantes.</p>}
       </div>
+      {!loading && selectedPlayer && (
+        <RankingPlayerReport
+          player={selectedPlayer}
+          entries={entries}
+          hasProvisional={hasProvisional}
+        />
+      )}
     </section>
+  );
+}
+
+function RankingPlayerReport({
+  player,
+  entries,
+  hasProvisional,
+}: {
+  player: RankingEntry;
+  entries: RankingEntry[];
+  hasProvisional: boolean;
+}) {
+  const leader = entries[0];
+  const currentPoints = hasProvisional ? player.provisionalPoints ?? player.points : player.points;
+  const leaderPoints = leader
+    ? hasProvisional
+      ? leader.provisionalPoints ?? leader.points
+      : leader.points
+    : currentPoints;
+  const gap = Math.max(0, leaderPoints - currentPoints);
+  const movement = rankingMovement(player);
+
+  return (
+    <div data-testid="ranking-player-report" className="border-t bg-surface-muted/55 p-5 md:p-6">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="flex min-w-0 items-start gap-3">
+          <UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} />
+          <div className="min-w-0">
+            <p className="eyebrow">Participante</p>
+            <h3 className="mt-1 text-2xl font-black tracking-tight">{player.name}</h3>
+            <p className="mt-1 text-sm font-bold text-muted">
+              {rankingLabel(player, entries, { provisional: hasProvisional, tiedSuffix: "=" })} · {currentPoints} pts
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/palpites"
+          className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-surface px-4 text-sm font-black text-brand hover:border-brand/70"
+        >
+          Ver palpites <ArrowRight className="size-4" />
+        </Link>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <PlayerMetric icon={BarChart3} label="Pontuação" value={`${currentPoints} pts`} />
+        <PlayerMetric icon={Target} label="Cravadas" value={pluralize(player.exact, "exata", "exatas")} />
+        <PlayerMetric icon={Check} label="Resultados" value={pluralize(player.correct, "acerto", "acertos")} />
+        <PlayerMetric
+          icon={movement.icon}
+          label="Ao vivo"
+          value={movement.label}
+          tone={movement.tone}
+        />
+      </div>
+      {leader && gap > 0 ? (
+        <p className="mt-3 text-xs font-bold text-muted">
+          {gap} pts atrás de {leader.name}.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function PlayerMetric({
+  icon: Icon,
+  label,
+  value,
+  tone = "neutral",
+}: {
+  icon: typeof BarChart3;
+  label: string;
+  value: string;
+  tone?: "neutral" | "up" | "down";
+}) {
+  const toneClass =
+    tone === "up"
+      ? "status-success"
+      : tone === "down"
+        ? "status-warning"
+        : "bg-surface";
+
+  return (
+    <div className={`rounded-2xl border p-3 ${toneClass}`}>
+      <div className="flex items-center gap-2">
+        <Icon className="size-4 text-brand" />
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+          {label}
+        </p>
+      </div>
+      <p className="mt-2 text-sm font-black">{value}</p>
+    </div>
   );
 }
 
@@ -917,6 +1102,32 @@ function rankingPositionLabel(player: RankingEntry, entries: RankingEntry[], pro
     provisional,
     tiedSuffix: "=",
   });
+}
+
+function rankingEntryKey(player: RankingEntry) {
+  return `${player.position}:${player.name}`;
+}
+
+function rankingMovement(player: RankingEntry): {
+  label: string;
+  tone: "neutral" | "up" | "down";
+  icon: typeof BarChart3;
+} {
+  if (!player.provisionalPosition || player.provisionalPosition === player.position) {
+    return { label: "mantém posição", tone: "neutral", icon: BarChart3 };
+  }
+  if (player.provisionalPosition < player.position) {
+    return {
+      label: `sobe ${player.position - player.provisionalPosition}`,
+      tone: "up",
+      icon: TrendingUp,
+    };
+  }
+  return {
+    label: `cai ${player.provisionalPosition - player.position}`,
+    tone: "down",
+    icon: TrendingDown,
+  };
 }
 
 function pluralize(value: number, singular: string, plural: string) {

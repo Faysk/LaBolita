@@ -5,6 +5,7 @@ import { SpecialPredictionsEntry } from "@/components/special-predictions-entry"
 import { isLiveMatch } from "@/lib/match-display";
 import { requireUser } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
+import { getPredictionComparisonOverview } from "@/lib/data/prediction-comparisons";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
 
 export const metadata: Metadata = {
@@ -14,9 +15,10 @@ export const metadata: Metadata = {
 
 export default async function PredictionsPage() {
   await requireUser("/palpites");
-  const [matches, specialsOverview] = await Promise.all([
-    getMatches(),
+  const matches = await getMatches();
+  const [specialsOverview, comparisonOverview] = await Promise.all([
     getSpecialMarketsOverview(),
+    getPredictionComparisonOverview(matches),
   ]);
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
@@ -37,7 +39,7 @@ export default async function PredictionsPage() {
       </div>
       <SpecialPredictionsEntry overview={specialsOverview} />
       <div id="lista-de-jogos" className="scroll-mt-28" aria-hidden="true" />
-      <PredictionBoard matches={matches} />
+      <PredictionBoard matches={matches} comparisonOverview={comparisonOverview} />
     </main>
   );
 }
