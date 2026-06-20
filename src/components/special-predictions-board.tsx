@@ -6,6 +6,7 @@ import {
 } from "@/components/special-sticker";
 import {
   ArrowRight,
+  BarChart3,
   CalendarClock,
   CheckCircle2,
   Clock3,
@@ -154,6 +155,8 @@ export function SpecialPredictionsBoard({
         </div>
       </section>
 
+      <SpecialCommandCenter grouped={grouped} markets={overview.markets} />
+
       <SpecialProgressRail markets={overview.markets} />
 
       {progress.openPending.length > 0 ? (
@@ -208,6 +211,197 @@ export function SpecialPredictionsBoard({
         markets={grouped.knockout}
       />
     </div>
+  );
+}
+
+function SpecialCommandCenter({
+  grouped,
+  markets,
+}: {
+  grouped: ReturnType<typeof groupSpecialMarkets<SpecialMarketView>>;
+  markets: SpecialMarketView[];
+}) {
+  const categories = [
+    {
+      title: "Jogadores",
+      description: "Artilheiro, assistências, Luva de Ouro e Bola de Ouro.",
+      markets: grouped.players,
+      icon: Sparkles,
+    },
+    {
+      title: "Seleções",
+      description: "Ataque mais produtivo e defesa menos vazada.",
+      markets: grouped.teams,
+      icon: Trophy,
+    },
+    {
+      title: "Mata-mata",
+      description: "Campeão, vice e quatro semifinalistas.",
+      markets: grouped.knockout,
+      icon: BarChart3,
+    },
+  ];
+  const completedMarkets = markets.filter((market) => market.predictions.length === market.pickCount);
+  const openMarkets = markets.filter((market) => market.predictions.length < market.pickCount && !market.locked);
+  const lockedMarkets = markets.filter((market) => market.predictions.length < market.pickCount && market.locked);
+
+  return (
+    <section
+      data-testid="special-command-center"
+      className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.8fr)]"
+    >
+      <div className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="eyebrow">Mapa dos palpites finais</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">
+              O que você está escolhendo
+            </h2>
+          </div>
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black status-info">
+            <CalendarClock className="size-4" />
+            Até {SPECIAL_LOCK_DATE_LABEL}
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {categories.map((category) => (
+            <SpecialCategoryCard
+              key={category.title}
+              title={category.title}
+              description={category.description}
+              markets={category.markets}
+              icon={category.icon}
+            />
+          ))}
+        </div>
+      </div>
+
+      <aside className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow">Minha situação</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">Resumo rápido</h2>
+          </div>
+          <CheckCircle2 className="size-5 text-brand" />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <SpecialSummaryMetric label="Salvos" value={completedMarkets.length} tone="success" />
+          <SpecialSummaryMetric label="Abertos" value={openMarkets.length} tone="warning" />
+          <SpecialSummaryMetric label="Fechados" value={lockedMarkets.length} tone="neutral" />
+        </div>
+        <div className="mt-4 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+          {markets.map((market) => (
+            <SpecialChoiceRow key={market.key} market={market} />
+          ))}
+        </div>
+      </aside>
+    </section>
+  );
+}
+
+function SpecialCategoryCard({
+  title,
+  description,
+  markets,
+  icon: Icon,
+}: {
+  title: string;
+  description: string;
+  markets: SpecialMarketView[];
+  icon: typeof Sparkles;
+}) {
+  const completed = markets.filter((market) => market.predictions.length === market.pickCount).length;
+  const pending = markets.filter((market) => market.predictions.length < market.pickCount);
+  const next = pending.find((market) => !market.locked) ?? markets[0] ?? null;
+  const percent = markets.length > 0 ? Math.round((completed / markets.length) * 100) : 0;
+
+  return (
+    <Link
+      href={next ? specialMarketPath(next.key) : "/especiais"}
+      prefetch={false}
+      className="interactive rounded-[1.25rem] border bg-surface-muted p-4 hover:border-brand/70"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-surface text-brand">
+          <Icon className="size-5" />
+        </span>
+        <span className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
+          {completed}/{markets.length}
+        </span>
+      </div>
+      <h3 className="mt-4 text-lg font-black tracking-tight">{title}</h3>
+      <p className="mt-2 min-h-10 text-xs font-bold leading-5 text-muted">
+        {description}
+      </p>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface">
+        <span className="block h-full rounded-full bg-brand" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-3 text-xs font-black text-brand">
+        {pending.length === 0 ? "Tudo salvo" : `${pending.length} pendente${pending.length === 1 ? "" : "s"}`}
+      </p>
+    </Link>
+  );
+}
+
+function SpecialSummaryMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "success" | "warning" | "neutral";
+}) {
+  const className =
+    tone === "success"
+      ? "status-success"
+      : tone === "warning"
+        ? "status-warning"
+        : "bg-surface-muted";
+
+  return (
+    <div className={`rounded-2xl border p-3 ${className}`}>
+      <p className="text-xl font-black">{value}</p>
+      <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function SpecialChoiceRow({ market }: { market: SpecialMarketView }) {
+  const display = specialMarketDisplay(market.key);
+  const Icon = display.icon;
+  const completed = market.predictions.length === market.pickCount;
+  const missingCount = Math.max(0, market.pickCount - market.predictions.length);
+  const statusClass = completed
+    ? "status-success"
+    : market.locked
+      ? "status-neutral"
+      : "status-warning";
+  const value = completed
+    ? market.predictions.map((pick) => pick.label).join(", ")
+    : `${missingCount} escolha${missingCount === 1 ? "" : "s"} pendente${missingCount === 1 ? "" : "s"}`;
+
+  return (
+    <Link
+      href={specialMarketPath(market.key)}
+      prefetch={false}
+      className="interactive grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-surface-muted p-3 hover:border-brand/70"
+    >
+      <span className="inline-flex size-10 items-center justify-center rounded-xl bg-surface text-brand">
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-black">{display.shortTitle}</span>
+        <span className="mt-0.5 block truncate text-xs font-bold text-muted">
+          {value}
+        </span>
+      </span>
+      <span className={`rounded-full px-2 py-1 text-[9px] font-black ${statusClass}`}>
+        {completed ? "OK" : market.locked ? "Fechado" : "Aberto"}
+      </span>
+    </Link>
   );
 }
 
