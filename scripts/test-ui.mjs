@@ -354,6 +354,12 @@ try {
   await page.goto(BASE_URL);
   await page.getByRole("navigation").getByRole("link", { name: "Ao vivo" }).waitFor();
   await page.getByRole("navigation").getByRole("link", { name: "Bolões" }).waitFor();
+  await page.getByRole("navigation", { name: "Menu principal" }).getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("menuitem", { name: /Jogos/ }).waitFor();
+  await page.getByRole("menuitem", { name: /Especiais/ }).waitFor();
+  await page.getByRole("menuitem", { name: /Jogadores/ }).waitFor();
+  await page.keyboard.press("Escape");
+  await page.getByRole("menuitem", { name: /Jogos/ }).waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "Abrir menu da conta" }).click();
   await page.getByText("Faysk · demonstração").waitFor();
   await page.keyboard.press("Escape");
@@ -439,6 +445,12 @@ try {
   await desktopPage.getByRole("link", { name: "contato@faysk.dev" }).waitFor();
   await desktopPage.goto(`${BASE_URL}/termos`);
   await desktopPage.getByRole("heading", { name: "Termos de Serviço" }).waitFor();
+  await desktopPage.goto(BASE_URL);
+  await desktopPage.getByRole("navigation", { name: "Menu principal" }).getByRole("button", { name: /Mais/ }).click();
+  await desktopPage.getByRole("menuitem", { name: /Meu painel/ }).waitFor();
+  await desktopPage.getByRole("menuitem", { name: /Regras/ }).waitFor();
+  await desktopPage.keyboard.press("Escape");
+  await desktopPage.getByRole("menuitem", { name: /Meu painel/ }).waitFor({ state: "hidden" });
   assert.deepEqual(desktopErrors, []);
 
   console.log("UI flow test passed");

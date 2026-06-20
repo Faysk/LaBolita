@@ -3,82 +3,348 @@
 import {
   BarChart3,
   CalendarDays,
+  CircleEllipsis,
   CircleHelp,
-  LayoutDashboard,
   Home,
+  LayoutDashboard,
+  Menu,
   Radio,
   Sparkles,
   Target,
   Trophy,
   UsersRound,
+  X,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
-const navigation = [
-  { href: "/", label: "Início", icon: Home },
-  { href: "/ao-vivo", label: "Ao vivo", icon: Radio },
-  { href: "/painel", label: "Painel", icon: LayoutDashboard },
-  { href: "/palpites", label: "Palpites", icon: Target },
-  { href: "/boloes", label: "Bolões", icon: BarChart3 },
-  { href: "/especiais", label: "Especiais", icon: Sparkles },
-  { href: "/jogadores", label: "Jogadores", icon: UsersRound },
-  { href: "/jogos", label: "Jogos", icon: CalendarDays, desktopOnly: true },
-  { href: "/competicao", label: "Copa", icon: Trophy, desktopOnly: true },
-  { href: "/regras", label: "Regras", icon: CircleHelp, desktopOnly: true },
+type NavigationItem = {
+  href: string;
+  label: string;
+  mobileLabel?: string;
+  description: string;
+  icon: LucideIcon;
+};
+
+const gamesItem: NavigationItem = {
+  href: "/jogos",
+  label: "Jogos",
+  description: "Agenda, placares e caminho para palpitar.",
+  icon: CalendarDays,
+};
+
+const primaryNavigation: NavigationItem[] = [
+  {
+    href: "/",
+    label: "Início",
+    description: "Resumo público da Copa e próximos jogos.",
+    icon: Home,
+  },
+  {
+    href: "/ao-vivo",
+    label: "Ao vivo",
+    description: "Placar, parciais e ranking mexendo.",
+    icon: Radio,
+  },
+  {
+    href: "/palpites",
+    label: "Palpites",
+    description: "Seus placares jogo a jogo.",
+    icon: Target,
+  },
+  {
+    href: "/boloes",
+    label: "Bolões",
+    description: "Rankings, grupos e comparações.",
+    icon: BarChart3,
+  },
+  gamesItem,
 ];
+
+const supportNavigation: NavigationItem[] = [
+  {
+    href: "/painel",
+    label: "Meu painel",
+    mobileLabel: "Painel",
+    description: "Tudo que falta, pontuação e alertas.",
+    icon: LayoutDashboard,
+  },
+  {
+    href: "/especiais",
+    label: "Especiais",
+    description: "Artilheiro, campeão e palpites finais.",
+    icon: Sparkles,
+  },
+  {
+    href: "/jogadores",
+    label: "Jogadores",
+    description: "Elencos, figurinhas e dados dos atletas.",
+    icon: UsersRound,
+  },
+  {
+    href: "/competicao",
+    label: "Copa",
+    description: "Seleções, grupos e visão da competição.",
+    icon: Trophy,
+  },
+  {
+    href: "/regras",
+    label: "Regras",
+    description: "Pontuação, bloqueios e desempates.",
+    icon: CircleHelp,
+  },
+];
+
+const mobileQuickNavigation = primaryNavigation.filter(
+  (item) => item.href !== gamesItem.href,
+);
+const mobileMenuNavigation = [gamesItem, ...supportNavigation];
 
 export function DesktopNavigation() {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const supportActive = supportNavigation.some((item) =>
+    isActivePath(pathname, item.href),
+  );
+
+  useEffect(() => {
+    if (!moreOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMoreOpen(false);
+    }
+
+    function closeOutside(event: PointerEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOutside);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOutside);
+    };
+  }, [moreOpen]);
 
   return (
-    <nav className="desktop-nav hidden items-center gap-1 lg:flex">
-      {navigation.map((item) => {
-        const active = isActivePath(pathname, item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={active ? "page" : undefined}
-            className={`interactive rounded-xl px-3.5 py-2 text-sm font-bold ${
-              active
-                ? "bg-white text-brand shadow-sm"
-                : "text-muted hover:bg-white hover:text-brand hover:shadow-sm"
-            }`}
+    <nav className="desktop-nav hidden items-center gap-1 lg:flex" aria-label="Menu principal">
+      {primaryNavigation.map((item) => (
+        <DesktopNavigationLink
+          key={item.href}
+          item={item}
+          active={isActivePath(pathname, item.href)}
+        />
+      ))}
+      <div ref={containerRef} className="relative">
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={moreOpen}
+          aria-controls="desktop-more-navigation"
+          onClick={() => setMoreOpen((value) => !value)}
+          className={`interactive inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold ${
+            supportActive || moreOpen
+              ? "bg-white text-brand shadow-sm"
+              : "text-muted hover:bg-white hover:text-brand hover:shadow-sm"
+          }`}
+        >
+          Mais
+          <CircleEllipsis className="size-4" />
+        </button>
+        {moreOpen ? (
+          <div
+            id="desktop-more-navigation"
+            role="menu"
+            className="absolute right-0 top-12 z-50 grid w-72 gap-1 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/15"
           >
-            {item.label}
-          </Link>
-        );
-      })}
+            {supportNavigation.map((item) => (
+              <MoreNavigationLink
+                key={item.href}
+                item={item}
+                active={isActivePath(pathname, item.href)}
+                onClick={() => setMoreOpen(false)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
     </nav>
   );
 }
 
 export function MobileNavigation() {
   const pathname = usePathname();
-  const mobileItems = navigation.filter((item) => !item.desktopOnly);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const menuActive = mobileMenuNavigation.some((item) =>
+    isActivePath(pathname, item.href),
+  );
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+
+    function closeOutside(event: PointerEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    document.addEventListener("pointerdown", closeOutside);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("pointerdown", closeOutside);
+    };
+  }, [menuOpen]);
 
   return (
-    <nav className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-7 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl lg:hidden">
-      {mobileItems.map((item) => {
-        const active = isActivePath(pathname, item.href);
-        return (
-          <Link
+    <div ref={containerRef} className="lg:hidden">
+      {menuOpen ? (
+        <div
+          id="mobile-more-navigation"
+          role="menu"
+          className="fixed inset-x-2.5 bottom-[5.45rem] z-50 grid gap-1 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/20 backdrop-blur-xl"
+        >
+          {mobileMenuNavigation.map((item) => (
+            <MoreNavigationLink
+              key={item.href}
+              item={item}
+              active={isActivePath(pathname, item.href)}
+              onClick={() => setMenuOpen(false)}
+            />
+          ))}
+        </div>
+      ) : null}
+      <nav
+        className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-5 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl"
+        aria-label="Menu principal"
+      >
+        {mobileQuickNavigation.map((item) => (
+          <MobileNavigationLink
             key={item.href}
-            href={item.href}
-            aria-current={active ? "page" : undefined}
-            className={`interactive flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
-              active
-                ? "bg-brand text-white shadow-md shadow-brand/20"
-                : "text-muted hover:bg-surface-muted hover:text-brand"
-            }`}
-          >
-            <item.icon className="size-4" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+            item={item}
+            active={isActivePath(pathname, item.href)}
+            onClick={() => setMenuOpen(false)}
+          />
+        ))}
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-more-navigation"
+          onClick={() => setMenuOpen((value) => !value)}
+          className={`interactive flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
+            menuActive || menuOpen
+              ? "bg-brand text-white shadow-md shadow-brand/20"
+              : "text-muted hover:bg-surface-muted hover:text-brand"
+          }`}
+        >
+          {menuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
+          Menu
+        </button>
+      </nav>
+    </div>
+  );
+}
+
+function DesktopNavigationLink({
+  item,
+  active,
+}: {
+  item: NavigationItem;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={`interactive rounded-xl px-3.5 py-2 text-sm font-bold ${
+        active
+          ? "bg-white text-brand shadow-sm"
+          : "text-muted hover:bg-white hover:text-brand hover:shadow-sm"
+      }`}
+    >
+      {item.label}
+    </Link>
+  );
+}
+
+function MobileNavigationLink({
+  item,
+  active,
+  onClick,
+}: {
+  item: NavigationItem;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      onClick={onClick}
+      className={`interactive flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
+        active
+          ? "bg-brand text-white shadow-md shadow-brand/20"
+          : "text-muted hover:bg-surface-muted hover:text-brand"
+      }`}
+    >
+      <item.icon className="size-4" />
+      {item.mobileLabel ?? item.label}
+    </Link>
+  );
+}
+
+function MoreNavigationLink({
+  item,
+  active,
+  onClick,
+}: {
+  item: NavigationItem;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      role="menuitem"
+      aria-current={active ? "page" : undefined}
+      onClick={onClick}
+      className={`interactive flex min-w-0 items-center gap-3 rounded-xl px-3 py-2.5 ${
+        active
+          ? "bg-brand text-white"
+          : "text-muted hover:bg-surface-muted hover:text-brand"
+      }`}
+    >
+      <span
+        className={`inline-flex size-10 shrink-0 items-center justify-center rounded-xl border ${
+          active ? "border-white/20 bg-white/10" : "bg-surface"
+        }`}
+      >
+        <item.icon className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-black">
+          {item.label}
+        </span>
+        <span
+          className={`mt-0.5 block truncate text-xs font-bold ${
+            active ? "text-white/65" : "text-muted"
+          }`}
+        >
+          {item.description}
+        </span>
+      </span>
+    </Link>
   );
 }
 
