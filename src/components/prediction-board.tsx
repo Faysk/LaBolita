@@ -217,7 +217,16 @@ export function PredictionBoard({
                 {groupedMatches.length} jogos
               </span>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <ProgressiveList
+              initialCount={progressiveInitialCount(
+                groupedMatches,
+                grouping === "stage" ? 8 : 6,
+                resolvedFocusMatchId,
+              )}
+              step={grouping === "stage" ? 8 : 6}
+              moreLabel="Ver mais jogos"
+              className="grid gap-4 md:grid-cols-2"
+            >
               {groupedMatches.map((match) => (
                 <MatchCard
                   key={match.id}
@@ -227,7 +236,7 @@ export function PredictionBoard({
                   highlighted={match.id === resolvedFocusMatchId}
                 />
               ))}
-            </div>
+            </ProgressiveList>
           </section>
         ))}
         {visibleMatches.length === 0 && (
@@ -348,15 +357,22 @@ export function FinishedMatchesReview({
           </div>
         </div>
 
-        <div className="grid gap-3">
+        <div>
           {comparisons.length > 0 ? (
-            comparisons.map((comparison) => (
-              <PoolComparisonPanel
-                key={comparison.poolId}
-                comparison={comparison}
-                match={selectedMatch}
-              />
-            ))
+            <ProgressiveList
+              initialCount={2}
+              step={2}
+              moreLabel="Ver mais bolões"
+              className="grid gap-3"
+            >
+              {comparisons.map((comparison) => (
+                <PoolComparisonPanel
+                  key={comparison.poolId}
+                  comparison={comparison}
+                  match={selectedMatch}
+                />
+              ))}
+            </ProgressiveList>
           ) : (
             <EmptyState
               icon={Layers3}
@@ -672,6 +688,16 @@ function groupMatches(matches: DemoMatch[], grouping: "stage" | "date") {
     groups.set(label, [...(groups.get(label) ?? []), match]);
   }
   return [...groups.entries()];
+}
+
+function progressiveInitialCount(
+  matches: DemoMatch[],
+  baseCount: number,
+  focusMatchId?: string,
+) {
+  if (!focusMatchId) return baseCount;
+  const focusIndex = matches.findIndex((match) => match.id === focusMatchId);
+  return focusIndex >= baseCount ? focusIndex + 1 : baseCount;
 }
 
 function selectedResultForButton(
