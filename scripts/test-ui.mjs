@@ -179,6 +179,8 @@ try {
   );
   await selectedPoolCard.getByText("Família Faysk").waitFor();
   await page.getByTestId("ranking-current-user").getByText("131 pts").waitFor();
+  await page.getByTestId("ranking-player-report").getByText("Palpites finalizados").waitFor();
+  await page.getByTestId("ranking-player-finished-picks").getByText("2 x 1").first().waitFor();
   await page.getByTestId("pool-friends").getByRole("button", { name: "Ver ranking" }).click();
   await page.getByTestId("pool-ranking").getByText("Resenha da Firma").waitFor();
   await page.getByRole("button", { name: "Criar bolão" }).click();

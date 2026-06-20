@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
 import { PoolFlag } from "@/components/pool-flag";
 import { TeamFlag } from "@/components/team-flag";
@@ -34,13 +34,27 @@ import { COUNTRIES } from "@/lib/countries";
 import type { PoolsOverview } from "@/lib/data/pools";
 import { isLiveMatch } from "@/lib/match-display";
 import {
+  buildDemoMatchComparisons,
+  predictionLabel,
+  type MatchPoolComparison,
+  type PredictionComparisonEntry,
+  type PredictionComparisonOverview,
+} from "@/lib/prediction-comparisons";
+import {
   storeLocalPool,
   useLocalPools,
   useLocalPredictions,
   useLocalResults,
 } from "@/lib/local-state";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import type { DemoMatch, PoolSummary, RankingEntry } from "@/lib/types";
+import type {
+  DemoMatch,
+  MatchResult,
+  PoolSummary,
+  RankingEntry,
+  ScoreBreakdown,
+  ScorePrediction,
+} from "@/lib/types";
 import { friendlyServerError } from "@/lib/user-errors";
 import { UserAvatar } from "@/components/user-avatar";
 import { rankingLabel } from "@/lib/ranking-display";
@@ -50,6 +64,11 @@ type ManagedMember = {
   display_name: string;
   role: "owner" | "admin" | "member";
   joined_at: string;
+};
+
+type PoolMatchComparisonPreview = {
+  match: DemoMatch;
+  comparison: MatchPoolComparison;
 };
 
 export function PoolsWorkspace({
@@ -63,8 +82,14 @@ export function PoolsWorkspace({
   publicPage,
   publicPages,
   publicSearch,
+  matches,
+  comparisonOverview,
   spotlightMatch,
-}: PoolsOverview & { spotlightMatch?: DemoMatch | null }) {
+}: PoolsOverview & {
+  matches: DemoMatch[];
+  comparisonOverview: PredictionComparisonOverview;
+  spotlightMatch?: DemoMatch | null;
+}) {
   const router = useRouter();
   const localPools = useLocalPools();
   const localPredictions = useLocalPredictions(demoMatches);
@@ -88,6 +113,12 @@ export function PoolsWorkspace({
   const [notice, setNotice] = useState<string | null>(null);
   const selectedPool =
     [...pools, ...publicPools].find((pool) => pool.id === selectedPoolId) ?? firstPool;
+  const selectedIsMembership = Boolean(
+    selectedPool && pools.some((pool) => pool.id === selectedPool.id),
+  );
+  const selectedIsPublicPool = Boolean(
+    selectedPool && publicPools.some((pool) => pool.id === selectedPool.id),
+  );
   const selectedIsLocal = Boolean(
     selectedPool && localPools.some((pool) => pool.id === selectedPool.id),
   );
@@ -112,6 +143,15 @@ export function PoolsWorkspace({
         localResults,
         selectedPool?.eligibleFrom,
       );
+  const selectedPoolMatchComparisons = selectedPool
+    ? buildPoolMatchComparisons({
+        pool: selectedPool,
+        matches,
+        comparisonOverview,
+        localPredictions,
+        localResults,
+      })
+    : [];
 
   function requireLogin(panelToOpen: "create" | "join") {
     if (!isAuthenticated) {
@@ -239,32 +279,34 @@ export function PoolsWorkspace({
       {isAuthenticated && (
         <PoolSection title="Seus bolões" subtitle="Grupos em que você participa ou administra.">
           {activePools.map((pool) => (
-            <Fragment key={pool.id}>
-              <PoolCard
-                pool={pool}
-                selected={pool.id === selectedPool?.id}
-                copied={copiedCode === pool.code}
-                onCopy={() => copyCode(pool.code)}
-                onSelect={() => void selectPool(pool)}
-                onManage={pool.isOwner ? () => setManagedPoolId(managedPoolId === pool.id ? null : pool.id) : undefined}
-              />
-              {pool.id === selectedPool?.id && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <Ranking
-                    entries={visibleRanking}
-                    name={selectedPool.name}
-                    memberCount={selectedPool.members}
-                    loading={rankingLoadingId === selectedPool.id}
-                    inline
-                  />
-                </div>
-              )}
-            </Fragment>
+            <PoolCard
+              key={pool.id}
+              pool={pool}
+              selected={pool.id === selectedPool?.id}
+              copied={copiedCode === pool.code}
+              onCopy={() => copyCode(pool.code)}
+              onSelect={() => void selectPool(pool)}
+              onManage={pool.isOwner ? () => setManagedPoolId(managedPoolId === pool.id ? null : pool.id) : undefined}
+            />
           ))}
           {activePools.length === 0 && (
             <EmptyCard text="Você ainda não participa de nenhum bolão. Crie um grupo, use um convite ou descubra um bolão público." />
           )}
         </PoolSection>
+      )}
+
+      {isAuthenticated && selectedPool && selectedIsMembership && (
+        <div className="mt-5">
+          <Ranking
+            key={selectedPool.id}
+            entries={visibleRanking}
+            name={selectedPool.name}
+            memberCount={selectedPool.members}
+            loading={rankingLoadingId === selectedPool.id}
+            matchComparisons={selectedPoolMatchComparisons}
+            inline
+          />
+        </div>
       )}
 
       {managedPoolId && (
@@ -299,31 +341,32 @@ export function PoolsWorkspace({
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {publicPools.map((pool) => (
-            <Fragment key={pool.id}>
-              <PublicPoolCard
-                pool={pool}
-                selected={pool.id === selectedPool?.id}
-                joining={joiningId === pool.id}
-                onSelect={() => void selectPool(pool)}
-                onJoin={() => joinPublicPool(pool)}
-              />
-              {pool.id === selectedPool?.id && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <Ranking
-                    entries={visibleRanking}
-                    name={selectedPool.name}
-                    memberCount={selectedPool.members}
-                    loading={rankingLoadingId === selectedPool.id}
-                    inline
-                  />
-                </div>
-              )}
-            </Fragment>
+            <PublicPoolCard
+              key={pool.id}
+              pool={pool}
+              selected={pool.id === selectedPool?.id}
+              joining={joiningId === pool.id}
+              onSelect={() => void selectPool(pool)}
+              onJoin={() => joinPublicPool(pool)}
+            />
           ))}
           {publicPools.length === 0 && (
             <EmptyCard text={publicSearch ? "Nenhum bolão público encontrado nesta busca." : "Ainda não há bolões públicos disponíveis."} />
           )}
         </div>
+        {selectedPool && selectedIsPublicPool && (
+          <div className="mt-5">
+            <Ranking
+              key={selectedPool.id}
+              entries={visibleRanking}
+              name={selectedPool.name}
+              memberCount={selectedPool.members}
+              loading={rankingLoadingId === selectedPool.id}
+              matchComparisons={selectedPoolMatchComparisons}
+              inline
+            />
+          </div>
+        )}
         {publicPages > 1 && (
           <div className="mt-5 flex items-center justify-center gap-3 text-sm font-bold">
             <PaginationLink page={publicPage - 1} disabled={publicPage <= 1} search={publicSearch}>Anterior</PaginationLink>
@@ -891,6 +934,7 @@ function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {
       avatar_url?: string | null;
     };
     return {
+      userId: row.user_id ?? undefined,
       position: Number(row.rank_position),
       provisionalPosition:
         row.provisional_rank_position === undefined
@@ -909,17 +953,59 @@ function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {
   });
 }
 
+function buildPoolMatchComparisons({
+  pool,
+  matches,
+  comparisonOverview,
+  localPredictions,
+  localResults,
+}: {
+  pool: PoolSummary;
+  matches: DemoMatch[];
+  comparisonOverview: PredictionComparisonOverview;
+  localPredictions: Record<string, ScorePrediction>;
+  localResults: Record<string, MatchResult>;
+}): PoolMatchComparisonPreview[] {
+  return matches
+    .map((match) => {
+      const result = localResults[match.id] ?? match.result;
+      const previewMatch = result ? { ...match, result } : match;
+      const comparable =
+        match.locked || Boolean(result) || match.providerStatus === "finished";
+      if (!comparable) return null;
+
+      if (comparisonOverview.source === "supabase") {
+        const comparison = comparisonOverview.comparisonsByMatch[match.id]?.find(
+          (item) => item.poolId === pool.id,
+        );
+        return comparison ? { match: previewMatch, comparison } : null;
+      }
+
+      const comparison = buildDemoMatchComparisons({
+        match,
+        result,
+        currentPrediction: localPredictions[match.id] ?? match.prediction ?? null,
+      }).find((item) => item.poolId === pool.id);
+
+      return comparison ? { match: previewMatch, comparison } : null;
+    })
+    .filter((item): item is PoolMatchComparisonPreview => Boolean(item))
+    .sort((left, right) => matchTime(right.match) - matchTime(left.match));
+}
+
 function Ranking({
   entries,
   name,
   memberCount,
   loading,
+  matchComparisons = [],
   inline = false,
 }: {
   entries: RankingEntry[];
   name: string;
   memberCount: number;
   loading: boolean;
+  matchComparisons?: PoolMatchComparisonPreview[];
   inline?: boolean;
 }) {
   const hasProvisional = entries.some(
@@ -1001,6 +1087,7 @@ function Ranking({
           player={selectedPlayer}
           entries={entries}
           hasProvisional={hasProvisional}
+          matchComparisons={matchComparisons}
         />
       )}
     </section>
@@ -1011,10 +1098,12 @@ function RankingPlayerReport({
   player,
   entries,
   hasProvisional,
+  matchComparisons,
 }: {
   player: RankingEntry;
   entries: RankingEntry[];
   hasProvisional: boolean;
+  matchComparisons: PoolMatchComparisonPreview[];
 }) {
   const leader = entries[0];
   const currentPoints = hasProvisional ? player.provisionalPoints ?? player.points : player.points;
@@ -1025,6 +1114,15 @@ function RankingPlayerReport({
     : currentPoints;
   const gap = Math.max(0, leaderPoints - currentPoints);
   const movement = rankingMovement(player);
+  const finishedPicks = matchComparisons
+    .map(({ match, comparison }) => {
+      const entry = findPlayerComparisonEntry(player, comparison.entries);
+      return entry ? { match, entry } : null;
+    })
+    .filter((item): item is { match: DemoMatch; entry: PredictionComparisonEntry } =>
+      Boolean(item),
+    )
+    .slice(0, 5);
 
   return (
     <div data-testid="ranking-player-report" className="border-t bg-surface-muted/55 p-5 md:p-6">
@@ -1062,7 +1160,92 @@ function RankingPlayerReport({
           {gap} pts atrás de {leader.name}.
         </p>
       ) : null}
+      <div data-testid="ranking-player-finished-picks" className="mt-4 rounded-2xl border bg-surface p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-muted">
+            Palpites finalizados
+          </p>
+          <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-black text-muted">
+            {finishedPicks.length} jogos
+          </span>
+        </div>
+        {finishedPicks.length > 0 ? (
+          <div className="mt-3 divide-y rounded-2xl border">
+            {finishedPicks.map(({ match, entry }) => (
+              <FinishedPickRow key={`${match.id}-${entry.userId ?? entry.name}`} match={match} entry={entry} />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
+            Nenhum palpite finalizado visível para este participante neste bolão.
+          </p>
+        )}
+      </div>
     </div>
+  );
+}
+
+function FinishedPickRow({
+  match,
+  entry,
+}: {
+  match: DemoMatch;
+  entry: PredictionComparisonEntry;
+}) {
+  const result = match.result ?? match.liveResult;
+  const updatedAt = formatShortDateTime(entry.updatedAt);
+
+  return (
+    <div className="grid gap-3 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+      <div className="min-w-0">
+        <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+          {match.stageLabel}
+        </p>
+        <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+          <MiniMatchTeam team={match.homeTeam} />
+          <span className="rounded-xl bg-surface-muted px-2 py-1 text-center text-xs font-black">
+            {result ? `${result.homeScore} x ${result.awayScore}` : "bloq."}
+          </span>
+          <MiniMatchTeam team={match.awayTeam} align="right" />
+        </div>
+      </div>
+      <div className="rounded-xl bg-surface-muted px-3 py-2">
+        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+          Palpite
+        </p>
+        <p className="mt-0.5 text-sm font-black">{predictionLabel(entry.prediction)}</p>
+        {updatedAt ? <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p> : null}
+      </div>
+      <div className="rounded-xl bg-surface-muted px-3 py-2 text-left md:text-right">
+        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+          Pontos
+        </p>
+        <p className="mt-0.5 text-sm font-black text-brand">
+          {entry.score ? `${entry.score.totalPoints} pts` : "—"}
+        </p>
+        {entry.score ? (
+          <p className="text-[10px] font-bold text-muted">
+            {scoreCategoryLabel(entry.score.category)}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function MiniMatchTeam({
+  team,
+  align = "left",
+}: {
+  team: DemoMatch["homeTeam"];
+  align?: "left" | "right";
+}) {
+  return (
+    <span className={`flex min-w-0 items-center gap-2 ${align === "right" ? "justify-end text-right" : ""}`}>
+      {align === "left" ? <TeamFlag team={team} size="sm" /> : null}
+      <span className="truncate text-xs font-black">{team.shortName}</span>
+      {align === "right" ? <TeamFlag team={team} size="sm" /> : null}
+    </span>
   );
 }
 
@@ -1105,6 +1288,7 @@ function rankingPositionLabel(player: RankingEntry, entries: RankingEntry[], pro
 }
 
 function rankingEntryKey(player: RankingEntry) {
+  if (player.userId) return player.userId;
   return `${player.position}:${player.name}`;
 }
 
@@ -1132,4 +1316,49 @@ function rankingMovement(player: RankingEntry): {
 
 function pluralize(value: number, singular: string, plural: string) {
   return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function findPlayerComparisonEntry(
+  player: RankingEntry,
+  entries: PredictionComparisonEntry[],
+) {
+  if (player.userId) {
+    const byId = entries.find((entry) => entry.userId === player.userId);
+    if (byId) return byId;
+  }
+  if (player.isCurrentUser) {
+    const currentUserEntry = entries.find((entry) => entry.isCurrentUser);
+    if (currentUserEntry) return currentUserEntry;
+  }
+  return (
+    entries.find(
+      (entry) => entry.name === player.name && entry.initials === player.initials,
+    ) ?? null
+  );
+}
+
+function scoreCategoryLabel(category: ScoreBreakdown["category"]) {
+  if (category === "exact") return "cravado";
+  if (category === "refined") return "refinado";
+  if (category === "result") return "resultado";
+  if (category === "one-score") return "um placar";
+  return "sem acerto";
+}
+
+function formatShortDateTime(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function matchTime(match: DemoMatch) {
+  if (!match.scheduledAt) return 0;
+  const date = new Date(match.scheduledAt);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }

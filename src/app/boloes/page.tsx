@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PoolsWorkspace } from "@/components/pools-workspace";
 import { getMatches } from "@/lib/data/matches";
 import { getPoolsOverview } from "@/lib/data/pools";
+import { getPredictionComparisonOverview } from "@/lib/data/prediction-comparisons";
 import { selectLiveOrNextMatch } from "@/lib/match-display";
 
 export const metadata: Metadata = {
@@ -23,5 +24,14 @@ export default async function PoolsPage({
     }),
     getMatches(),
   ]);
-  return <PoolsWorkspace {...overview} spotlightMatch={selectLiveOrNextMatch(matches)} />;
+  const comparisonOverview = await getPredictionComparisonOverview(matches);
+
+  return (
+    <PoolsWorkspace
+      {...overview}
+      matches={matches}
+      comparisonOverview={comparisonOverview}
+      spotlightMatch={selectLiveOrNextMatch(matches)}
+    />
+  );
 }

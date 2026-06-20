@@ -306,6 +306,7 @@ function demoOverview(): PoolsOverview {
 
 function mapRanking(ranking: RankingRow[], currentUserId?: string): RankingEntry[] {
   return ranking.map((entry) => ({
+    userId: entry.user_id ?? undefined,
     position: Number(entry.rank_position),
     provisionalPosition:
       entry.provisional_rank_position === undefined
