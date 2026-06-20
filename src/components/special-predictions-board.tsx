@@ -155,6 +155,8 @@ export function SpecialPredictionsBoard({
         </div>
       </section>
 
+      <SpecialReadingGuide grouped={grouped} />
+
       <SpecialCommandCenter grouped={grouped} markets={overview.markets} />
 
       <SpecialProgressRail markets={overview.markets} />
@@ -211,6 +213,132 @@ export function SpecialPredictionsBoard({
         markets={grouped.knockout}
       />
     </div>
+  );
+}
+
+function SpecialReadingGuide({
+  grouped,
+}: {
+  grouped: ReturnType<typeof groupSpecialMarkets<SpecialMarketView>>;
+}) {
+  const guides = [
+    {
+      title: "Jogadores",
+      eyebrow: "Palpites individuais",
+      description: "Artilheiro, assistências, Luva de Ouro e Bola de Ouro. Você escolhe uma carta de jogador por categoria.",
+      detail: "Use quando a resposta é uma pessoa.",
+      markets: grouped.players,
+      icon: Sparkles,
+    },
+    {
+      title: "Seleções",
+      eyebrow: "Força coletiva",
+      description: "Mais gols e menos gols sofridos. Você escolhe uma seleção que pode liderar a estatística final.",
+      detail: "Use quando a resposta é um time.",
+      markets: grouped.teams,
+      icon: Trophy,
+    },
+    {
+      title: "Mata-mata",
+      eyebrow: "Caminho da taça",
+      description: "Campeão, vice e semifinalistas. Você monta o fim do torneio antes da Copa mostrar o caminho.",
+      detail: "Use quando a resposta é campanha.",
+      markets: grouped.knockout,
+      icon: BarChart3,
+    },
+  ];
+
+  return (
+    <section data-testid="special-reading-guide" className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] xl:items-start">
+        <div>
+          <p className="eyebrow">Como ler esta tela</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight">São palpites finais, não placares</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Cada bloco abaixo é uma categoria final da Copa. Ao abrir, você entra
+            em um baralho de cartas, busca uma opção e salva seu palpite.
+          </p>
+          <div className="mt-4 grid gap-2">
+            <GuideStep index="1" title="Abra um especial" detail="Escolha a categoria que falta preencher." />
+            <GuideStep index="2" title="Passe pelas cartas" detail="Compare jogadores ou seleções com imagem, bandeira e dados." />
+            <GuideStep index="3" title="Salve e avance" detail="Depois de salvar, o app indica o próximo pendente." />
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {guides.map((guide) => (
+            <SpecialGuideCard key={guide.title} {...guide} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GuideStep({
+  index,
+  title,
+  detail,
+}: {
+  index: string;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="grid grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-2xl border bg-surface-muted px-3 py-2">
+      <span className="flex size-8 items-center justify-center rounded-xl bg-brand text-xs font-black text-white">
+        {index}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-black">{title}</span>
+        <span className="mt-0.5 block text-xs font-bold leading-5 text-muted">{detail}</span>
+      </span>
+    </div>
+  );
+}
+
+function SpecialGuideCard({
+  title,
+  eyebrow,
+  description,
+  detail,
+  markets,
+  icon: Icon,
+}: {
+  title: string;
+  eyebrow: string;
+  description: string;
+  detail: string;
+  markets: SpecialMarketView[];
+  icon: typeof Sparkles;
+}) {
+  const completed = markets.filter((market) => market.predictions.length === market.pickCount).length;
+  const openPending = markets.filter((market) => market.predictions.length < market.pickCount && !market.locked).length;
+  const percent = markets.length > 0 ? Math.round((completed / markets.length) * 100) : 0;
+
+  return (
+    <article className="rounded-[1.25rem] border bg-surface-muted p-4">
+      <div className="flex items-start justify-between gap-3">
+        <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-surface text-brand">
+          <Icon className="size-5" />
+        </span>
+        <span className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
+          {completed}/{markets.length}
+        </span>
+      </div>
+      <p className="mt-4 text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+        {eyebrow}
+      </p>
+      <h3 className="mt-1 text-lg font-black tracking-tight">{title}</h3>
+      <p className="mt-2 text-xs font-bold leading-5 text-muted">{description}</p>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-surface">
+        <span className="block h-full rounded-full bg-brand" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="mt-3 text-[11px] font-black text-muted">
+        {openPending > 0
+          ? `${openPending} aberto${openPending === 1 ? "" : "s"} pendente${openPending === 1 ? "" : "s"}`
+          : detail}
+      </p>
+    </article>
   );
 }
 
@@ -501,6 +629,14 @@ function MarketCard({ market }: { market: SpecialMarketView }) {
       </p>
       <h3 className="mt-1 text-2xl font-black tracking-tight">{display.shortTitle}</h3>
       <p className="mt-2 text-sm leading-6 text-muted">{display.teaser}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span className="rounded-full border bg-surface-muted px-3 py-1 text-[11px] font-black text-muted">
+          {marketRequirementLabel(market)}
+        </span>
+        <span className="rounded-full border bg-surface-muted px-3 py-1 text-[11px] font-black text-muted">
+          {market.locked ? "Fechado" : `Aberto até ${SPECIAL_LOCK_DATE_LABEL}`}
+        </span>
+      </div>
       <div className="mt-4 grid gap-2">
         <MarketValue
           label={display.pickLabel}
@@ -574,6 +710,20 @@ function SpecialProgressRail({ markets }: { markets: SpecialMarketView[] }) {
       </div>
     </section>
   );
+}
+
+function marketRequirementLabel(market: SpecialMarketView) {
+  const display = specialMarketDisplay(market.key);
+  const count = market.pickCount;
+  const noun =
+    display.category === "players"
+      ? count === 1
+        ? "jogador"
+        : "jogadores"
+      : count === 1
+        ? "seleção"
+        : "seleções";
+  return count === 1 ? `Escolha 1 ${noun}` : `Escolha ${count} ${noun}`;
 }
 
 function MarketValue({
