@@ -113,7 +113,7 @@ export function HomeOverview({
           icon={Users}
           label="Meus bolões"
           value={canShowPersonalStats ? String(pools.length) : "Entrar"}
-          detail={canShowPersonalStats ? `${opponents} rivais na resenha` : "Login necessário"}
+          detail={canShowPersonalStats ? `${opponents} participantes nos bolões` : "Login necessário"}
           href={canShowPersonalStats ? undefined : "/entrar?next=%2Fboloes"}
         />
       </section>

@@ -155,7 +155,7 @@ export function MobileNavigation() {
           role="menu"
           className="fixed inset-x-2.5 bottom-[5.45rem] z-50 grid max-h-[calc(100dvh-7rem)] gap-1 overflow-y-auto rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/20 backdrop-blur-xl"
         >
-          <MenuHeader title="Mais caminhos" description="Jogos, dados, especiais e regras." />
+          <MenuHeader title="Mais caminhos" description="Jogos, dados, finais e regras." />
           {mobileMenuNavigation.map((item) => (
             <MoreNavigationLink
               key={item.href}

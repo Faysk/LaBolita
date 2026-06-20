@@ -37,7 +37,7 @@ export default async function AccountPage() {
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
           Ajuste nome, foto, tema e horário dos jogos do jeito que combina com
-          sua resenha.
+          você.
         </p>
       </div>
 

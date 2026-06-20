@@ -870,7 +870,7 @@ function specialAuditEntry(row: SpecialPredictionChangeRow): AuditEntry {
     numericId: row.id,
     source: "specials",
     action: `special_prediction_${row.action}`,
-    title: row.action === "created" ? "Palpite especial criado" : "Palpite especial alterado",
+    title: row.action === "created" ? "Palpite final criado" : "Palpite final alterado",
     actorId: null,
     userId: row.user_id,
     entityType: "special_market",
@@ -1441,7 +1441,7 @@ async function getAdminUserReports({
             id: change.id,
             marketId: change.market_id,
             marketKey: market?.key ?? change.market_id,
-            marketTitle: market?.title ?? "Palpite especial",
+            marketTitle: market?.title ?? "Palpite final",
             action: change.action,
             previousOptions: arrayFromJson(change.previous_options),
             newOptions: arrayFromJson(change.new_options),
@@ -1557,7 +1557,7 @@ function groupSpecialPredictions(rows: SpecialPredictionRow[]) {
       byUserAndMarket.get(key) ??
       ({
         marketKey: market?.key ?? row.market_id,
-        marketTitle: market?.title ?? "Palpite especial",
+        marketTitle: market?.title ?? "Palpite final",
         picks: [],
         updatedAt: row.updated_at,
       } satisfies AdminUserReport["specialMarkets"][number]);

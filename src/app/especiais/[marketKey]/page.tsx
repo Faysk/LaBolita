@@ -11,7 +11,7 @@ import {
 } from "@/lib/special-market-display";
 
 export const metadata: Metadata = {
-  title: "Palpite especial",
+  title: "Palpite final",
   robots: { index: false, follow: false },
 };
 
@@ -39,7 +39,7 @@ export default async function SpecialMarketPage({
   return (
     <main className="page-container py-7 md:py-10">
       <div className="mb-7">
-        <p className="eyebrow">Palpite especial</p>
+        <p className="eyebrow">Palpite final</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
           {display.heroTitle}
         </h1>

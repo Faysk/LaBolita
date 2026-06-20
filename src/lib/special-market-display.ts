@@ -186,7 +186,7 @@ export function specialMarketDisplay(marketKey: string) {
     eyebrow: "Especial",
     shortTitle: marketKey,
     heroTitle: marketKey,
-    teaser: "Palpite especial.",
+    teaser: "Palpite final.",
     highlightTitle: "Destaques",
     pickLabel: "Minha escolha",
     searchPlaceholder: "Buscar opção",

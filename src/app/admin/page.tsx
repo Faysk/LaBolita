@@ -214,7 +214,7 @@ function OperationalReadinessPanel({
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
             Sinais para priorizar placares, divergências, mata-mata e prazo dos
-            palpites finais antes da rodada apertar.
+            palpites finais antes do prazo apertar.
           </p>
         </div>
         <span

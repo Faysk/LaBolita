@@ -57,7 +57,7 @@ export default function SpecialPredictionsLoading() {
         ))}
       </section>
 
-      <p className="sr-only" aria-live="polite">Carregando especiais, aguarde.</p>
+      <p className="sr-only" aria-live="polite">Carregando palpites finais, aguarde.</p>
     </main>
   );
 }

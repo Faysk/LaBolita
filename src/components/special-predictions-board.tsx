@@ -68,7 +68,7 @@ export function SpecialPredictionsBoard({
         <div className="card-dark overflow-hidden rounded-[1.8rem] p-5 text-white md:p-6">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
-              Finais especiais
+              Palpites finais
             </span>
             <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/75">
               Até {SPECIAL_LOCK_DATE_LABEL}
@@ -147,7 +147,7 @@ export function SpecialPredictionsBoard({
             prefetch={false}
             className="interactive relative mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
-            <LinkPendingLabel pendingLabel="Abrindo especiais...">
+            <LinkPendingLabel pendingLabel="Abrindo finais...">
               {progress.next ? "Completar agora" : "Revisar escolhas"}
               <ArrowRight className="size-4" />
             </LinkPendingLabel>
@@ -259,7 +259,7 @@ function SpecialReadingGuide({
             em um baralho de cartas, busca uma opção e salva seu palpite.
           </p>
           <div className="mt-4 grid gap-2">
-            <GuideStep index="1" title="Abra um especial" detail="Escolha a categoria que falta preencher." />
+            <GuideStep index="1" title="Abra um palpite final" detail="Escolha a categoria que falta preencher." />
             <GuideStep index="2" title="Passe pelas cartas" detail="Compare jogadores ou seleções com imagem, bandeira e dados." />
             <GuideStep index="3" title="Salve e avance" detail="Depois de salvar, o app indica o próximo pendente." />
           </div>

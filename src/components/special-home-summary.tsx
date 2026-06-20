@@ -26,9 +26,9 @@ export function SpecialHomeSummary({
             </span>
             <div>
               <p className="eyebrow">Palpites finais</p>
-              <h2 className="mt-1 text-xl font-black">Especiais da Copa</h2>
+              <h2 className="mt-1 text-xl font-black">Finais da Copa</h2>
               <p className="mt-1 text-sm leading-6 text-muted">
-                Entre para cravar artilheiro, campeão, Bola de Ouro e seleções destaque.
+                Entre para escolher artilheiro, campeão, Bola de Ouro e seleções destaque.
               </p>
             </div>
           </div>
@@ -38,7 +38,7 @@ export function SpecialHomeSummary({
             className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
             <LinkPendingLabel pendingLabel="Abrindo login...">
-              Entrar nos especiais <ArrowRight className="size-4" />
+              Entrar nos finais <ArrowRight className="size-4" />
             </LinkPendingLabel>
           </Link>
         </div>
@@ -83,7 +83,7 @@ export function SpecialHomeSummary({
           prefetch={false}
           className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
         >
-          <LinkPendingLabel pendingLabel="Abrindo especiais...">
+          <LinkPendingLabel pendingLabel="Abrindo finais...">
             {next ? "Completar agora" : "Revisar finais"}
             <ArrowRight className="size-4" />
           </LinkPendingLabel>

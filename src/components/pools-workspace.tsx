@@ -284,7 +284,7 @@ export function PoolsWorkspace({
     <main className="page-container py-7 md:py-10">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="eyebrow">A resenha mora aqui</p>
+          <p className="eyebrow">Disputa com a turma</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
             Bolões
           </h1>
@@ -402,9 +402,9 @@ export function PoolsWorkspace({
       <section className="mt-10">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="eyebrow">Aberto para a torcida</p>
+            <p className="eyebrow">Bolões abertos</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight">Bolões públicos</h2>
-            <p className="mt-2 text-sm text-muted">Lista leve para descobrir disputa nova sem bagunçar a tela.</p>
+            <p className="mt-2 text-sm text-muted">Descubra disputas públicas sem perder o ranking que você já está vendo.</p>
           </div>
           <form action="/boloes" className="flex gap-2">
             <label className="relative min-w-0 flex-1 md:w-72">

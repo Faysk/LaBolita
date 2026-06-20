@@ -49,7 +49,7 @@ export default function SpecialMarketLoading() {
         </div>
       </section>
 
-      <p className="sr-only" aria-live="polite">Carregando mercado especial, aguarde.</p>
+      <p className="sr-only" aria-live="polite">Carregando palpite final, aguarde.</p>
     </main>
   );
 }

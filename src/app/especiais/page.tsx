@@ -24,7 +24,7 @@ export default async function SpecialPredictionsPage() {
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
             Aqui entram as apostas de temporada: artilheiro, assistências,
             prêmios individuais, seleções destaque e caminho até a final. Cada
-            especial abre um baralho de cartas para buscar, comparar e salvar.
+            palpite final abre um baralho de cartas para buscar, comparar e salvar.
           </p>
         </div>
       </div>

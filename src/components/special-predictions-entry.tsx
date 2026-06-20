@@ -86,7 +86,7 @@ export function SpecialPredictionsEntry({
               prefetch={false}
               className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-[#063b22] shadow-lg shadow-accent/20"
             >
-              <LinkPendingLabel pendingLabel="Abrindo especiais...">
+              <LinkPendingLabel pendingLabel="Abrindo finais...">
                 {next ? "Completar agora" : "Revisar finais"} <ArrowRight className="size-4" />
               </LinkPendingLabel>
             </Link>

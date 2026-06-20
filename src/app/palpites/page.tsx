@@ -34,13 +34,13 @@ export default async function PredictionsPage({ searchParams }: PredictionsPageP
     <main className="page-container py-7 md:py-10">
       <LiveRefresh active={matches.some(isLiveMatch) || awaitingOfficial} />
       <div className="mb-7">
-        <p className="eyebrow">A bola está com você</p>
+        <p className="eyebrow">Seus placares</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
           Meus palpites
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-muted md:text-base">
           O mesmo placar vale em todos os seus bolões. Dá para mudar até o
-          bloqueio de cada jogo. Depois disso, é torcida e calculadora.
+          bloqueio de cada jogo. Depois disso, é acompanhar a rodada e somar.
         </p>
       </div>
       <PageShortcuts

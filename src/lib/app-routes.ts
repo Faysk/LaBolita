@@ -61,7 +61,7 @@ export const appRoutes = {
   specials: {
     href: "/especiais",
     label: "Especiais",
-    description: "Artilheiro, campeão e prêmios.",
+    description: "Palpites finais da Copa.",
     icon: Sparkles,
   },
   players: {

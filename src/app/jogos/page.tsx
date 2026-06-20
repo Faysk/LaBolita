@@ -51,7 +51,7 @@ export default async function GamesPage() {
           href="/palpites"
           className="interactive inline-flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-black text-brand"
         >
-          Abrir meus palpites <ArrowRight className="size-4" />
+          Abrir palpites <ArrowRight className="size-4" />
         </Link>
       </div>
 
@@ -65,7 +65,7 @@ export default async function GamesPage() {
           icon={Radio}
           label="Ao vivo"
           value={liveMatches.length}
-          detail={liveMatches.length > 0 ? "partiu acompanhar" : "nenhum jogo agora"}
+          detail={liveMatches.length > 0 ? "acompanhe agora" : "nenhum jogo agora"}
           tone={liveMatches.length > 0 ? "live" : "neutral"}
         />
         <ScheduleMetric

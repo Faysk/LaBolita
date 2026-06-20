@@ -43,7 +43,7 @@ export default function RulesPage() {
   return (
     <main className="page-container py-7 md:py-10">
       <div className="max-w-2xl">
-        <p className="eyebrow">Sem letrinha miúda</p>
+        <p className="eyebrow">Regras sem mistério</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
           Regras do jogo
         </h1>
@@ -67,8 +67,8 @@ export default function RulesPage() {
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         {[
           [Clock3, "Até o apito", "Altere seu palpite livremente até o bloqueio."],
-          [EyeOff, "Tudo oculto", "Os palpites rivais aparecem somente após o bloqueio."],
-          [ShieldCheck, "Sem jeitinho", "O horário do servidor decide se um palpite é válido."],
+          [EyeOff, "Rivais ocultos", "Os palpites rivais aparecem somente após o bloqueio."],
+          [ShieldCheck, "Servidor no apito", "O horário do servidor decide se um palpite é válido."],
         ].map(([Icon, title, text]) => {
           const RuleIcon = Icon as typeof Clock3;
           return (

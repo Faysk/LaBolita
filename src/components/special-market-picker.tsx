@@ -253,14 +253,14 @@ export function SpecialMarketPicker({
         busy: false,
         message: friendlyServerError(
           error,
-          "Não foi possível salvar este palpite especial.",
+          "Não foi possível salvar este palpite final.",
         ),
       });
       navigator.vibrate?.([25, 30, 25]);
       return;
     }
 
-    setSync({ busy: false, ok: true, message: "Palpite especial salvo." });
+    setSync({ busy: false, ok: true, message: "Palpite final salvo." });
     navigator.vibrate?.(20);
     router.refresh();
   }
@@ -278,7 +278,7 @@ export function SpecialMarketPicker({
         >
           <LinkPendingLabel pendingLabel="Voltando...">
             <ArrowLeft className="size-3.5" />
-            Voltar aos especiais
+            Todos os finais
           </LinkPendingLabel>
         </Link>
         <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
@@ -543,7 +543,7 @@ export function SpecialMarketPicker({
               className="interactive mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border bg-surface px-4 text-sm font-black text-brand hover:border-brand/70"
             >
               <LinkPendingLabel pendingLabel="Abrindo próximo...">
-                Próximo especial: {nextMarket.label}
+                Próximo final: {nextMarket.label}
                 <ArrowRight className="size-4" />
               </LinkPendingLabel>
             </Link>

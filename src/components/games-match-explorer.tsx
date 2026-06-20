@@ -61,7 +61,7 @@ export function GamesMatchExplorer({
       comparisons={comparisons}
       comparisonSource={comparisonOverview.source}
       onSelectMatch={setSelectedMatchId}
-      eyebrow="Clique em um jogo"
+      eyebrow="Escolha um jogo"
       title="Palpites do bolão por partida"
     />
   );
