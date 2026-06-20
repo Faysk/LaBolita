@@ -1,6 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Goal, Images, ShieldCheck, Sparkles, Trophy, Users } from "lucide-react";
+import {
+  PlayersCatalog,
+  type PlayerCatalogItem,
+  type PlayerCatalogTeam,
+} from "@/components/players-catalog";
 import { TeamFlag } from "@/components/team-flag";
 import { uniqueTeams } from "@/lib/competition";
 import { getMatches } from "@/lib/data/matches";
@@ -16,7 +21,7 @@ import {
   squadSummary,
 } from "@/lib/squads";
 import type { SquadPlayer } from "@/lib/squads";
-import type { DemoTeam } from "@/lib/types";
+import type { DemoMatch, DemoTeam } from "@/lib/types";
 
 type PlayerWithTeam = ReturnType<typeof allPlayers>[number];
 
@@ -30,11 +35,20 @@ export async function PlayersDirectory({
   const matches = await getMatches();
   const teams = uniqueTeams(matches);
   const players = allPlayers();
+  const groupsByTeamCode = groupNamesByTeamCode(matches);
   const teamsByCode = new Map(
     teams
       .filter((team) => team.code)
       .map((team) => [team.code!.toUpperCase(), team]),
   );
+  const catalogPlayers = buildCatalogPlayers(players, teamsByCode, groupsByTeamCode);
+  const stickerCountByTeam = catalogPlayers.reduce((counts, player) => {
+    if (player.sticker) {
+      counts.set(player.teamCode, (counts.get(player.teamCode) ?? 0) + 1);
+    }
+    return counts;
+  }, new Map<string, number>());
+  const catalogTeams = buildCatalogTeams(teams, groupsByTeamCode, stickerCountByTeam);
   const topScorers = [...players]
     .sort((left, right) => right.goals - left.goals || right.caps - left.caps)
     .slice(0, 8);
@@ -61,6 +75,9 @@ export async function PlayersDirectory({
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
             Convocados, posições, clubes, números e dados usados nos palpites
             especiais. As figurinhas aparecem quando já foram publicadas no app.
+          </p>
+          <p className="mt-2 text-xs font-bold leading-5 text-muted">
+            {sourceVersionLabel()}
           </p>
         </div>
         <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -112,6 +129,8 @@ export async function PlayersDirectory({
         </section>
       )}
 
+      <PlayersCatalog players={catalogPlayers} teams={catalogTeams} />
+
       <section className="mt-8 grid min-w-0 gap-5 lg:grid-cols-2">
         <Leaderboard
           title="Artilheiros pela seleção"
@@ -127,65 +146,6 @@ export async function PlayersDirectory({
           teamsByCode={teamsByCode}
           metric={(player) => `${player.caps} jogos`}
         />
-      </section>
-
-      <section className="mt-8">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="eyebrow">Por seleção</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight">Elencos</h2>
-          </div>
-          <p className="max-w-xl text-xs font-bold leading-5 text-muted">
-            {sourceVersionLabel()}
-          </p>
-        </div>
-        <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {teams.map((team) => {
-            const squad = getSquadByCode(team.code);
-            const summary = squad ? squadSummary(squad) : null;
-            const spotlight = squad?.players
-              .slice()
-              .sort((left, right) => right.goals - left.goals || right.caps - left.caps)
-              .slice(0, 3);
-
-            return (
-              <Link
-                key={team.id}
-                href={`/competicao/selecoes/${encodeURIComponent(team.id)}`}
-                className="interactive block min-w-0 overflow-hidden rounded-2xl border bg-surface p-5 shadow-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <TeamFlag team={team} size="md" />
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-lg font-black">{team.name}</h3>
-                    <p className="text-xs font-bold text-muted">
-                      {squad ? `${squad.players.length} convocados` : "Elenco a confirmar"}
-                    </p>
-                  </div>
-                  <ArrowRight className="size-4 text-brand" />
-                </div>
-                {summary && (
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                    <MiniMetric label="Artilheiro" value={summary.topScorer.name} />
-                    <MiniMetric label="Gols" value={String(summary.topScorer.goals)} />
-                    <MiniMetric label="Mais jogos" value={summary.mostCapped.name} />
-                    <MiniMetric label="Média" value={`${summary.averageAge} anos`} />
-                  </div>
-                )}
-                {spotlight && (
-                  <div className="mt-4 flex -space-x-2">
-                    {spotlight.map((player) => (
-                      <PlayerMiniPortrait
-                        key={`${team.code}-${player.number}`}
-                        player={{ ...player, team: { code: team.code ?? "", name: team.name, players: [] } }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
       </section>
     </main>
   );
@@ -317,15 +277,6 @@ function PlayerMiniPortrait({ player }: { player: PlayerWithTeam }) {
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-2xl bg-surface-muted p-3">
-      <p className="text-[10px] font-black uppercase tracking-wider text-muted">{label}</p>
-      <p className="mt-1 truncate font-black">{value}</p>
-    </div>
-  );
-}
-
 function teamForPlayer(player: PlayerWithTeam, teamsByCode: Map<string, DemoTeam>) {
   return (
     teamsByCode.get(player.team.code.toUpperCase()) ?? {
@@ -340,4 +291,83 @@ function teamForPlayer(player: PlayerWithTeam, teamsByCode: Map<string, DemoTeam
 
 function stickerKey(player: Pick<PlayerWithTeam, "team" | "number" | "fullName">) {
   return playerOptionKey(player.team.code, player.number, player.fullName);
+}
+
+function buildCatalogPlayers(
+  players: PlayerWithTeam[],
+  teamsByCode: Map<string, DemoTeam>,
+  groupsByTeamCode: Map<string, string>,
+): PlayerCatalogItem[] {
+  return players.map((player) => {
+    const key = stickerKey(player);
+    const team = teamForPlayer(player, teamsByCode);
+    const teamCode = (team.code ?? player.team.code).toUpperCase();
+    const sticker = playerStickerAsset(key);
+
+    return {
+      key,
+      name: player.name,
+      fullName: player.fullName,
+      number: player.number,
+      position: player.position,
+      positionLabel: positionLabel(player.position),
+      positionShortLabel: positionShortLabel(player.position),
+      teamId: team.id,
+      teamCode,
+      teamName: team.name,
+      teamShortName: team.shortName,
+      teamFlag: team.flag,
+      groupName: groupsByTeamCode.get(teamCode),
+      club: player.club,
+      age: playerAge(player),
+      heightCm: player.heightCm,
+      caps: player.caps,
+      goals: player.goals,
+      sticker: sticker ? { ...sticker } : null,
+    };
+  });
+}
+
+function buildCatalogTeams(
+  teams: DemoTeam[],
+  groupsByTeamCode: Map<string, string>,
+  stickerCountByTeam: Map<string, number>,
+): PlayerCatalogTeam[] {
+  return teams
+    .filter((team) => team.code)
+    .map((team) => {
+      const teamCode = team.code!.toUpperCase();
+      const squad = getSquadByCode(teamCode);
+      const summary = squad ? squadSummary(squad) : null;
+
+      return {
+        id: team.id,
+        code: teamCode,
+        name: team.name,
+        shortName: team.shortName,
+        flag: team.flag,
+        groupName: groupsByTeamCode.get(teamCode),
+        totalPlayers: squad?.players.length ?? 0,
+        stickerCount: stickerCountByTeam.get(teamCode) ?? 0,
+        topScorerName: summary?.topScorer.name,
+        topScorerGoals: summary?.topScorer.goals,
+        mostCappedName: summary?.mostCapped.name,
+        mostCappedCaps: summary?.mostCapped.caps,
+        averageAge: summary?.averageAge,
+      };
+    });
+}
+
+function groupNamesByTeamCode(matches: DemoMatch[]) {
+  const groups = new Map<string, string>();
+  for (const match of matches) {
+    if (match.stage !== "group") continue;
+    const groupName = match.stageLabel.startsWith("Grupo")
+      ? match.stageLabel
+      : `Grupo ${match.stageLabel}`;
+    for (const team of [match.homeTeam, match.awayTeam]) {
+      if (team.code) groups.set(team.code.toUpperCase(), groupName);
+    }
+  }
+  return groups;
 }
