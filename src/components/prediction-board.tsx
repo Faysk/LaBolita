@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from "react";
 import {
+  BarChart3,
   CalendarDays,
   CheckCircle2,
   CircleDashed,
   Layers3,
   ListChecks,
+  Target,
+  Trophy,
 } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { PoolFlag } from "@/components/pool-flag";
@@ -26,7 +29,7 @@ import {
   type PredictionComparisonEntry,
 } from "@/lib/prediction-comparisons";
 import { calculateScore } from "@/lib/scoring";
-import type { DemoMatch, MatchResult, ScorePrediction } from "@/lib/types";
+import type { DemoMatch, MatchResult, ScoreBreakdown, ScorePrediction } from "@/lib/types";
 
 export function PredictionBoard({
   matches,
@@ -210,6 +213,7 @@ function FinishedMatchesReview({
     selectedResult && selectedPrediction
       ? calculateScore(selectedPrediction, selectedResult, selectedMatch.stage)
       : null;
+  const totals = summarizeComparisonTotals(comparisons);
 
   return (
     <section className="mb-7 overflow-hidden rounded-[1.5rem] border bg-surface/90 shadow-lg shadow-brand/5">
@@ -221,10 +225,11 @@ function FinishedMatchesReview({
               Comparar palpites do bolão
             </h2>
           </div>
-          <span className="inline-flex items-center gap-2 rounded-2xl bg-surface-muted px-3 py-2 text-xs font-black text-muted">
-            <ListChecks className="size-4 text-brand" />
-            {matches.length} jogos disponíveis
-          </span>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <ReviewPill icon={ListChecks} label="Jogos" value={matches.length} />
+            <ReviewPill icon={Layers3} label="Bolões" value={comparisons.length} />
+            <ReviewPill icon={Target} label="Visíveis" value={totals.predictionCount} />
+          </div>
         </div>
         <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
           {matches.map((match) => (
@@ -265,13 +270,29 @@ function FinishedMatchesReview({
               value={userScore ? `${userScore.totalPoints} pts` : "aguardando resultado"}
               tone={userScore?.category === "exact" ? "success" : "neutral"}
             />
+            <ReviewStat
+              label="Tipo de acerto"
+              value={userScore ? scoreCategoryLabel(userScore.category) : "sem placar final"}
+            />
+            <ReviewStat
+              label="Iguais ao seu"
+              value={
+                selectedPrediction
+                  ? `${totals.samePredictionCount} palpite${totals.samePredictionCount === 1 ? "" : "s"}`
+                  : "sem palpite"
+              }
+            />
           </div>
         </div>
 
         <div className="grid gap-3">
           {comparisons.length > 0 ? (
             comparisons.map((comparison) => (
-              <PoolComparisonPanel key={comparison.poolId} comparison={comparison} />
+              <PoolComparisonPanel
+                key={comparison.poolId}
+                comparison={comparison}
+                match={selectedMatch}
+              />
             ))
           ) : (
             <div className="rounded-[1.25rem] border bg-surface-muted p-5 text-sm leading-6 text-muted">
@@ -315,7 +336,13 @@ function FinishedMatchButton({
   );
 }
 
-function PoolComparisonPanel({ comparison }: { comparison: MatchPoolComparison }) {
+function PoolComparisonPanel({
+  comparison,
+  match,
+}: {
+  comparison: MatchPoolComparison;
+  match: DemoMatch;
+}) {
   const entries = [...comparison.entries].sort(compareEntriesForPanel).slice(0, 8);
 
   return (
@@ -328,12 +355,19 @@ function PoolComparisonPanel({ comparison }: { comparison: MatchPoolComparison }
             <p className="text-xs text-muted">{comparison.memberCount} jogadores</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+          <MiniMetric label="Palpites" value={comparison.predictionCount} />
           <MiniMetric label="Cravadas" value={comparison.exactCount} />
           <MiniMetric label="Acertos" value={comparison.resultCount} />
           <MiniMetric label="Média" value={comparison.averagePoints ?? "—"} />
+          <MiniMetric
+            label="Mesmo"
+            value={comparison.samePredictionCount}
+            muted={comparison.samePredictionCount === 0}
+          />
         </div>
       </div>
+      <OutcomeDistribution comparison={comparison} match={match} />
       <div className="mt-4 divide-y rounded-2xl border bg-surface">
         {entries.map((entry) => (
           <ComparisonRow key={`${comparison.poolId}-${entry.userId ?? entry.name}`} entry={entry} />
@@ -349,6 +383,8 @@ function PoolComparisonPanel({ comparison }: { comparison: MatchPoolComparison }
 }
 
 function ComparisonRow({ entry }: { entry: PredictionComparisonEntry }) {
+  const updatedAt = formatShortDateTime(entry.updatedAt);
+
   return (
     <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 ${entry.isCurrentUser ? "bg-accent/20" : ""}`}>
       <div className="flex min-w-0 items-center gap-3">
@@ -363,6 +399,9 @@ function ComparisonRow({ entry }: { entry: PredictionComparisonEntry }) {
             )}
           </p>
           <p className="text-xs text-muted">{predictionLabel(entry.prediction)}</p>
+          {updatedAt ? (
+            <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p>
+          ) : null}
         </div>
       </div>
       <div className="text-right">
@@ -371,6 +410,84 @@ function ComparisonRow({ entry }: { entry: PredictionComparisonEntry }) {
         </p>
         <p className="text-[10px] font-bold text-muted">#{entry.position}</p>
       </div>
+    </div>
+  );
+}
+
+function OutcomeDistribution({
+  comparison,
+  match,
+}: {
+  comparison: MatchPoolComparison;
+  match: DemoMatch;
+}) {
+  if (comparison.predictionCount === 0) return null;
+
+  const outcomes = [
+    {
+      key: "home" as const,
+      label: match.homeTeam.shortName,
+      value: comparison.outcomeCounts.home,
+    },
+    { key: "draw" as const, label: "Empate", value: comparison.outcomeCounts.draw },
+    {
+      key: "away" as const,
+      label: match.awayTeam.shortName,
+      value: comparison.outcomeCounts.away,
+    },
+  ];
+
+  return (
+    <div className="mt-4 rounded-2xl border bg-surface p-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-muted">
+          <BarChart3 className="size-3.5 text-brand" />
+          Mapa dos palpites
+        </p>
+        {comparison.bestScore !== null ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-2 py-1 text-[10px] font-black text-brand">
+            <Trophy className="size-3" />
+            Melhor {comparison.bestScore} pts
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid gap-2">
+        {outcomes.map((outcome) => {
+          const percentage =
+            comparison.predictionCount > 0
+              ? Math.round((outcome.value / comparison.predictionCount) * 100)
+              : 0;
+
+          return (
+            <div key={outcome.key} className="grid grid-cols-[4.5rem_minmax(0,1fr)_2.5rem] items-center gap-2">
+              <span className="truncate text-xs font-bold text-muted">{outcome.label}</span>
+              <span className="h-2 overflow-hidden rounded-full bg-surface-muted">
+                <span
+                  className="block h-full rounded-full bg-brand"
+                  style={{ width: `${percentage}%` }}
+                />
+              </span>
+              <span className="text-right text-xs font-black">{percentage}%</span>
+            </div>
+          );
+        })}
+      </div>
+      {comparison.topScorelines.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {comparison.topScorelines.map((scoreline) => (
+            <span
+              key={scoreline.label}
+              className={`rounded-full border px-2 py-1 text-[10px] font-black ${
+                scoreline.isCurrentUserPrediction
+                  ? "border-brand bg-brand text-white"
+                  : "bg-surface-muted text-muted"
+              }`}
+            >
+              {scoreline.label} · {scoreline.count}
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -475,13 +592,41 @@ function ReviewStat({
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: string | number }) {
+function ReviewPill({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof ListChecks;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl bg-surface-muted px-3 py-2">
+      <p className="flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+        <Icon className="size-3 text-brand" />
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-black">{value}</p>
+    </div>
+  );
+}
+
+function MiniMetric({
+  label,
+  value,
+  muted = false,
+}: {
+  label: string;
+  value: string | number;
+  muted?: boolean;
+}) {
   return (
     <div className="rounded-xl border bg-surface px-2 py-1.5">
       <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
         {label}
       </p>
-      <p className="mt-0.5 text-sm font-black">{value}</p>
+      <p className={`mt-0.5 text-sm font-black ${muted ? "text-muted" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -496,4 +641,34 @@ function compareEntriesForPanel(
     left.position - right.position ||
     left.name.localeCompare(right.name, "pt-BR")
   );
+}
+
+function summarizeComparisonTotals(comparisons: MatchPoolComparison[]) {
+  return comparisons.reduce(
+    (totals, comparison) => ({
+      predictionCount: totals.predictionCount + comparison.predictionCount,
+      samePredictionCount: totals.samePredictionCount + comparison.samePredictionCount,
+    }),
+    { predictionCount: 0, samePredictionCount: 0 },
+  );
+}
+
+function scoreCategoryLabel(category: ScoreBreakdown["category"]) {
+  if (category === "exact") return "Placar cravado";
+  if (category === "refined") return "Resultado refinado";
+  if (category === "result") return "Resultado certo";
+  if (category === "one-score") return "Um placar certo";
+  return "Sem acerto";
+}
+
+function formatShortDateTime(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }

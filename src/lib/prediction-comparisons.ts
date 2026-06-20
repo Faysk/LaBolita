@@ -31,10 +31,25 @@ export type MatchPoolComparison = {
   memberCount: number;
   matchId: string;
   entries: PredictionComparisonEntry[];
+  predictionCount: number;
+  scoredCount: number;
   exactCount: number;
   resultCount: number;
+  bestScore: number | null;
+  currentUserPoints: number | null;
+  samePredictionCount: number;
   averagePoints: number | null;
   hiddenCount: number;
+  outcomeCounts: {
+    home: number;
+    draw: number;
+    away: number;
+  };
+  topScorelines: {
+    label: string;
+    count: number;
+    isCurrentUserPrediction: boolean;
+  }[];
 };
 
 export type PredictionComparisonOverview = {
@@ -89,6 +104,7 @@ export function summarizePoolComparison({
   memberCount: number;
 }): MatchPoolComparison {
   const scoredEntries = entries.filter((entry) => entry.score);
+  const predictionCount = entries.filter((entry) => entry.prediction).length;
   const totalPoints = scoredEntries.reduce(
     (total, entry) => total + (entry.score?.totalPoints ?? 0),
     0,
@@ -99,6 +115,19 @@ export function summarizePoolComparison({
   const resultCount = scoredEntries.filter((entry) =>
     ["exact", "refined", "result"].includes(entry.score?.category ?? ""),
   ).length;
+  const currentUserPrediction = entries.find((entry) => entry.isCurrentUser)?.prediction;
+  const currentUserPredictionKey = currentUserPrediction
+    ? predictionKey(currentUserPrediction)
+    : null;
+  const outcomeCounts = { home: 0, draw: 0, away: 0 };
+  const scorelineCounts = new Map<string, number>();
+
+  for (const entry of entries) {
+    if (!entry.prediction) continue;
+    outcomeCounts[predictionOutcome(entry.prediction)] += 1;
+    const label = predictionLabel(entry.prediction);
+    scorelineCounts.set(label, (scorelineCounts.get(label) ?? 0) + 1);
+  }
 
   return {
     poolId: pool.id,
@@ -107,11 +136,42 @@ export function summarizePoolComparison({
     memberCount,
     matchId,
     entries,
+    predictionCount,
+    scoredCount: scoredEntries.length,
     exactCount,
     resultCount,
+    bestScore:
+      scoredEntries.length > 0
+        ? Math.max(...scoredEntries.map((entry) => entry.score?.totalPoints ?? 0))
+        : null,
+    currentUserPoints:
+      entries.find((entry) => entry.isCurrentUser)?.score?.totalPoints ?? null,
+    samePredictionCount: currentUserPredictionKey
+      ? entries.filter(
+          (entry) =>
+            !entry.isCurrentUser &&
+            entry.prediction &&
+            predictionKey(entry.prediction) === currentUserPredictionKey,
+        ).length
+      : 0,
     averagePoints:
       scoredEntries.length > 0 ? Math.round(totalPoints / scoredEntries.length) : null,
-    hiddenCount: Math.max(0, memberCount - entries.filter((entry) => entry.prediction).length),
+    hiddenCount: Math.max(0, memberCount - predictionCount),
+    outcomeCounts,
+    topScorelines: [...scorelineCounts.entries()]
+      .map(([label, count]) => ({
+        label,
+        count,
+        isCurrentUserPrediction: label === predictionLabel(currentUserPrediction),
+      }))
+      .sort(
+        (left, right) =>
+          right.count - left.count ||
+          Number(right.isCurrentUserPrediction) -
+            Number(left.isCurrentUserPrediction) ||
+          left.label.localeCompare(right.label, "pt-BR"),
+      )
+      .slice(0, 3),
   };
 }
 
@@ -149,4 +209,13 @@ function hashSeed(value: string) {
     hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
   return hash;
+}
+
+function predictionOutcome(prediction: ScorePrediction) {
+  if (prediction.homeScore === prediction.awayScore) return "draw";
+  return prediction.homeScore > prediction.awayScore ? "home" : "away";
+}
+
+function predictionKey(prediction: ScorePrediction) {
+  return `${prediction.homeScore}:${prediction.awayScore}:${prediction.advancingTeamId ?? ""}`;
 }

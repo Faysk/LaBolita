@@ -149,6 +149,9 @@ try {
 
   await page.goto(`${BASE_URL}/palpites`);
   await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("heading", { name: "Comparar palpites do bolão" }).waitFor();
+  await page.getByText("Mapa dos palpites").first().waitFor();
+  await page.getByText("Iguais ao seu").first().waitFor();
   await page
     .getByTestId("match-match-1")
     .getByText("Seu palpite rendeu 10 pontos")
