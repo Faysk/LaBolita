@@ -21,6 +21,7 @@ export default async function PoolsPage({
       publicPage: Number(params.pagina ?? 1),
       publicSearch: params.busca ?? "",
       includePublic: true,
+      includeAllRankings: true,
     }),
     getMatches(),
   ]);

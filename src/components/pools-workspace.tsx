@@ -71,6 +71,21 @@ type PoolMatchComparisonPreview = {
   comparison: MatchPoolComparison;
 };
 
+type RankingMovement = {
+  label: string;
+  tone: "neutral" | "up" | "down";
+  icon: typeof BarChart3;
+};
+
+type PoolSnapshot = {
+  pool: PoolSummary;
+  currentPlayer?: RankingEntry;
+  positionLabel: string;
+  pointsLabel: string;
+  movement?: RankingMovement;
+  completedMatches: number;
+};
+
 export function PoolsWorkspace({
   pools: initialPools,
   publicPools: initialPublicPools,
@@ -152,6 +167,48 @@ export function PoolsWorkspace({
         localResults,
       })
     : [];
+  function visibleRankingForPool(pool: PoolSummary) {
+    const isLocalPool = localPools.some((localPool) => localPool.id === pool.id);
+    const baseRanking =
+      loadedRankings[pool.id] ??
+      (isLocalPool
+        ? newPoolRanking
+        : selectedPool?.id === pool.id
+          ? selectedBaseRanking
+          : ranking);
+
+    if (usesSupabase) return baseRanking;
+
+    return calculateDemoRanking(
+      baseRanking.length ? baseRanking : demoRanking,
+      demoMatches,
+      localPredictions,
+      localResults,
+      pool.eligibleFrom,
+    );
+  }
+
+  const activePoolSnapshots = activePools.map((pool) =>
+    buildPoolSnapshot({
+      pool,
+      ranking: visibleRankingForPool(pool),
+      completedMatches: buildPoolMatchComparisons({
+        pool,
+        matches,
+        comparisonOverview,
+        localPredictions,
+        localResults,
+      }).length,
+    }),
+  );
+  const selectedPoolSnapshot = selectedPool
+    ? activePoolSnapshots.find((snapshot) => snapshot.pool.id === selectedPool.id) ??
+      buildPoolSnapshot({
+        pool: selectedPool,
+        ranking: visibleRanking,
+        completedMatches: selectedPoolMatchComparisons.length,
+      })
+    : null;
 
   function requireLogin(panelToOpen: "create" | "join") {
     if (!isAuthenticated) {
@@ -268,9 +325,20 @@ export function PoolsWorkspace({
 
       {spotlightMatch ? <PoolMatchSpotlight match={spotlightMatch} /> : null}
 
+      <PoolCommandCenter
+        snapshots={activePoolSnapshots}
+        selectedSnapshot={selectedPoolSnapshot}
+        selectedPool={selectedPool}
+        publicCount={publicPools.length}
+        archivedCount={archivedPools.length}
+        selectedIsMembership={selectedIsMembership}
+        selectedIsPublicPool={selectedIsPublicPool}
+        spotlightMatch={spotlightMatch}
+      />
+
       {activePools.length > 1 && (
         <PoolQuickSwitch
-          pools={activePools}
+          snapshots={activePoolSnapshots}
           selectedPoolId={selectedPool?.id ?? ""}
           onSelect={(pool) => void selectPool(pool)}
         />
@@ -407,20 +475,183 @@ export function PoolsWorkspace({
   );
 }
 
+function PoolCommandCenter({
+  snapshots,
+  selectedSnapshot,
+  selectedPool,
+  publicCount,
+  archivedCount,
+  selectedIsMembership,
+  selectedIsPublicPool,
+  spotlightMatch,
+}: {
+  snapshots: PoolSnapshot[];
+  selectedSnapshot: PoolSnapshot | null;
+  selectedPool?: PoolSummary;
+  publicCount: number;
+  archivedCount: number;
+  selectedIsMembership: boolean;
+  selectedIsPublicPool: boolean;
+  spotlightMatch?: DemoMatch | null;
+}) {
+  const totalMembers = snapshots.reduce((total, snapshot) => total + snapshot.pool.members, 0);
+  const live = spotlightMatch ? isLiveMatch(spotlightMatch) : false;
+  const selectedLabel = selectedIsMembership
+    ? "Seu bolão"
+    : selectedIsPublicPool
+      ? "Público"
+      : "Selecionado";
+  const selectedPosition = selectedSnapshot?.currentPlayer
+    ? selectedSnapshot.positionLabel
+    : selectedIsPublicPool
+      ? "prévia"
+      : "—";
+  const selectedPoints = selectedSnapshot?.currentPlayer
+    ? selectedSnapshot.pointsLabel
+    : selectedPool
+      ? `${selectedPool.members} jogadores`
+      : "sem bolão";
+  const SelectedMovementIcon = selectedSnapshot?.movement?.icon ?? BarChart3;
+
+  return (
+    <section
+      data-testid="pools-command-center"
+      className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.8fr)]"
+    >
+      <div className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="eyebrow">Mapa dos bolões</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">
+              Tudo em um lugar
+            </h2>
+          </div>
+          <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${live ? "status-live" : "status-info"}`}>
+            {live ? <Radio className="size-4 animate-pulse" /> : <CalendarClock className="size-4" />}
+            {live ? "Ao vivo agora" : "Agenda monitorada"}
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <PoolMapMetric label="Meus bolões" value={snapshots.length} detail="ativos" />
+          <PoolMapMetric label="Participantes" value={totalMembers} detail="somados" />
+          <PoolMapMetric label="Públicos" value={publicCount} detail="disponíveis" />
+          <PoolMapMetric label="Arquivados" value={archivedCount} detail="histórico" />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <a
+            href="#ranking-do-bolao"
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-brand px-4 text-sm font-black text-white"
+          >
+            Ranking <ArrowRight className="size-4" />
+          </a>
+          <Link
+            href="/ao-vivo"
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-white px-4 text-sm font-black text-brand"
+          >
+            Ao vivo <Radio className="size-4" />
+          </Link>
+          <Link
+            href="/palpites"
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-white px-4 text-sm font-black text-brand"
+          >
+            Palpites <Target className="size-4" />
+          </Link>
+        </div>
+      </div>
+
+      <aside className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="eyebrow">Bolão selecionado</p>
+            <h2 className="mt-1 truncate text-2xl font-black tracking-tight">
+              {selectedPool?.name ?? "Nenhum bolão"}
+            </h2>
+            <p className="mt-1 text-sm font-bold text-muted">{selectedLabel}</p>
+          </div>
+          {selectedPool ? (
+            <PoolFlag code={selectedPool.flagCode} size="sm" />
+          ) : (
+            <Users className="size-5 text-brand" />
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <PoolMapMetric label="Posição" value={selectedPosition} detail="ranking atual" />
+          <PoolMapMetric label="Pontos" value={selectedPoints} detail="neste bolão" />
+        </div>
+
+        <div className="mt-4 rounded-2xl border bg-surface-muted p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+              Movimento
+            </p>
+            {selectedSnapshot?.movement ? (
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black ${movementToneClass(selectedSnapshot.movement.tone)}`}>
+                <SelectedMovementIcon className="size-3" />
+                {selectedSnapshot.movement.label}
+              </span>
+            ) : (
+              <span className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
+                sem parcial
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-xs font-bold text-muted">
+            {selectedSnapshot
+              ? `${selectedSnapshot.completedMatches} jogos comparáveis neste bolão.`
+              : "Selecione ou participe de um bolão para acompanhar."}
+          </p>
+        </div>
+      </aside>
+    </section>
+  );
+}
+
+function PoolMapMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border bg-surface-muted p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-black text-brand">{value}</p>
+      <p className="mt-1 text-xs font-bold text-muted">{detail}</p>
+    </div>
+  );
+}
+
 function PoolQuickSwitch({
-  pools,
+  snapshots,
   selectedPoolId,
   onSelect,
 }: {
-  pools: PoolSummary[];
+  snapshots: PoolSnapshot[];
   selectedPoolId: string;
   onSelect: (pool: PoolSummary) => void;
 }) {
   return (
-    <section className="mt-6 rounded-[1.5rem] border bg-surface/85 p-3">
+    <section className="mt-5 rounded-[1.5rem] border bg-surface/85 p-3 md:p-4">
+      <div className="mb-3 flex items-center justify-between gap-3 px-1">
+        <div>
+          <p className="eyebrow">Alternar bolão</p>
+          <h2 className="mt-1 text-xl font-black tracking-tight">Seus rankings</h2>
+        </div>
+        <BarChart3 className="size-5 text-brand" />
+      </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {pools.map((pool) => {
+        {snapshots.map((snapshot) => {
+          const pool = snapshot.pool;
           const selected = pool.id === selectedPoolId;
+          const MovementIcon = snapshot.movement?.icon ?? BarChart3;
 
           return (
             <button
@@ -438,10 +669,13 @@ function PoolQuickSwitch({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-black">{pool.name}</span>
                 <span className={`block text-xs font-bold ${selected ? "text-white/62" : "text-muted"}`}>
-                  {pool.members} jogadores
+                  {snapshot.positionLabel} · {snapshot.pointsLabel}
                 </span>
               </span>
-              <ArrowRight className={`size-4 shrink-0 ${selected ? "text-accent" : "text-brand"}`} />
+              <span className={`hidden items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black sm:inline-flex ${selected ? "border-white/20 bg-white/10 text-white" : movementToneClass(snapshot.movement?.tone ?? "neutral")}`}>
+                <MovementIcon className="size-3" />
+                {snapshot.movement?.label ?? "sem parcial"}
+              </span>
             </button>
           );
         })}
@@ -1035,6 +1269,7 @@ function Ranking({
 
   return (
     <section
+      id="ranking-do-bolao"
       data-testid="pool-ranking"
       className={`card overflow-hidden ${inline ? "" : "mt-8"}`}
     >
@@ -1280,6 +1515,42 @@ function PlayerMetric({
   );
 }
 
+function buildPoolSnapshot({
+  pool,
+  ranking,
+  completedMatches,
+}: {
+  pool: PoolSummary;
+  ranking: RankingEntry[];
+  completedMatches: number;
+}): PoolSnapshot {
+  const hasProvisional = ranking.some(
+    (entry) =>
+      entry.provisionalPoints !== undefined &&
+      entry.provisionalPoints !== entry.points,
+  );
+  const currentPlayer = ranking.find((entry) => entry.isCurrentUser);
+  const currentPoints = currentPlayer
+    ? hasProvisional
+      ? currentPlayer.provisionalPoints ?? currentPlayer.points
+      : currentPlayer.points
+    : null;
+
+  return {
+    pool,
+    currentPlayer,
+    positionLabel: currentPlayer
+      ? rankingLabel(currentPlayer, ranking, {
+          provisional: hasProvisional,
+          tiedSuffix: "=",
+        })
+      : "sem posição",
+    pointsLabel: currentPoints === null ? `${pool.members} jogadores` : `${currentPoints} pts`,
+    movement: currentPlayer ? rankingMovement(currentPlayer) : undefined,
+    completedMatches,
+  };
+}
+
 function rankingPositionLabel(player: RankingEntry, entries: RankingEntry[], provisional: boolean) {
   return rankingLabel(player, entries, {
     provisional,
@@ -1292,11 +1563,7 @@ function rankingEntryKey(player: RankingEntry) {
   return `${player.position}:${player.name}`;
 }
 
-function rankingMovement(player: RankingEntry): {
-  label: string;
-  tone: "neutral" | "up" | "down";
-  icon: typeof BarChart3;
-} {
+function rankingMovement(player: RankingEntry): RankingMovement {
   if (!player.provisionalPosition || player.provisionalPosition === player.position) {
     return { label: "mantém posição", tone: "neutral", icon: BarChart3 };
   }
@@ -1312,6 +1579,12 @@ function rankingMovement(player: RankingEntry): {
     tone: "down",
     icon: TrendingDown,
   };
+}
+
+function movementToneClass(tone: RankingMovement["tone"]) {
+  if (tone === "up") return "status-success";
+  if (tone === "down") return "status-warning";
+  return "bg-surface";
 }
 
 function pluralize(value: number, singular: string, plural: string) {
