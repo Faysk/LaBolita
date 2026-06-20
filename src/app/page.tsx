@@ -58,7 +58,7 @@ export default async function HomePage() {
       </section>
 
       <PageShortcuts
-        routeKeys={["games", "predictions", "pools", "players"]}
+        routeKeys={["live", "games", "predictions", "pools"]}
         className="mt-5 md:mt-6"
       />
 
@@ -72,18 +72,19 @@ export default async function HomePage() {
               </h2>
             </div>
             <Link
-              href="/jogos"
+              href="/ao-vivo"
               className="hidden items-center gap-1 text-sm font-bold text-brand md:flex"
             >
-              Abrir agenda <ArrowRight className="size-4" />
+              Abrir ao vivo <ArrowRight className="size-4" />
             </Link>
           </div>
           <MatchTimeline
             matches={liveMatches}
             variant="rail"
-            href="/jogos"
+            href="/ao-vivo"
             initialCount={3}
             moreLabel="Ver mais jogos ao vivo"
+            actionLabel="Abrir central ao vivo"
           />
         </section>
       ) : null}

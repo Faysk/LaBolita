@@ -37,6 +37,12 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
       : "Ver calendário";
   const isLive = Boolean(liveMatch);
   const score = liveMatch?.liveResult;
+  const actionHref = isLive ? "/ao-vivo" : nextMatch ? "/palpites" : "/jogos";
+  const pendingLabel = isLive
+    ? "Abrindo ao vivo..."
+    : nextMatch
+      ? "Abrindo palpites..."
+      : "Abrindo calendário...";
 
   return (
     <div className={`relative overflow-hidden rounded-[1.75rem] border p-4 shadow-2xl backdrop-blur md:justify-self-end md:p-5 ${
@@ -119,11 +125,11 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
         )}
 
         <Link
-          href={isLive ? "/jogos" : "/palpites"}
+          href={actionHref}
           prefetch={false}
           className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-extrabold text-brand-strong transition hover:brightness-95"
         >
-          <LinkPendingLabel pendingLabel={isLive ? "Abrindo agenda..." : "Abrindo palpites..."}>
+          <LinkPendingLabel pendingLabel={pendingLabel}>
             {action}
             <ArrowRight className="size-4" />
           </LinkPendingLabel>
