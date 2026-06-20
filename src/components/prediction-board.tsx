@@ -67,8 +67,12 @@ export function PredictionBoard({
       Boolean(resultForMatch(match)) ||
       match.providerStatus === "finished",
   );
+  const focusedFinishedMatch = focusedMatch
+    ? finishedMatches.find((match) => match.id === focusedMatch.id)
+    : undefined;
+  const focusedFinishedMatchId = focusedFinishedMatch?.id ?? null;
   const [selectedFinishedMatchId, setSelectedFinishedMatchId] = useState(
-    () => finishedMatches[0]?.id ?? "",
+    () => focusedFinishedMatchId ?? finishedMatches[0]?.id ?? "",
   );
   const selectedFinishedMatch =
     finishedMatches.find((match) => match.id === selectedFinishedMatchId) ??
@@ -131,6 +135,9 @@ export function PredictionBoard({
 
     let scrollFrame: number | undefined;
     const filterFrame = window.requestAnimationFrame(() => {
+      if (focusedFinishedMatchId) {
+        setSelectedFinishedMatchId(focusedFinishedMatchId);
+      }
       setFilter((currentFilter) =>
         currentFilter === "all" ? currentFilter : "all",
       );
@@ -149,7 +156,7 @@ export function PredictionBoard({
         window.cancelAnimationFrame(scrollFrame);
       }
     };
-  }, [resolvedFocusMatchId]);
+  }, [focusedFinishedMatchId, resolvedFocusMatchId]);
 
   return (
     <>
@@ -294,7 +301,10 @@ export function FinishedMatchesReview({
       </div>
 
       <div className="grid gap-4 p-4 md:p-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
-        <div className="rounded-[1.25rem] border bg-surface-muted p-4">
+        <div
+          data-testid="finished-review-selected-match"
+          className="rounded-[1.25rem] border bg-surface-muted p-4"
+        >
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
             {selectedMatch.stageLabel}
           </p>

@@ -1503,6 +1503,12 @@ function FinishedPickRow({
                   : "—"
             }
           />
+          <Link
+            href={`/palpites?jogo=${encodeURIComponent(match.id)}#lista-de-jogos`}
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-surface px-3 text-xs font-black text-brand hover:border-brand/70 sm:col-span-2 lg:col-span-4"
+          >
+            Abrir comparação deste jogo <ArrowRight className="size-3.5" />
+          </Link>
         </div>
       ) : null}
     </div>

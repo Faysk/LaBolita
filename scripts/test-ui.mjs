@@ -88,6 +88,17 @@ try {
   await page.getByText("Trilha rápida").waitFor();
   await page.getByRole("heading", { name: "Próximos jogos" }).waitFor();
   await page.getByText("Meu palpite").first().waitFor();
+  const quickSchedule = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Agora, próximos e últimos" }),
+  });
+  const quickScheduleHref = await quickSchedule.getByTestId(/^timeline-match-/).first().evaluate((element) =>
+    element.closest("a")?.getAttribute("href") ?? "",
+  );
+  assert.match(
+    quickScheduleHref,
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "quick schedule match cards must open the focused prediction",
+  );
   await page.getByRole("heading", { name: "Palpites do bolão por partida" }).waitFor();
   await page.getByText("Agenda completa").waitFor();
   const completeSchedule = page.locator("section").filter({
@@ -235,6 +246,9 @@ try {
     .getByText("Seu palpite rendeu 53 pontos")
     .waitFor();
   assert.equal(await page.getByTestId("match-match-1").getByLabel("Gols de México").isDisabled(), true);
+  await page.goto(`${BASE_URL}/palpites?jogo=match-9#lista-de-jogos`);
+  await page.getByTestId("finished-review-selected-match").getByText("Final · simulação").waitFor();
+  await page.getByTestId("match-match-9").getByText("Jogo aberto pela agenda").waitFor();
 
   await page.goto(`${BASE_URL}/boloes`);
   await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
@@ -274,6 +288,16 @@ try {
     .first()
     .getByText("Pontos do placar")
     .waitFor();
+  const finishedPickHref = await page
+    .getByTestId("finished-pick-details")
+    .first()
+    .getByRole("link", { name: "Abrir comparação deste jogo" })
+    .getAttribute("href");
+  assert.match(
+    finishedPickHref ?? "",
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "finished pick details must link to the focused prediction comparison",
+  );
   await page.getByTestId("pool-friends").getByRole("button", { name: "Ver ranking" }).click();
   await page.getByTestId("pools-command-center").getByText("Resenha da Firma").waitFor();
   await page.getByTestId("pool-ranking").getByText("Resenha da Firma").waitFor();
