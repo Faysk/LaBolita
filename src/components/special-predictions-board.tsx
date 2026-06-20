@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LinkPendingLabel, LinkPendingOverlay } from "@/components/link-pending-feedback";
+import { ProgressiveList } from "@/components/progressive-list";
 import {
   SpecialOptionAvatar,
   SpecialOptionSticker,
@@ -176,7 +177,12 @@ export function SpecialPredictionsBoard({
               Bloqueia em {SPECIAL_LOCK_DATE_LABEL}
             </p>
           </div>
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          <ProgressiveList
+            initialCount={6}
+            step={6}
+            moreLabel="Ver mais abertos"
+            className="mt-4 flex gap-2 overflow-x-auto pb-1"
+          >
             {progress.openPending.map((market) => {
               const display = specialMarketDisplay(market.key);
               const Icon = display.icon;
@@ -193,7 +199,7 @@ export function SpecialPredictionsBoard({
                 </Link>
               );
             })}
-          </div>
+          </ProgressiveList>
         </section>
       ) : null}
 
@@ -417,11 +423,16 @@ function SpecialCommandCenter({
           <SpecialSummaryMetric label="Abertos" value={openMarkets.length} tone="warning" />
           <SpecialSummaryMetric label="Fechados" value={lockedMarkets.length} tone="neutral" />
         </div>
-        <div className="mt-4 max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+        <ProgressiveList
+          initialCount={6}
+          step={6}
+          moreLabel="Ver mais finais"
+          className="mt-4 space-y-2"
+        >
           {markets.map((market) => (
             <SpecialChoiceRow key={market.key} market={market} />
           ))}
-        </div>
+        </ProgressiveList>
       </aside>
     </section>
   );

@@ -131,6 +131,7 @@ export function SpecialMarketPicker({
   const dragOffset = drag.offsetX ?? 0;
   const dragRotation = Math.max(-10, Math.min(10, dragOffset / 12));
   const visibleOptions = filteredOptions.slice(0, visibleCount);
+  const hiddenOptionCount = Math.max(0, filteredOptions.length - visibleOptions.length);
   const saveLabel = market.predictions.length > 0 ? "Salvar alteração" : "Salvar palpite";
   const canSave = complete && dirty && !market.locked && !sync.busy;
   const showStickySave = !market.locked && selectedOptions.length > 0;
@@ -317,6 +318,12 @@ export function SpecialMarketPicker({
               {market.pickCount === 1 ? "" : "s"} escolhida
               {market.pickCount === 1 ? "" : "s"}
             </p>
+            {!complete ? (
+              <p className="mt-1 text-xs font-bold text-white/55">
+                {remainingChoices === 1 ? "Falta" : "Faltam"} {remainingChoices} carta
+                {remainingChoices === 1 ? "" : "s"}.
+              </p>
+            ) : null}
           </div>
         </div>
       </section>
@@ -601,6 +608,11 @@ export function SpecialMarketPicker({
             </button>
           ) : null}
         </label>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <QuickSearchMetric label="Visíveis" value={visibleOptions.length} />
+          <QuickSearchMetric label="Selecionadas" value={selectedOptions.length} />
+          <QuickSearchMetric label="Escondidas" value={hiddenOptionCount} />
+        </div>
         <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
           {filterOptions.map((option) => {
             const active = option.value === effectiveFilter;
@@ -668,7 +680,7 @@ export function SpecialMarketPicker({
               onClick={() => setVisibleCount((current) => current + OPTIONS_PAGE_SIZE)}
               className="interactive min-h-11 rounded-2xl border bg-surface px-5 text-sm font-black text-brand hover:border-brand/70"
             >
-              Mostrar mais figurinhas
+              Mostrar mais figurinhas ({hiddenOptionCount})
             </button>
           </div>
         )}
@@ -744,6 +756,17 @@ export function SpecialMarketPicker({
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function QuickSearchMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border bg-surface-muted px-3 py-2">
+      <p className="text-lg font-black text-brand">{value}</p>
+      <p className="mt-0.5 text-[10px] font-black uppercase tracking-[0.1em] text-muted">
+        {label}
+      </p>
     </div>
   );
 }
