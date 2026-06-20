@@ -63,6 +63,17 @@ export async function GET(request: Request) {
     return NextResponse.redirect(termsRedirect(url.origin, nextPath, "registro"));
   }
 
+  const { error: sessionAuditError } = await supabase.rpc("record_user_session_event", {
+    p_event_type: "login_completed",
+    p_next_path: nextPath,
+  });
+  if (sessionAuditError) {
+    console.error("Login activity registration failed", {
+      code: sessionAuditError.code,
+      message: sessionAuditError.message,
+    });
+  }
+
   if (profile?.disabled_at) {
     return NextResponse.redirect(new URL("/conta-suspensa", url.origin));
   }

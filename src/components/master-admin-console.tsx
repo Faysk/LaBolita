@@ -186,7 +186,7 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
       icon: History,
       label: "Auditoria 24h",
       value: formatNumber(summary.audit.recentTotal),
-      detail: `${summary.audit.resultChanges} placares · ${summary.audit.userActions} usuários`,
+      detail: `${summary.audit.resultChanges} placares · ${summary.audit.userActivityEvents} eventos`,
       tone: summary.audit.recentTotal > 0 ? "warn" : "ok",
     },
   ] as const;
@@ -789,8 +789,29 @@ function UserReportPanel({
     ["Palpites", report.stats.matchPredictions, `${report.stats.changedPredictions} alterações`],
     ["Pontos", report.stats.totalPoints, `${report.stats.exactScores} exatos`],
     ["Especiais", report.stats.specialPicks, `${report.specialMarkets.length} mercados`],
+    ["Eventos", report.stats.activityEvents, `${report.stats.matchPredictionChanges + report.stats.specialPredictionChanges} mudanças`],
     ["Auditoria", report.stats.adminActionsAsActor + report.stats.adminActionsAsTarget, `${report.stats.resultChanges} placares`],
   ] as const;
+  const predictionHistory = [
+    ...report.predictionChanges.map((change) => ({
+      id: `match-${change.id}`,
+      kind: "Jogo",
+      title: change.matchLabel,
+      action: change.action,
+      previous: predictionJsonScore(change.previousPrediction),
+      next: predictionJsonScore(change.newPrediction),
+      createdAt: change.createdAt,
+    })),
+    ...report.specialPredictionChanges.map((change) => ({
+      id: `special-${change.id}`,
+      kind: "Especial",
+      title: change.marketTitle,
+      action: change.action,
+      previous: optionsSummary(change.previousOptions),
+      next: optionsSummary(change.newOptions),
+      createdAt: change.createdAt,
+    })),
+  ].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 
   return (
     <div className="mt-4 space-y-3 rounded-2xl border bg-surface p-4">
@@ -918,6 +939,41 @@ function UserReportPanel({
         )}
       </ReportSection>
 
+      <ReportSection icon={History} title="Histórico de alterações">
+        {predictionHistory.length > 0 ? (
+          <ProgressiveList
+            initialCount={6}
+            step={6}
+            moreLabel="Ver mais alterações"
+            className="divide-y rounded-xl border"
+          >
+            {predictionHistory.map((change) => (
+              <div key={change.id} className="grid gap-2 px-3 py-2 md:grid-cols-[1fr_auto] md:items-center">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="rounded-full border bg-surface px-2 py-0.5 text-[10px] font-black text-muted">
+                      {change.kind}
+                    </span>
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                      {historyActionLabel(change.action)}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-xs font-black">{change.title}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] text-muted">
+                    {change.previous} → {change.next}
+                  </p>
+                </div>
+                <p className="text-[10px] font-bold text-muted md:text-right">
+                  {formatDateTime(change.createdAt)}
+                </p>
+              </div>
+            ))}
+          </ProgressiveList>
+        ) : (
+          <EmptyReportLine>Alterações novas passam a aparecer aqui a partir desta rodada.</EmptyReportLine>
+        )}
+      </ReportSection>
+
       <div className="grid gap-3 xl:grid-cols-2">
         <ReportSection icon={Sparkles} title="Especiais">
           {report.specialMarkets.length > 0 ? (
@@ -969,6 +1025,36 @@ function UserReportPanel({
             </ProgressiveList>
           ) : (
             <EmptyReportLine>Sem ações administrativas vinculadas.</EmptyReportLine>
+          )}
+        </ReportSection>
+
+        <ReportSection icon={Activity} title="Atividade recente">
+          {report.activity.length > 0 ? (
+            <ProgressiveList
+              initialCount={6}
+              step={6}
+              moreLabel="Ver mais atividade"
+              className="divide-y rounded-xl border"
+            >
+              {report.activity.map((event) => {
+                const summary = metadataSummary(event.metadata);
+                return (
+                  <div key={event.id} className="px-3 py-2">
+                    <p className="text-xs font-black">{activityEventLabel(event.eventType)}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted">
+                      {event.entityType} · {formatDateTime(event.createdAt)}
+                    </p>
+                    {summary ? (
+                      <p className="mt-0.5 line-clamp-2 text-[10px] font-bold text-muted">
+                        {summary}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </ProgressiveList>
+          ) : (
+            <EmptyReportLine>Eventos do usuário passam a aparecer aqui daqui em diante.</EmptyReportLine>
           )}
         </ReportSection>
       </div>
@@ -1122,6 +1208,10 @@ function metadataLabel(key: string) {
     {
       reason: "motivo",
       source: "fonte",
+      method: "entrada",
+      next_path: "destino",
+      match_number: "jogo",
+      market_title: "especial",
       old_name: "nome anterior",
       new_name: "novo nome",
       old_display_name: "nome anterior",
@@ -1133,6 +1223,29 @@ function metadataLabel(key: string) {
       next: "novo",
     }[key] ?? key
   );
+}
+
+function predictionJsonScore(value: Record<string, unknown> | null) {
+  if (!value) return "primeiro envio";
+  const home = value.home_score ?? value.homeScore;
+  const away = value.away_score ?? value.awayScore;
+  if (typeof home === "number" && typeof away === "number") {
+    const advancingTeam = value.advancing_team_id ?? value.advancingTeamId;
+    return advancingTeam ? `${home} x ${away} · classificado ${shortId(String(advancingTeam))}` : `${home} x ${away}`;
+  }
+  return "palpite registrado";
+}
+
+function optionsSummary(options: unknown[]) {
+  if (options.length === 0) return "primeiro envio";
+  const labels = options
+    .map((option) => {
+      if (!option || typeof option !== "object") return null;
+      const label = (option as { label?: unknown }).label;
+      return typeof label === "string" ? label : null;
+    })
+    .filter((label): label is string => Boolean(label));
+  return labels.length > 0 ? labels.join(", ") : `${options.length} opção(ões)`;
 }
 
 function scoreText(prediction: { homeScore: number; awayScore: number }) {
@@ -1161,6 +1274,26 @@ function scoreCategoryLabel(category: string) {
   );
 }
 
+function historyActionLabel(action: string) {
+  return action === "created" ? "criado" : action === "updated" ? "alterado" : action;
+}
+
+function activityEventLabel(eventType: string) {
+  return (
+    {
+      login_completed: "Login concluído",
+      terms_accepted: "Termos aceitos",
+      match_prediction_created: "Palpite criado",
+      match_prediction_updated: "Palpite alterado",
+      special_prediction_created: "Especial criado",
+      special_prediction_updated: "Especial alterado",
+      pool_created: "Bolão criado",
+      pool_joined: "Entrou no bolão",
+      admin_alert_dismissed: "Alerta dispensado",
+    }[eventType] ?? eventType
+  );
+}
+
 function auditActionLabel(action: string) {
   return (
     {
@@ -1178,6 +1311,7 @@ function auditActionLabel(action: string) {
       remove_pool_member: "Membro removido",
       set_terms_enforcement: "Termos alterados",
       resolve_special_market: "Especial resolvido",
+      create_admin_alert: "Alerta criado",
     }[action] ?? action
   );
 }

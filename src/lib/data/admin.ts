@@ -75,6 +75,8 @@ export type AdminSummary = {
     resultChanges: number;
     userActions: number;
     poolActions: number;
+    userActivityEvents: number;
+    predictionChanges: number;
     topActions: { action: string; count: number }[];
   };
   connections: AdminConnectionStatus[];
@@ -103,6 +105,9 @@ export type AdminUserReport = {
     adminActionsAsActor: number;
     adminActionsAsTarget: number;
     resultChanges: number;
+    matchPredictionChanges: number;
+    specialPredictionChanges: number;
+    activityEvents: number;
   };
   pools: {
     poolId: string;
@@ -134,6 +139,33 @@ export type AdminUserReport = {
     updatedAt: string;
   }[];
   auditTrail: AuditEntry[];
+  predictionChanges: {
+    id: number;
+    matchId: string;
+    matchLabel: string;
+    action: string;
+    previousPrediction: Record<string, unknown> | null;
+    newPrediction: Record<string, unknown>;
+    createdAt: string;
+  }[];
+  specialPredictionChanges: {
+    id: number;
+    marketId: string;
+    marketKey: string;
+    marketTitle: string;
+    action: string;
+    previousOptions: unknown[];
+    newOptions: unknown[];
+    createdAt: string;
+  }[];
+  activity: {
+    id: number;
+    eventType: string;
+    entityType: string;
+    entityId: string;
+    metadata: Record<string, unknown>;
+    createdAt: string;
+  }[];
 };
 
 export type MasterOverview = {
@@ -259,6 +291,42 @@ type SpecialPredictionRow = {
     | null;
 };
 
+type SpecialMarketLookupRow = {
+  id: string;
+  key: string;
+  title: string;
+};
+
+type PredictionChangeRow = {
+  id: number;
+  user_id: string;
+  match_id: string;
+  action: string;
+  previous_prediction: Record<string, unknown> | null;
+  new_prediction: Record<string, unknown>;
+  created_at: string;
+};
+
+type SpecialPredictionChangeRow = {
+  id: number;
+  user_id: string;
+  market_id: string;
+  action: string;
+  previous_options: unknown;
+  new_options: unknown;
+  created_at: string;
+};
+
+type UserActivityRow = {
+  id: number;
+  user_id: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 type AuditRow = {
   id: number;
   actor_id: string | null;
@@ -296,6 +364,8 @@ const EMPTY_SUMMARY: AdminSummary = {
     resultChanges: 0,
     userActions: 0,
     poolActions: 0,
+    userActivityEvents: 0,
+    predictionChanges: 0,
     topActions: [],
   },
   connections: [
@@ -562,6 +632,8 @@ async function getAdminSummary({
     userAudit,
     poolAudit,
     changedMatchPredictions,
+    userActivityEvents,
+    predictionChanges,
     topActions,
   ] = await Promise.all([
     safeCount("profiles.total", client.from("profiles").select("id", { count: "exact", head: true })),
@@ -636,6 +708,21 @@ async function getAdminSummary({
         .gte("created_at", since),
     ),
     getChangedPredictionCount(client),
+    safeCount(
+      "user_activity_events.recent",
+      client
+        .from("user_activity_events")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", since),
+    ),
+    safeCount(
+      "prediction_change_events.recent",
+      client
+        .from("prediction_change_events")
+        .select("id", { count: "exact", head: true })
+        .eq("action", "updated")
+        .gte("created_at", since),
+    ),
     getTopAuditActions(client, since),
   ]);
 
@@ -680,6 +767,8 @@ async function getAdminSummary({
       resultChanges: resultAudit,
       userActions: userAudit,
       poolActions: poolAudit,
+      userActivityEvents,
+      predictionChanges,
       topActions,
     },
     connections: [
@@ -745,6 +834,10 @@ async function getAdminUserReports({
     matches,
     teams,
     specialPredictions,
+    specialMarkets,
+    predictionChanges,
+    specialPredictionChanges,
+    activityEvents,
     actorAudit,
     targetAudit,
     resultChanges,
@@ -795,6 +888,37 @@ async function getAdminUserReports({
         .order("updated_at", { ascending: false })
         .range(0, 9999),
     ),
+    safeRows<SpecialMarketLookupRow>(
+      "special_markets.user_reports",
+      serviceClient.from("special_markets").select("id, key, title").range(0, 100),
+    ),
+    safeRows<PredictionChangeRow>(
+      "prediction_change_events.user_reports",
+      serviceClient
+        .from("prediction_change_events")
+        .select("id, user_id, match_id, action, previous_prediction, new_prediction, created_at")
+        .in("user_id", userIds)
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ),
+    safeRows<SpecialPredictionChangeRow>(
+      "special_prediction_change_events.user_reports",
+      serviceClient
+        .from("special_prediction_change_events")
+        .select("id, user_id, market_id, action, previous_options, new_options, created_at")
+        .in("user_id", userIds)
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ),
+    safeRows<UserActivityRow>(
+      "user_activity_events.user_reports",
+      serviceClient
+        .from("user_activity_events")
+        .select("id, user_id, event_type, entity_type, entity_id, metadata, created_at")
+        .in("user_id", userIds)
+        .order("created_at", { ascending: false })
+        .limit(500),
+    ),
     safeRows<AuditRow>(
       "admin_audit_logs.actor_reports",
       serviceClient
@@ -831,7 +955,14 @@ async function getAdminUserReports({
   );
   const matchesById = new Map(matches.map((match) => [match.id, match]));
   const teamsById = new Map(teams.map((team) => [team.id, team]));
+  const specialMarketsById = new Map(specialMarkets.map((market) => [market.id, market]));
   const specialsByUser = groupSpecialPredictions(specialPredictions);
+  const predictionChangesByUser = groupBy(predictionChanges, (change) => change.user_id);
+  const specialPredictionChangesByUser = groupBy(
+    specialPredictionChanges,
+    (change) => change.user_id,
+  );
+  const activityEventsByUser = groupBy(activityEvents, (event) => event.user_id);
   const actorAuditByUser = groupBy(actorAudit, (entry) => entry.actor_id ?? "");
   const targetAuditByUser = groupBy(targetAudit, (entry) => entry.entity_id ?? "");
   const resultChangesByUser = groupBy(resultChanges, (entry) => entry.changed_by ?? "");
@@ -843,9 +974,18 @@ async function getAdminUserReports({
       const userPredictions = predictionsByUser.get(user.userId) ?? [];
       const userScores = scoresByUser.get(user.userId) ?? [];
       const userSpecials = specialsByUser.get(user.userId) ?? [];
+      const userPredictionChanges = predictionChangesByUser.get(user.userId) ?? [];
+      const userSpecialPredictionChanges = specialPredictionChangesByUser.get(user.userId) ?? [];
+      const userActivityEvents = activityEventsByUser.get(user.userId) ?? [];
       const asActor = actorAuditByUser.get(user.userId) ?? [];
       const asTarget = targetAuditByUser.get(user.userId) ?? [];
       const auditTrail = uniqueAuditEntries([...asActor, ...asTarget]);
+      const inferredChangedPredictions = userPredictions.filter((prediction) =>
+        hasMeaningfulUpdate(prediction.submitted_at, prediction.updated_at),
+      ).length;
+      const recordedPredictionUpdates = userPredictionChanges.filter(
+        (change) => change.action === "updated",
+      ).length;
       const report: AdminUserReport = {
         userId: user.userId,
         identity: {
@@ -859,9 +999,7 @@ async function getAdminUserReports({
           poolMemberships: userMemberships.length,
           poolsOwned: user.poolsOwned,
           matchPredictions: userPredictions.length,
-          changedPredictions: userPredictions.filter((prediction) =>
-            hasMeaningfulUpdate(prediction.submitted_at, prediction.updated_at),
-          ).length,
+          changedPredictions: Math.max(inferredChangedPredictions, recordedPredictionUpdates),
           scoredPredictions: userScores.length,
           totalPoints: userScores.reduce((total, score) => total + Number(score.total_points), 0),
           exactScores: userScores.filter((score) => score.category === "exact").length,
@@ -872,6 +1010,9 @@ async function getAdminUserReports({
           adminActionsAsActor: asActor.length,
           adminActionsAsTarget: asTarget.length,
           resultChanges: (resultChangesByUser.get(user.userId) ?? []).length,
+          matchPredictionChanges: userPredictionChanges.length,
+          specialPredictionChanges: userSpecialPredictionChanges.length,
+          activityEvents: userActivityEvents.length,
         },
         pools: userMemberships.map((membership) => {
           const pool = firstRelation(membership.pools);
@@ -916,6 +1057,39 @@ async function getAdminUserReports({
         }),
         specialMarkets: userSpecials,
         auditTrail,
+        predictionChanges: userPredictionChanges.map((change) => {
+          const match = matchesById.get(change.match_id);
+          return {
+            id: change.id,
+            matchId: change.match_id,
+            matchLabel: match ? matchLabel(match, teamsById) : "Partida não encontrada",
+            action: change.action,
+            previousPrediction: change.previous_prediction,
+            newPrediction: change.new_prediction,
+            createdAt: change.created_at,
+          };
+        }),
+        specialPredictionChanges: userSpecialPredictionChanges.map((change) => {
+          const market = specialMarketsById.get(change.market_id);
+          return {
+            id: change.id,
+            marketId: change.market_id,
+            marketKey: market?.key ?? change.market_id,
+            marketTitle: market?.title ?? "Palpite especial",
+            action: change.action,
+            previousOptions: arrayFromJson(change.previous_options),
+            newOptions: arrayFromJson(change.new_options),
+            createdAt: change.created_at,
+          };
+        }),
+        activity: userActivityEvents.map((event) => ({
+          id: event.id,
+          eventType: event.event_type,
+          entityType: event.entity_type,
+          entityId: event.entity_id,
+          metadata: event.metadata ?? {},
+          createdAt: event.created_at,
+        })),
       };
       return [user.userId, report];
     }),
@@ -1042,6 +1216,10 @@ function groupSpecialPredictions(rows: SpecialPredictionRow[]) {
 function firstRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+function arrayFromJson(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }
 
 function uniqueAuditEntries(entries: AuditRow[]) {
