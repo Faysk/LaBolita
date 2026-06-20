@@ -58,6 +58,8 @@ try {
 
   await page.goto(`${BASE_URL}/jogos`);
   await page.getByRole("heading", { name: "Jogos da Copa" }).waitFor();
+  await page.getByText("Trilha rápida").waitFor();
+  await page.getByRole("heading", { name: "Próximos jogos" }).waitFor();
   await page.getByText("Agenda completa").waitFor();
   await waitForFlagFallbacks(page);
 

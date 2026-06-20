@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Radio } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  ListChecks,
+  Radio,
+} from "lucide-react";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchTimeline } from "@/components/match-timeline";
 import { getMatches } from "@/lib/data/matches";
-import { isLiveMatch, selectHomeTimelineMatches } from "@/lib/match-display";
+import { isLiveMatch } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -15,7 +22,8 @@ export const metadata: Metadata = {
 export default async function GamesPage() {
   const matches = await getMatches();
   const liveMatches = matches.filter(isLiveMatch);
-  const nextMatches = selectHomeTimelineMatches(matches, 6);
+  const nextMatches = selectUpcomingMatches(matches, 6);
+  const recentMatches = selectRecentMatches(matches, 6);
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
   );
@@ -43,26 +51,69 @@ export default async function GamesPage() {
         </Link>
       </div>
 
-      <section className="rounded-2xl border bg-surface p-4 md:p-5">
+      <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <ScheduleMetric
+          icon={Radio}
+          label="Ao vivo"
+          value={liveMatches.length}
+          detail={liveMatches.length > 0 ? "acompanhar agora" : "sem jogo neste momento"}
+          tone={liveMatches.length > 0 ? "live" : "neutral"}
+        />
+        <ScheduleMetric
+          icon={CalendarDays}
+          label="Próximos"
+          value={nextMatches.length}
+          detail="na fila da agenda"
+          tone="info"
+        />
+        <ScheduleMetric
+          icon={Clock3}
+          label="A confirmar"
+          value={matches.filter((match) => match.providerStatus === "finished" && !match.result).length}
+          detail="resultado pendente"
+          tone={awaitingOfficial ? "warning" : "neutral"}
+        />
+        <ScheduleMetric
+          icon={CheckCircle2}
+          label="Finalizados"
+          value={matches.filter((match) => match.result).length}
+          detail={`${matches.length} jogos no calendário`}
+          tone="neutral"
+        />
+      </section>
+
+      <section className="rounded-[1.5rem] border bg-surface p-4 md:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <p className="eyebrow">
-              {liveMatches.length > 0 ? "Acontecendo agora" : "Próximos da fila"}
-            </p>
+            <p className="eyebrow">Trilha rápida</p>
             <h2 className="mt-1 text-xl font-black tracking-tight">
-              {liveMatches.length > 0 ? "Ao vivo" : "Agora e depois"}
+              Agora, próximos e últimos
             </h2>
           </div>
-          {liveMatches.length > 0 ? (
-            <Radio className="size-5 animate-pulse text-emerald-600" />
-          ) : (
-            <CalendarDays className="size-5 text-brand" />
-          )}
+          <ListChecks className="size-5 text-brand" />
         </div>
-        <MatchTimeline
-          matches={liveMatches.length > 0 ? liveMatches : nextMatches.slice(0, 3)}
-          variant="rail"
-        />
+        <div className="grid gap-5">
+          {liveMatches.length > 0 ? (
+            <ScheduleRail
+              eyebrow="Acontecendo agora"
+              title="Ao vivo"
+              matches={liveMatches}
+              live
+            />
+          ) : null}
+          <ScheduleRail
+            eyebrow="Próximos da fila"
+            title="Próximos jogos"
+            matches={nextMatches.slice(0, 6)}
+          />
+          {recentMatches.length > 0 ? (
+            <ScheduleRail
+              eyebrow="Já passaram"
+              title="Últimos resultados"
+              matches={recentMatches}
+            />
+          ) : null}
+        </div>
       </section>
 
       <section className="mt-8 space-y-6">
@@ -85,6 +136,73 @@ export default async function GamesPage() {
   );
 }
 
+function ScheduleRail({
+  eyebrow,
+  title,
+  matches,
+  live = false,
+}: {
+  eyebrow: string;
+  title: string;
+  matches: DemoMatch[];
+  live?: boolean;
+}) {
+  return (
+    <section className="min-w-0">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+            {eyebrow}
+          </p>
+          <h3 className="mt-1 text-lg font-black">{title}</h3>
+        </div>
+        {live ? (
+          <Radio className="size-4 animate-pulse text-emerald-600" />
+        ) : (
+          <CalendarDays className="size-4 text-brand" />
+        )}
+      </div>
+      <MatchTimeline matches={matches} variant="rail" />
+    </section>
+  );
+}
+
+function ScheduleMetric({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: typeof CalendarDays;
+  label: string;
+  value: number;
+  detail: string;
+  tone: "neutral" | "info" | "live" | "warning";
+}) {
+  const toneClass =
+    tone === "live"
+      ? "status-live"
+      : tone === "warning"
+        ? "status-warning"
+        : tone === "info"
+          ? "status-info"
+          : "bg-surface";
+
+  return (
+    <article className={`rounded-[1.2rem] border p-4 ${toneClass}`}>
+      <div className="flex items-center justify-between gap-3">
+        <Icon className={`size-4 ${tone === "live" ? "animate-pulse" : ""}`} />
+        <p className="text-right text-[10px] font-black uppercase text-muted">
+          {label}
+        </p>
+      </div>
+      <p className="mt-3 text-2xl font-black">{value}</p>
+      <p className="mt-1 text-xs font-bold text-muted">{detail}</p>
+    </article>
+  );
+}
+
 function groupMatchesByDate(matches: DemoMatch[]) {
   const formatter = new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -102,4 +220,31 @@ function groupMatchesByDate(matches: DemoMatch[]) {
   }
 
   return [...groups.entries()];
+}
+
+function selectUpcomingMatches(matches: DemoMatch[], limit: number) {
+  return matches
+    .filter(
+      (match) =>
+        !isLiveMatch(match) &&
+        !match.locked &&
+        !match.result &&
+        match.providerStatus !== "finished",
+    )
+    .sort((left, right) => scheduledTime(left) - scheduledTime(right))
+    .slice(0, limit);
+}
+
+function selectRecentMatches(matches: DemoMatch[], limit: number) {
+  return matches
+    .filter((match) => Boolean(match.result) || match.providerStatus === "finished")
+    .sort((left, right) => scheduledTime(right) - scheduledTime(left))
+    .slice(0, limit);
+}
+
+function scheduledTime(match: DemoMatch) {
+  const value = match.scheduledAt
+    ? new Date(match.scheduledAt).getTime()
+    : Number.MAX_SAFE_INTEGER;
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }

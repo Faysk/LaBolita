@@ -14,15 +14,17 @@ import { SpecialHomeSummary } from "@/components/special-home-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
-import { isLiveMatch, selectHomeTimelineMatches } from "@/lib/match-display";
+import { isLiveMatch } from "@/lib/match-display";
+import type { DemoMatch } from "@/lib/types";
 
 export default async function HomePage() {
   const [matches, viewer] = await Promise.all([
     getMatches(),
     getViewerState(),
   ]);
-  const highlightedMatches = selectHomeTimelineMatches(matches, 3);
-  const hasLiveMatch = highlightedMatches.some(isLiveMatch);
+  const liveMatches = matches.filter(isLiveMatch);
+  const nextMatches = selectUpcomingMatches(matches, 3);
+  const hasLiveMatch = liveMatches.length > 0;
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
   );
@@ -63,12 +65,32 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mt-7 md:mt-10">
+      {hasLiveMatch ? (
+        <section className="mt-7 md:mt-10">
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <div>
+              <p className="eyebrow">A bola está rolando</p>
+              <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">
+                Agora ao vivo
+              </h2>
+            </div>
+            <Link
+              href="/jogos"
+              className="hidden items-center gap-1 text-sm font-bold text-brand md:flex"
+            >
+              Ver agenda <ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <MatchTimeline matches={liveMatches} variant="rail" href="/jogos" />
+        </section>
+      ) : null}
+
+      <section className={hasLiveMatch ? "mt-7" : "mt-7 md:mt-10"}>
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">{hasLiveMatch ? "A bola está rolando" : "Próximos da fila"}</p>
+            <p className="eyebrow">Próximos da fila</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">
-              {hasLiveMatch ? "Agora ao vivo" : "Próximos 3 jogos"}
+              Próximos 3 jogos
             </h2>
           </div>
           <Link
@@ -78,7 +100,7 @@ export default async function HomePage() {
             Ver agenda <ArrowRight className="size-4" />
           </Link>
         </div>
-        <MatchTimeline matches={highlightedMatches} variant="rail" href="/jogos" />
+        <MatchTimeline matches={nextMatches} variant="rail" href="/jogos" />
       </section>
 
       <SpecialHomeSummary
@@ -88,6 +110,26 @@ export default async function HomePage() {
 
     </main>
   );
+}
+
+function selectUpcomingMatches(matches: DemoMatch[], limit: number) {
+  return matches
+    .filter(
+      (match) =>
+        !isLiveMatch(match) &&
+        !match.locked &&
+        !match.result &&
+        match.providerStatus !== "finished",
+    )
+    .sort((left, right) => scheduledTime(left) - scheduledTime(right))
+    .slice(0, limit);
+}
+
+function scheduledTime(match: DemoMatch) {
+  const value = match.scheduledAt
+    ? new Date(match.scheduledAt).getTime()
+    : Number.MAX_SAFE_INTEGER;
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }
 
 function HomeAction({

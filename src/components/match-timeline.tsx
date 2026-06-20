@@ -26,8 +26,8 @@ export function MatchTimeline({
 
   if (variant === "rail") {
     return (
-      <div className="overflow-x-auto pb-2">
-        <div className="grid auto-cols-[minmax(17rem,1fr)] grid-flow-col gap-3 md:grid-flow-row md:grid-cols-3">
+      <div className="min-w-0 max-w-full snap-x overflow-x-auto pb-2">
+        <div className="grid auto-cols-[minmax(17rem,85vw)] grid-flow-col gap-3 sm:auto-cols-[18rem] lg:auto-cols-[20rem]">
           {matches.map((match) => (
             <TimelineCard key={match.id} match={match} href={href} compact />
           ))}
@@ -59,7 +59,7 @@ function TimelineCard({
   const content = (
     <article
       data-testid={`timeline-match-${match.id}`}
-      className={`interactive relative overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm ${
+      className={`interactive relative snap-start overflow-hidden rounded-2xl border bg-surface p-4 shadow-sm ${
         status.kind === "live" ? "border-emerald-300 bg-emerald-50/80" : ""
       } ${compact ? "min-h-56" : ""}`}
     >
