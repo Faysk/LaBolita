@@ -28,7 +28,7 @@ export type SpecialMarketDisplay = {
   dataNote: string;
 };
 
-export const SPECIAL_LOCK_DATE_LABEL = "22 de junho";
+export const SPECIAL_LOCK_DATE_LABEL = "22 de junho, 23:59";
 export const SPECIAL_LOCK_RATIONALE =
   "Prazo pensado para dar tempo de participar antes que a Copa mostre tendências fortes demais.";
 
@@ -208,13 +208,31 @@ export function specialMarketKeyFromSlug(slug: string) {
 
 export function specialProgress(markets: MarketProgressLike[]) {
   const total = markets.length;
-  const completed = markets.filter(
+  const completedMarkets = markets.filter(
     (market) => market.predictions.length === market.pickCount,
-  ).length;
-  const next = markets.find(
+  );
+  const pendingMarkets = markets.filter(
+    (market) => market.predictions.length < market.pickCount,
+  );
+  const openPending = pendingMarkets.filter((market) => !market.locked);
+  const lockedPending = pendingMarkets.filter((market) => market.locked);
+  const next = openPending[0];
+  const completed = completedMarkets.length;
+
+  return {
+    total,
+    completed,
+    pending: Math.max(0, total - completed),
+    openPending,
+    lockedPending,
+    next,
+  };
+}
+
+export function hasOpenSpecialPending(markets: MarketProgressLike[]) {
+  return markets.some(
     (market) => !market.locked && market.predictions.length < market.pickCount,
   );
-  return { total, completed, next };
 }
 
 export function groupSpecialMarkets<T extends MarketProgressLike>(markets: T[]) {

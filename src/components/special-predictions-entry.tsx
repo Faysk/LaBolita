@@ -22,6 +22,8 @@ export function SpecialPredictionsEntry({
 
   const progress = specialProgress(overview.markets);
   const featured = overview.markets.slice(0, 5);
+  const next = progress.next;
+  const openPendingCount = progress.openPending.length;
 
   return (
     <section className="mb-7 grid gap-4 lg:grid-cols-[0.82fr_1.18fr]">
@@ -80,12 +82,12 @@ export function SpecialPredictionsEntry({
               </span>
             </div>
             <Link
-              href="/especiais"
+              href={next ? specialMarketPath(next.key) : "/especiais"}
               prefetch={false}
               className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-[#063b22] shadow-lg shadow-accent/20"
             >
               <LinkPendingLabel pendingLabel="Abrindo especiais...">
-                Abrir especiais <ArrowRight className="size-4" />
+                {next ? "Completar pendente" : "Revisar especiais"} <ArrowRight className="size-4" />
               </LinkPendingLabel>
             </Link>
           </div>
@@ -100,8 +102,13 @@ export function SpecialPredictionsEntry({
                 {SPECIAL_LOCK_DATE_LABEL}
               </p>
               <p className="mt-1 text-xs font-bold text-white/75">
-                {progress.completed}/{progress.total} preenchidos
+                {progress.completed}/{progress.total} preenchidos · {openPendingCount} abertos
               </p>
+              {next && (
+                <p className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-xs font-black text-accent">
+                  Próximo: {specialMarketDisplay(next.key).shortTitle}
+                </p>
+              )}
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {featured.map((market) => {
@@ -129,7 +136,7 @@ export function SpecialPredictionsEntry({
                       className="mt-1 justify-start text-[11px] font-bold text-white/75"
                       pendingLabel="Abrindo..."
                     >
-                      {complete ? "Salvo" : "Pendente"}
+                      {complete ? "Salvo" : market.locked ? "Bloqueado" : "Pendente aberto"}
                     </LinkPendingLabel>
                     <LinkPendingOverlay
                       label="Abrindo..."

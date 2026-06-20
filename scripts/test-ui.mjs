@@ -1,42 +1,45 @@
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
+import { access, rm } from "node:fs/promises";
 import { spawn, spawnSync } from "node:child_process";
 import { chromium } from "playwright-core";
 
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const DEMO_BUILD_DIR = `.next-demo-ui-${process.pid}-${Date.now()}`;
 const executablePath = await findBrowser();
-buildDemo();
-const server = spawn(
-  process.execPath,
-  ["node_modules/next/dist/bin/next", "start", "-p", String(PORT)],
-  {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      PORT: String(PORT),
-      LABOLITA_BUILD_DIR: ".next-demo",
-      NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
-      NEXT_PUBLIC_SUPABASE_URL: "",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
-      SUPABASE_SERVICE_ROLE_KEY: "",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  },
-);
 
 let serverOutput = "";
-server.stdout.on("data", (chunk) => {
-  serverOutput += chunk;
-});
-server.stderr.on("data", (chunk) => {
-  serverOutput += chunk;
-});
-
+let server;
 let browser;
 
 try {
+  buildDemo();
+  server = spawn(
+    process.execPath,
+    ["node_modules/next/dist/bin/next", "start", "-p", String(PORT)],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        PORT: String(PORT),
+        LABOLITA_BUILD_DIR: DEMO_BUILD_DIR,
+        NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
+        NEXT_PUBLIC_SUPABASE_URL: "",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+        SUPABASE_SERVICE_ROLE_KEY: "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    },
+  );
+
+  server.stdout.on("data", (chunk) => {
+    serverOutput += chunk;
+  });
+  server.stderr.on("data", (chunk) => {
+    serverOutput += chunk;
+  });
+
   await waitForServer();
   browser = await chromium.launch({ executablePath, headless: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -231,6 +234,7 @@ try {
   for (const path of [
     "/",
     "/palpites",
+    "/especiais",
     "/boloes",
     "/regras",
     "/admin",
@@ -293,7 +297,8 @@ try {
   throw error;
 } finally {
   await browser?.close();
-  server.kill();
+  server?.kill();
+  await cleanupDemoBuild();
 }
 
 async function waitForServer() {
@@ -316,7 +321,10 @@ function buildDemo() {
     ["scripts/build-demo.mjs"],
     {
       cwd: process.cwd(),
-      env: process.env,
+      env: {
+        ...process.env,
+        LABOLITA_BUILD_DIR: DEMO_BUILD_DIR,
+      },
       stdio: "inherit",
       windowsHide: true,
     },
@@ -324,6 +332,22 @@ function buildDemo() {
 
   if (result.status !== 0) {
     throw new Error("Não foi possível gerar o build de demonstração para o teste UI.");
+  }
+}
+
+async function cleanupDemoBuild() {
+  if (!DEMO_BUILD_DIR.startsWith(".next-demo-ui-")) return;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await rm(DEMO_BUILD_DIR, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (attempt === 4) {
+        console.warn(`Não foi possível remover ${DEMO_BUILD_DIR}:`, error);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
   }
 }
 

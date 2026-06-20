@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarClock, Sparkles } from "lucide-react";
 import { LinkPendingLabel } from "@/components/link-pending-feedback";
 import {
   SPECIAL_LOCK_DATE_LABEL,
@@ -50,6 +50,7 @@ export function SpecialHomeSummary({
 
   const progress = specialProgress(overview.markets);
   const next = progress.next;
+  const openPendingCount = progress.openPending.length;
 
   return (
     <section className="mt-7 card overflow-hidden">
@@ -66,8 +67,14 @@ export function SpecialHomeSummary({
             <p className="mt-1 text-sm leading-6 text-muted">
               Fecha em {SPECIAL_LOCK_DATE_LABEL}.{" "}
               {next
-                ? `Próximo pendente: ${specialMarketDisplay(next.key).shortTitle}.`
+                ? `Ainda ${openPendingCount === 1 ? "falta" : "faltam"} ${openPendingCount} ${openPendingCount === 1 ? "pendente aberto" : "pendentes abertos"}. Próximo: ${specialMarketDisplay(next.key).shortTitle}.`
                 : "Tudo preenchido, mas ainda dá para revisar."}
+            </p>
+            <p className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-black ${
+              next ? "status-warning" : "status-success"
+            }`}>
+              <CalendarClock className="size-3.5" />
+              {next ? "Ação recomendada antes do prazo" : "Especiais em dia"}
             </p>
           </div>
         </div>

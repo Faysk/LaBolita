@@ -1,5 +1,15 @@
 import type { Metadata } from "next";
-import { AlertTriangle, CheckCircle2, Database, RefreshCw } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  Database,
+  ListChecks,
+  RefreshCw,
+  ShieldAlert,
+  Sparkles,
+} from "lucide-react";
 import { AdminMatchQueue } from "@/components/admin-match-queue";
 import { MasterAdminConsole } from "@/components/master-admin-console";
 import { SpecialAdminPanel } from "@/components/special-admin-panel";
@@ -7,8 +17,13 @@ import { requireAdmin } from "@/lib/auth";
 import { getMasterOverview } from "@/lib/data/admin";
 import type { MasterTab } from "@/lib/data/admin";
 import { getMatches, getResultsSyncState, getTeams } from "@/lib/data/matches";
-import { getSpecialMarketsOverview } from "@/lib/data/specials";
+import { getSpecialMarketsOverview, type SpecialMarketsOverview } from "@/lib/data/specials";
+import {
+  SPECIAL_LOCK_DATE_LABEL,
+  specialProgress,
+} from "@/lib/special-market-display";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
+import type { DemoMatch } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Administração",
@@ -107,6 +122,14 @@ export default async function AdminPage({
         })}
       </section>
 
+      <OperationalReadinessPanel
+        matches={matches}
+        specialsOverview={specialsOverview}
+        syncSummary={syncSummary}
+        syncHealthy={syncHealthy}
+        resultsSyncConfigured={resultsSyncConfigured}
+      />
+
       <MasterAdminConsole
         key={`${masterOverview.activeTab}-${masterOverview.page}-${masterOverview.search}`}
         overview={masterOverview}
@@ -127,5 +150,169 @@ export default async function AdminPage({
         <AdminMatchQueue matches={matches} teams={teams} />
       </section>
     </main>
+  );
+}
+
+function OperationalReadinessPanel({
+  matches,
+  specialsOverview,
+  syncSummary,
+  syncHealthy,
+  resultsSyncConfigured,
+}: {
+  matches: DemoMatch[];
+  specialsOverview: SpecialMarketsOverview;
+  syncSummary: string;
+  syncHealthy: boolean;
+  resultsSyncConfigured: boolean;
+}) {
+  const liveCount = matches.filter(
+    (match) => match.providerStatus === "live" && !match.result,
+  ).length;
+  const awaitingConfirmation = matches.filter(
+    (match) => match.providerStatus === "finished" && !match.result,
+  ).length;
+  const divergences = matches.filter(
+    (match) =>
+      match.result &&
+      match.liveResult &&
+      (match.result.homeScore !== match.liveResult.homeScore ||
+        match.result.awayScore !== match.liveResult.awayScore),
+  ).length;
+  const pendingKnockoutTeams = matches.filter(
+    (match) =>
+      match.stage !== "group" &&
+      (!isUuid(match.homeTeam.id) || !isUuid(match.awayTeam.id)),
+  ).length;
+  const specialsProgress = specialsOverview.available
+    ? specialProgress(specialsOverview.markets)
+    : null;
+  const hasAction =
+    liveCount > 0 ||
+    awaitingConfirmation > 0 ||
+    divergences > 0 ||
+    pendingKnockoutTeams > 0 ||
+    Boolean(specialsProgress?.openPending.length);
+
+  return (
+    <section className="card mt-7 overflow-hidden">
+      <div className="flex flex-col gap-3 border-b bg-surface-muted/70 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+        <div>
+          <p className="eyebrow">Prontidão operacional</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight">
+            {hasAction ? "Acompanhar agora" : "Operação em dia"}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            Sinais para priorizar confirmação de placares, divergências,
+            participantes do mata-mata e prazo dos especiais.
+          </p>
+        </div>
+        <span
+          className={`inline-flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-black ${
+            hasAction ? "status-warning" : "status-success"
+          }`}
+        >
+          <ListChecks className="size-4" />
+          {hasAction ? "Há pontos para revisar" : "Sem urgências visíveis"}
+        </span>
+      </div>
+
+      <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-3">
+        <ReadinessItem
+          icon={Activity}
+          label="Ao vivo"
+          value={String(liveCount)}
+          detail="Jogos em andamento sem resultado oficial"
+          tone={liveCount > 0 ? "live" : "ok"}
+        />
+        <ReadinessItem
+          icon={CalendarClock}
+          label="Aguardam confirmação"
+          value={String(awaitingConfirmation)}
+          detail="Provedor marcou como finalizado"
+          tone={awaitingConfirmation > 0 ? "warn" : "ok"}
+        />
+        <ReadinessItem
+          icon={ShieldAlert}
+          label="Divergências"
+          value={String(divergences)}
+          detail="Resultado salvo difere do provedor"
+          tone={divergences > 0 ? "danger" : "ok"}
+        />
+        <ReadinessItem
+          icon={ListChecks}
+          label="Mata-mata"
+          value={String(pendingKnockoutTeams)}
+          detail="Partidas ainda sem participantes definidos"
+          tone={pendingKnockoutTeams > 0 ? "warn" : "ok"}
+        />
+        <ReadinessItem
+          icon={Sparkles}
+          label="Especiais"
+          value={
+            specialsProgress
+              ? `${specialsProgress.completed}/${specialsProgress.total}`
+              : "—"
+          }
+          detail={
+            specialsProgress
+              ? `${specialsProgress.openPending.length} pendentes abertos até ${SPECIAL_LOCK_DATE_LABEL}`
+              : specialsOverview.missingReason ?? "Mercados indisponíveis"
+          }
+          tone={specialsProgress?.openPending.length ? "warn" : "ok"}
+        />
+        <ReadinessItem
+          icon={RefreshCw}
+          label="Sincronização"
+          value={resultsSyncConfigured ? syncSummary : "Manual"}
+          detail={
+            resultsSyncConfigured
+              ? "Feed configurado para atualização"
+              : "Resultados dependem do painel"
+          }
+          tone={syncHealthy || !resultsSyncConfigured ? "ok" : "warn"}
+        />
+      </div>
+    </section>
+  );
+}
+
+function ReadinessItem({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: typeof Activity;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "ok" | "warn" | "danger" | "live";
+}) {
+  const toneClass = {
+    ok: "text-brand bg-emerald-50",
+    warn: "text-amber-700 bg-amber-50",
+    danger: "text-red-700 bg-red-50",
+    live: "text-sky-700 bg-sky-50",
+  }[tone];
+
+  return (
+    <article className="rounded-2xl border bg-surface p-4">
+      <span className={`inline-flex rounded-xl p-2 ${toneClass}`}>
+        <Icon className="size-4" />
+      </span>
+      <p className="mt-4 text-xs font-bold uppercase tracking-wider text-muted">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-black">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted">{detail}</p>
+    </article>
+  );
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value,
   );
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LinkPendingLabel, LinkPendingOverlay } from "@/components/link-pending-feedback";
 import {
   ArrowRight,
+  CalendarClock,
   CheckCircle2,
   LockKeyhole,
   Sparkles,
@@ -42,6 +43,7 @@ export function SpecialPredictionsBoard({
 
   const progress = specialProgress(overview.markets);
   const grouped = groupSpecialMarkets(overview.markets);
+  const nextDisplay = progress.next ? specialMarketDisplay(progress.next.key) : null;
 
   return (
     <div className="space-y-8">
@@ -65,11 +67,17 @@ export function SpecialPredictionsBoard({
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
             <HeroMiniStat label="Feitos" value={`${progress.completed}/${progress.total}`} />
             <HeroMiniStat
-              label="Pendentes"
-              value={String(Math.max(0, progress.total - progress.completed))}
+              label="Abertos"
+              value={String(progress.openPending.length)}
             />
             <HeroMiniStat label="Prazo" value={SPECIAL_LOCK_DATE_LABEL} />
           </div>
+          {nextDisplay && (
+            <p className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-2 text-xs font-black text-accent">
+              <CalendarClock className="size-4" />
+              Próximo pendente: {nextDisplay.shortTitle}
+            </p>
+          )}
         </div>
 
         <div className="card p-5">
@@ -77,16 +85,14 @@ export function SpecialPredictionsBoard({
             <div>
               <p className="eyebrow">Próxima escolha</p>
               <h2 className="mt-1 text-2xl font-black tracking-tight">
-                {progress.next
-                  ? specialMarketDisplay(progress.next.key).shortTitle
-                  : "Tudo preenchido"}
+                {nextDisplay ? nextDisplay.shortTitle : "Tudo preenchido"}
               </h2>
             </div>
             <Trophy className="size-6 text-brand" />
           </div>
           <p className="mt-3 text-sm leading-6 text-muted">
-            {progress.next
-              ? specialMarketDisplay(progress.next.key).teaser
+            {nextDisplay
+              ? nextDisplay.teaser
               : "Você já registrou todos os palpites especiais abertos. Ainda dá para revisar até o bloqueio."}
           </p>
           <Link
@@ -147,7 +153,7 @@ function MarketCard({ market }: { market: SpecialMarketView }) {
       ? "Bloqueado"
       : completed
         ? "Salvo"
-        : "Pendente";
+        : "Pendente aberto";
 
   return (
     <Link

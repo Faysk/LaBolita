@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 
+const buildDir = process.env.LABOLITA_BUILD_DIR ?? ".next-demo";
+
 const result = spawnSync(
   process.execPath,
   ["node_modules/next/dist/bin/next", "build"],
@@ -7,7 +9,7 @@ const result = spawnSync(
     cwd: process.cwd(),
     env: {
       ...process.env,
-      LABOLITA_BUILD_DIR: ".next-demo",
+      LABOLITA_BUILD_DIR: buildDir,
       NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
       NEXT_PUBLIC_SUPABASE_URL: "",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
