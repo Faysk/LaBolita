@@ -1,6 +1,6 @@
 "use client";
 
-import type { PointerEvent, ReactNode } from "react";
+import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -55,6 +55,15 @@ type DeckDrag = {
   offsetX?: number;
 };
 
+type SpecialOptionFilter = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+const INITIAL_VISIBLE_OPTIONS = 36;
+const OPTIONS_PAGE_SIZE = 36;
+
 export function SpecialMarketPicker({
   market,
   nextMarket = null,
@@ -81,7 +90,8 @@ export function SpecialMarketPicker({
   const [selectedKeys, setSelectedKeys] = useState(initialSelection);
   const [activeKey, setActiveKey] = useState(initialActiveKey);
   const [search, setSearch] = useState("");
-  const [visibleCount, setVisibleCount] = useState(36);
+  const [filter, setFilter] = useState("all");
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_OPTIONS);
   const [sync, setSync] = useState<SyncState>({});
   const [drag, setDrag] = useState<DeckDrag>({});
 
@@ -94,17 +104,25 @@ export function SpecialMarketPicker({
     () => highlightSpecialOptions(market.key, market.options, 18),
     [market.key, market.options],
   );
+  const filterOptions = useMemo(
+    () => specialFilterOptions(market.options, selectedKeys),
+    [market.options, selectedKeys],
+  );
+  const effectiveFilter = filterOptions.some((option) => option.value === filter)
+    ? filter
+    : "all";
   const filteredOptions = useMemo(
-    () => visibleSpecialOptions(market.options, search, selectedKeys, market.key),
-    [market.key, market.options, search, selectedKeys],
+    () => visibleSpecialOptions(market.options, search, selectedKeys, market.key, effectiveFilter),
+    [effectiveFilter, market.key, market.options, search, selectedKeys],
   );
   const deckOptions = useMemo(() => {
     if (search.trim()) return filteredOptions;
+    if (effectiveFilter !== "all") return filteredOptions;
     return highlighted.length > 0 ? highlighted : filteredOptions;
-  }, [filteredOptions, highlighted, search]);
+  }, [effectiveFilter, filteredOptions, highlighted, search]);
   const activeIndex = deckOptions.findIndex((option) => option.key === activeKey);
   const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0;
-  const activeOption = deckOptions[safeActiveIndex] ?? market.options[0] ?? null;
+  const activeOption = deckOptions[safeActiveIndex] ?? null;
   const activeSelected = activeOption
     ? selectedKeys.includes(activeOption.key)
     : false;
@@ -115,6 +133,7 @@ export function SpecialMarketPicker({
   const saveLabel = market.predictions.length > 0 ? "Salvar alteração" : "Salvar palpite";
   const canSave = complete && dirty && !market.locked && !sync.busy;
   const showStickySave = !market.locked && selectedOptions.length > 0;
+  const showContinueLink = complete && !dirty && Boolean(nextMarket);
   const stickyOption = selectedOptions[0];
   const remainingChoices = Math.max(market.pickCount - selectedOptions.length, 0);
   const stickySummary = complete
@@ -127,6 +146,7 @@ export function SpecialMarketPicker({
     : complete
       ? "Pronto para salvar"
       : "Complete o palpite";
+  const deckRailOptions = nearbyDeckOptions(deckOptions, safeActiveIndex, 7);
 
   function chooseOption(option: SpecialOption) {
     if (market.locked || sync.busy) return;
@@ -167,6 +187,32 @@ export function SpecialMarketPicker({
     const nextIndex = wrapIndex(safeActiveIndex + direction, deckOptions.length);
     setActiveKey(deckOptions[nextIndex].key);
     setDrag({});
+  }
+
+  function resetVisibleOptions() {
+    setVisibleCount(INITIAL_VISIBLE_OPTIONS);
+  }
+
+  function clearSearch() {
+    setSearch("");
+    resetVisibleOptions();
+  }
+
+  function handleDeckKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      moveDeck(-1);
+      return;
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      moveDeck(1);
+      return;
+    }
+    if ((event.key === "Enter" || event.key === " ") && activeOption) {
+      event.preventDefault();
+      chooseOption(activeOption);
+    }
   }
 
   function startDeckDrag(event: PointerEvent<HTMLDivElement>) {
@@ -219,7 +265,10 @@ export function SpecialMarketPicker({
   }
 
   return (
-    <div className={showStickySave ? "space-y-7 pb-32 md:pb-28" : "space-y-7"}>
+    <div
+      data-testid="special-market-picker"
+      className={showStickySave ? "space-y-7 pb-32 md:pb-28" : "space-y-7"}
+    >
       <section className="card-dark overflow-hidden rounded-[2rem] p-4 text-white md:p-5 lg:p-6">
         <Link
           href="/especiais"
@@ -322,13 +371,21 @@ export function SpecialMarketPicker({
                 <div className="absolute left-5 top-6 h-72 w-44 rotate-[-10deg] rounded-[1.5rem] border border-white/10 bg-white/8" />
                 <div className="absolute right-5 top-9 h-72 w-44 rotate-[10deg] rounded-[1.5rem] border border-white/10 bg-white/8" />
                 <div
-                  className="relative z-10 flex h-full min-h-[22rem] touch-pan-y select-none flex-col items-center justify-center gap-4"
+                  data-testid="special-active-card"
+                  className="relative z-10 flex h-full min-h-[22rem] touch-pan-y select-none flex-col items-center justify-center gap-4 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  tabIndex={0}
+                  role="group"
+                  aria-label={`Carta ${safeActiveIndex + 1} de ${Math.max(deckOptions.length, 1)}: ${activeOption.label}`}
                   onPointerDown={startDeckDrag}
                   onPointerMove={updateDeckDrag}
                   onPointerUp={endDeckDrag}
                   onPointerCancel={() => setDrag({})}
+                  onKeyDown={handleDeckKeyDown}
                 >
-                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
+                  <span
+                    aria-live="polite"
+                    className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent"
+                  >
                     {safeActiveIndex + 1}/{Math.max(deckOptions.length, 1)}
                   </span>
                   <div
@@ -417,6 +474,15 @@ export function SpecialMarketPicker({
               Nenhuma carta disponível para este especial.
             </div>
           )}
+
+          {deckRailOptions.length > 1 ? (
+            <DeckRail
+              options={deckRailOptions}
+              activeKey={activeOption?.key ?? ""}
+              selectedKeys={selectedKeys}
+              onSelect={(option) => setActiveKey(option.key)}
+            />
+          ) : null}
         </div>
 
         <aside className="card p-5">
@@ -478,6 +544,18 @@ export function SpecialMarketPicker({
               </LinkPendingLabel>
             </Link>
           ) : null}
+          {showContinueLink && nextMarket && !sync.ok ? (
+            <Link
+              href={nextMarket.href}
+              prefetch={false}
+              className="interactive mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border bg-surface px-4 text-sm font-black text-brand hover:border-brand/70"
+            >
+              <LinkPendingLabel pendingLabel="Abrindo próximo...">
+                Continuar: {nextMarket.label}
+                <ArrowRight className="size-4" />
+              </LinkPendingLabel>
+            </Link>
+          ) : null}
         </aside>
       </section>
 
@@ -499,15 +577,56 @@ export function SpecialMarketPicker({
         <label className="relative mt-4 block">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <input
+            data-testid="special-search"
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
-              setVisibleCount(36);
+              resetVisibleOptions();
             }}
             placeholder={display.searchPlaceholder}
-            className="w-full rounded-2xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold outline-none placeholder:text-muted focus:border-brand"
+            className="w-full rounded-2xl border bg-surface py-3 pl-10 pr-12 text-sm font-bold outline-none placeholder:text-muted focus:border-brand"
           />
+          {search.trim() ? (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="interactive absolute right-2 top-1/2 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-xl text-muted hover:bg-surface-muted hover:text-brand"
+              aria-label="Limpar busca"
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </label>
+        <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+          {filterOptions.map((option) => {
+            const active = option.value === effectiveFilter;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  setFilter(option.value);
+                  resetVisibleOptions();
+                }}
+                aria-pressed={active}
+                className={`interactive inline-flex min-h-10 shrink-0 items-center gap-2 rounded-2xl border px-3 text-xs font-black ${
+                  active
+                    ? "border-brand bg-brand text-white"
+                    : "bg-surface text-muted hover:border-brand/70 hover:text-brand"
+                }`}
+              >
+                <span>{option.label}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] ${
+                    active ? "bg-white/20 text-white" : "bg-surface-muted text-muted"
+                  }`}
+                >
+                  {option.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visibleOptions.map((option) => (
             <OptionCard
@@ -515,15 +634,23 @@ export function SpecialMarketPicker({
               option={option}
               selected={selectedKeys.includes(option.key)}
               disabled={market.locked || Boolean(sync.busy)}
-              onSelect={() => chooseOption(option)}
+              onSelect={() => {
+                setActiveKey(option.key);
+                chooseOption(option);
+              }}
             />
           ))}
         </div>
+        {filteredOptions.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed bg-surface-muted p-5 text-sm font-bold text-muted">
+            Nenhuma figurinha encontrada nessa combinação.
+          </div>
+        ) : null}
         {visibleOptions.length < filteredOptions.length && (
           <div className="mt-5 flex justify-center">
             <button
               type="button"
-              onClick={() => setVisibleCount((current) => current + 36)}
+              onClick={() => setVisibleCount((current) => current + OPTIONS_PAGE_SIZE)}
               className="interactive min-h-11 rounded-2xl border bg-surface px-5 text-sm font-black text-brand hover:border-brand/70"
             >
               Mostrar mais figurinhas
@@ -587,9 +714,64 @@ export function SpecialMarketPicker({
                 </LinkPendingLabel>
               </Link>
             ) : null}
+            {showContinueLink && nextMarket && !sync.ok ? (
+              <Link
+                href={nextMarket.href}
+                prefetch={false}
+                className="interactive mt-2 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-black text-white"
+              >
+                <LinkPendingLabel pendingLabel="Abrindo próximo...">
+                  Continuar: {nextMarket.label}
+                  <ArrowRight className="size-3.5" />
+                </LinkPendingLabel>
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function DeckRail({
+  options,
+  activeKey,
+  selectedKeys,
+  onSelect,
+}: {
+  options: SpecialOption[];
+  activeKey: string;
+  selectedKeys: string[];
+  onSelect: (option: SpecialOption) => void;
+}) {
+  return (
+    <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 md:-mx-5 md:px-5">
+      {options.map((option) => {
+        const active = option.key === activeKey;
+        const selected = selectedKeys.includes(option.key);
+        return (
+          <button
+            key={option.key}
+            type="button"
+            onClick={() => onSelect(option)}
+            aria-current={active ? "true" : undefined}
+            className={`interactive grid w-28 shrink-0 gap-2 rounded-2xl border p-2 text-left ${
+              active
+                ? "border-brand bg-surface text-brand shadow-sm"
+                : selected
+                  ? "border-success-line bg-success-bg text-success-fg"
+                  : "bg-surface-muted text-muted hover:border-brand/70"
+            }`}
+          >
+            <span className="flex justify-center">
+              <SpecialOptionAvatar option={option} size="md" />
+            </span>
+            <span className="line-clamp-2 min-h-8 text-center text-[11px] font-black leading-4">
+              {option.label}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -973,18 +1155,20 @@ function visibleSpecialOptions(
   search: string,
   selectedKeys: string[],
   marketKey: string,
+  filter: string,
 ) {
   const normalized = normalizeSearch(search);
   const selected = new Set(selectedKeys.filter(Boolean));
   const ordered = normalized ? options : highlightSpecialOptions(marketKey, options, options.length);
   const filtered = ordered.filter((option) => {
+    if (!matchesSpecialFilter(option, filter, selected)) return false;
     if (!normalized) return true;
     return normalizeSearch(
       `${option.label} ${option.fullName ?? ""} ${option.teamName} ${option.club ?? ""}`,
     ).includes(normalized);
   });
 
-  for (const key of selected) {
+  for (const key of filter === "all" && !normalized ? selected : []) {
     const option = options.find((candidate) => candidate.key === key);
     if (option && !filtered.some((candidate) => candidate.key === key)) {
       filtered.unshift(option);
@@ -992,6 +1176,86 @@ function visibleSpecialOptions(
   }
 
   return filtered;
+}
+
+function specialFilterOptions(
+  options: SpecialOption[],
+  selectedKeys: string[],
+): SpecialOptionFilter[] {
+  const selectedCount = selectedKeys.filter(Boolean).length;
+  const filters: SpecialOptionFilter[] = [
+    { value: "all", label: "Todos", count: options.length },
+  ];
+
+  if (selectedCount > 0) {
+    filters.push({ value: "selected", label: "Escolhidos", count: selectedCount });
+  }
+
+  const positionCounts = new Map<NonNullable<SpecialOption["position"]>, number>();
+  const groupCounts = new Map<string, number>();
+  for (const option of options) {
+    if (option.position) {
+      positionCounts.set(option.position, (positionCounts.get(option.position) ?? 0) + 1);
+    } else if (option.groupName) {
+      groupCounts.set(option.groupName, (groupCounts.get(option.groupName) ?? 0) + 1);
+    }
+  }
+
+  for (const position of ["GK", "DF", "MF", "FW"] as const) {
+    const count = positionCounts.get(position);
+    if (count) {
+      filters.push({
+        value: `position:${position}`,
+        label: positionLabel(position),
+        count,
+      });
+    }
+  }
+
+  for (const [groupName, count] of [...groupCounts].sort((left, right) =>
+    left[0].localeCompare(right[0], "pt-BR"),
+  )) {
+    filters.push({
+      value: `group:${groupName}`,
+      label: groupName.replace("Grupo ", "G"),
+      count,
+    });
+  }
+
+  return filters;
+}
+
+function matchesSpecialFilter(
+  option: SpecialOption,
+  filter: string,
+  selected: Set<string>,
+) {
+  if (filter === "all") return true;
+  if (filter === "selected") return selected.has(option.key);
+  if (filter.startsWith("position:")) {
+    return option.position === filter.replace("position:", "");
+  }
+  if (filter.startsWith("group:")) {
+    return option.groupName === filter.replace("group:", "");
+  }
+  return true;
+}
+
+function nearbyDeckOptions(
+  options: SpecialOption[],
+  activeIndex: number,
+  limit: number,
+) {
+  if (options.length <= limit) return options;
+  const safeIndex = Math.max(0, Math.min(activeIndex, options.length - 1));
+  const radius = Math.floor(limit / 2);
+  let start = Math.max(0, safeIndex - radius);
+  let end = start + limit;
+  if (end > options.length) {
+    end = options.length;
+    start = Math.max(0, end - limit);
+  }
+  return options.slice(start, end);
 }
 
 function compactSelection(keys: string[], pickCount: number) {
