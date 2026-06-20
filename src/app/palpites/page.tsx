@@ -13,8 +13,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function PredictionsPage() {
+type PredictionsPageProps = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
+
+export default async function PredictionsPage({ searchParams }: PredictionsPageProps) {
   await requireUser("/palpites");
+  const requestedMatchId = firstSearchParam((await searchParams).jogo);
   const matches = await getMatches();
   const [specialsOverview, comparisonOverview] = await Promise.all([
     getSpecialMarketsOverview(),
@@ -39,7 +44,15 @@ export default async function PredictionsPage() {
       </div>
       <SpecialPredictionsEntry overview={specialsOverview} />
       <div id="lista-de-jogos" className="scroll-mt-28" aria-hidden="true" />
-      <PredictionBoard matches={matches} comparisonOverview={comparisonOverview} />
+      <PredictionBoard
+        matches={matches}
+        comparisonOverview={comparisonOverview}
+        focusMatchId={requestedMatchId}
+      />
     </main>
   );
+}
+
+function firstSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }

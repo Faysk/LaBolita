@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   CalendarDays,
@@ -11,7 +11,7 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
-import { MatchCard } from "@/components/match-card";
+import { MatchCard, predictionMatchCardId } from "@/components/match-card";
 import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -35,14 +35,20 @@ import type { DemoMatch, MatchResult, ScoreBreakdown, ScorePrediction } from "@/
 export function PredictionBoard({
   matches,
   comparisonOverview,
+  focusMatchId,
 }: {
   matches: DemoMatch[];
   comparisonOverview: PredictionComparisonOverview;
+  focusMatchId?: string;
 }) {
   const predictions = useLocalPredictions(matches);
   const results = useLocalResults();
+  const focusedMatch = focusMatchId
+    ? matches.find((match) => match.id === focusMatchId)
+    : undefined;
+  const resolvedFocusMatchId = focusedMatch?.id;
   const [filter, setFilter] = useState<PredictionFilter>(() =>
-    initialPredictionFilter(matches),
+    focusedMatch ? "all" : initialPredictionFilter(matches),
   );
   const [grouping, setGrouping] = useState<"stage" | "date">("date");
   const isComplete = (match: DemoMatch) =>
@@ -118,6 +124,31 @@ export function PredictionBoard({
   });
   const groups = groupMatches(visibleMatches, grouping);
 
+  useEffect(() => {
+    if (!resolvedFocusMatchId) return;
+
+    let scrollFrame: number | undefined;
+    const filterFrame = window.requestAnimationFrame(() => {
+      setFilter((currentFilter) =>
+        currentFilter === "all" ? currentFilter : "all",
+      );
+      scrollFrame = window.requestAnimationFrame(() => {
+        const element = document.getElementById(
+          predictionMatchCardId(resolvedFocusMatchId),
+        );
+        element?.scrollIntoView({ behavior: "smooth", block: "center" });
+        element?.focus({ preventScroll: true });
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(filterFrame);
+      if (scrollFrame !== undefined) {
+        window.cancelAnimationFrame(scrollFrame);
+      }
+    };
+  }, [resolvedFocusMatchId]);
+
   return (
     <>
       {finishedMatches.length > 0 && selectedFinishedMatch ? (
@@ -178,7 +209,13 @@ export function PredictionBoard({
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {groupedMatches.map((match) => (
-                <MatchCard key={match.id} match={match} isAuthenticated termsAccepted />
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  isAuthenticated
+                  termsAccepted
+                  highlighted={match.id === resolvedFocusMatchId}
+                />
               ))}
             </div>
           </section>

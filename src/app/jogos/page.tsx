@@ -146,7 +146,8 @@ export default async function GamesPage() {
               initialCount={8}
               moreLabel="Ver mais jogos deste dia"
               href="/palpites#lista-de-jogos"
-              actionLabel="Abrir palpites"
+              hrefMatchParam="jogo"
+              actionLabel="Abrir este palpite"
             />
           </section>
         ))}

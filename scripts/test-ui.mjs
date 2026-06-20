@@ -76,13 +76,19 @@ try {
   const completeSchedule = page.locator("section").filter({
     has: page.getByRole("heading", { name: "Agenda completa" }),
   });
+  const firstAgendaHref = await completeSchedule.getByTestId(/^timeline-match-/).first().evaluate((element) =>
+    element.closest("a")?.getAttribute("href") ?? "",
+  );
   assert.match(
-    await completeSchedule.getByTestId(/^timeline-match-/).first().evaluate((element) =>
-      element.closest("a")?.getAttribute("href") ?? "",
-    ),
-    /^\/palpites#lista-de-jogos$/,
+    firstAgendaHref,
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
     "complete schedule match cards must open the predictions screen",
   );
+  const focusedMatchId = new URL(firstAgendaHref, BASE_URL).searchParams.get("jogo");
+  assert.ok(focusedMatchId, "complete schedule links must include the match id");
+  await page.goto(`${BASE_URL}${firstAgendaHref}`);
+  await page.getByTestId(`match-${focusedMatchId}`).waitFor();
+  await page.getByText("Jogo aberto pela agenda").waitFor();
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/jogadores`);

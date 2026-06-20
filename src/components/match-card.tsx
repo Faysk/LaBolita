@@ -7,6 +7,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   Save,
+  Target,
   TriangleAlert,
   Undo2,
 } from "lucide-react";
@@ -36,11 +37,13 @@ export function MatchCard({
   compact = false,
   isAuthenticated = true,
   termsAccepted = true,
+  highlighted = false,
 }: {
   match: DemoMatch;
   compact?: boolean;
   isAuthenticated?: boolean;
   termsAccepted?: boolean;
+  highlighted?: boolean;
 }) {
   const router = useRouter();
   const storedPrediction = useLocalPrediction(match.id);
@@ -193,9 +196,20 @@ export function MatchCard({
 
   return (
     <article
+      id={predictionMatchCardId(match.id)}
       data-testid={`match-${match.id}`}
-      className={`card match-card p-5 ${effectiveLocked ? "match-card-locked" : ""}`}
+      tabIndex={highlighted ? -1 : undefined}
+      aria-current={highlighted ? "true" : undefined}
+      className={`card match-card scroll-mt-28 p-5 outline-none ${
+        effectiveLocked ? "match-card-locked" : ""
+      } ${highlighted ? "ring-2 ring-brand/50 shadow-lg shadow-brand/15" : ""}`}
     >
+      {highlighted ? (
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1.5 text-[11px] font-black text-brand">
+          <Target className="size-3.5" />
+          Jogo aberto pela agenda
+        </div>
+      ) : null}
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[0.13em] text-brand">
@@ -403,6 +417,10 @@ export function MatchCard({
       )}
     </article>
   );
+}
+
+export function predictionMatchCardId(matchId: string) {
+  return `palpite-${matchId}`;
 }
 
 function isUuid(value: string) {

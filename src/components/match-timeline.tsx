@@ -11,6 +11,7 @@ type MatchTimelineProps = {
   matches: DemoMatch[];
   variant?: "rail" | "list";
   href?: string;
+  hrefMatchParam?: string;
   showPrediction?: boolean;
   initialCount?: number;
   step?: number;
@@ -22,6 +23,7 @@ export function MatchTimeline({
   matches,
   variant = "list",
   href,
+  hrefMatchParam,
   showPrediction = false,
   initialCount,
   step,
@@ -41,7 +43,7 @@ export function MatchTimeline({
       <TimelineCard
         key={match.id}
         match={match}
-        href={href}
+        href={buildMatchHref(href, match, hrefMatchParam)}
         compact
         showPrediction={showPrediction}
         actionLabel={actionLabel}
@@ -75,7 +77,7 @@ export function MatchTimeline({
     <TimelineCard
       key={match.id}
       match={match}
-      href={href}
+      href={buildMatchHref(href, match, hrefMatchParam)}
       showPrediction={showPrediction}
       actionLabel={actionLabel}
     />
@@ -99,6 +101,21 @@ export function MatchTimeline({
       {cards}
     </div>
   );
+}
+
+function buildMatchHref(
+  href: string | undefined,
+  match: DemoMatch,
+  matchParam?: string,
+) {
+  if (!href || !matchParam) return href;
+
+  const hashIndex = href.indexOf("#");
+  const path = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
+  const hash = hashIndex >= 0 ? href.slice(hashIndex) : "";
+  const separator = path.includes("?") ? "&" : "?";
+
+  return `${path}${separator}${encodeURIComponent(matchParam)}=${encodeURIComponent(match.id)}${hash}`;
 }
 
 function TimelineCard({
