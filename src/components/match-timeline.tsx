@@ -1,20 +1,23 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CheckCircle2, Clock3, MapPin, Radio } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, Clock3, MapPin, Radio, Target } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { TeamFlag } from "@/components/team-flag";
 import { isLiveMatch } from "@/lib/match-display";
+import { predictionLabel } from "@/lib/prediction-comparisons";
 import type { DemoMatch } from "@/lib/types";
 
 type MatchTimelineProps = {
   matches: DemoMatch[];
   variant?: "rail" | "list";
   href?: string;
+  showPrediction?: boolean;
 };
 
 export function MatchTimeline({
   matches,
   variant = "list",
   href,
+  showPrediction = false,
 }: MatchTimelineProps) {
   if (matches.length === 0) {
     return (
@@ -29,7 +32,7 @@ export function MatchTimeline({
       <div className="min-w-0 max-w-full snap-x overflow-x-auto pb-2">
         <div className="grid auto-cols-[minmax(17rem,85vw)] grid-flow-col gap-3 sm:auto-cols-[18rem] lg:auto-cols-[20rem]">
           {matches.map((match) => (
-            <TimelineCard key={match.id} match={match} href={href} compact />
+            <TimelineCard key={match.id} match={match} href={href} compact showPrediction={showPrediction} />
           ))}
         </div>
       </div>
@@ -39,7 +42,7 @@ export function MatchTimeline({
   return (
     <div className="grid gap-3">
       {matches.map((match) => (
-        <TimelineCard key={match.id} match={match} href={href} />
+        <TimelineCard key={match.id} match={match} href={href} showPrediction={showPrediction} />
       ))}
     </div>
   );
@@ -49,10 +52,12 @@ function TimelineCard({
   match,
   href,
   compact = false,
+  showPrediction = false,
 }: {
   match: DemoMatch;
   href?: string;
   compact?: boolean;
+  showPrediction?: boolean;
 }) {
   const status = timelineStatus(match);
   const score = match.result ?? match.liveResult;
@@ -100,6 +105,18 @@ function TimelineCard({
         <MapPin className="size-3.5 shrink-0" />
         <span className="min-w-0 truncate">{match.venue}</span>
       </div>
+
+      {showPrediction ? (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border bg-surface-muted px-3 py-2 text-xs">
+          <span className="inline-flex items-center gap-1 font-black text-brand">
+            <Target className="size-3.5" />
+            Meu palpite
+          </span>
+          <span className="font-black text-foreground">
+            {predictionLabel(match.prediction)}
+          </span>
+        </div>
+      ) : null}
 
       {href && (
         <div className="mt-4 inline-flex items-center gap-1 text-xs font-black text-brand">

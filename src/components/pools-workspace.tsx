@@ -1293,38 +1293,39 @@ function Ranking({
           const selected = selectedPlayer ? rankingEntryKey(player) === rankingEntryKey(selectedPlayer) : false;
 
           return (
-          <button
-            key={`${player.position}-${player.name}`}
-            type="button"
-            data-testid={player.isCurrentUser ? "ranking-current-user" : undefined}
-            aria-pressed={selected}
-            onClick={() => setSelectedPlayerKey(rankingEntryKey(player))}
-            className={`interactive grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 text-left md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${
-              selected ? "bg-brand text-white" : player.isCurrentUser ? "bg-accent/20" : ""
-            }`}
-          >
-            <span className={`text-center text-sm font-black ${selected ? "text-white/75" : "text-muted"}`}>{rankingPositionLabel(player, entries, hasProvisional)}</span>
-            <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name} {player.isCurrentUser && <span className={`ml-1 rounded-full px-2 py-0.5 text-[9px] font-black ${selected ? "bg-accent text-brand-strong" : "bg-brand text-white"}`}>Você</span>}</p><p className={`text-xs md:hidden ${selected ? "text-white/62" : "text-muted"}`}>{pluralize(player.exact, "cravada", "cravadas")} · {pluralize(player.correct, "resultado", "resultados")}</p></div></div>
-            <span className={`text-right text-sm font-black ${selected ? "text-accent" : "text-brand"}`}>
-              {hasProvisional ? player.provisionalPoints ?? player.points : player.points} pts
-              {hasProvisional && player.provisionalPoints !== player.points && (
-                <small className={`block text-[9px] font-bold ${selected ? "text-white/62" : "text-muted"}`}>{player.points} oficial</small>
-              )}
-            </span>
-            <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.exact, "exato", "exatos")}</span>
-            <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.correct, "resultado", "resultados")}</span>
-          </button>
+          <div key={`${player.position}-${player.name}`}>
+            <button
+              type="button"
+              data-testid={player.isCurrentUser ? "ranking-current-user" : undefined}
+              aria-pressed={selected}
+              onClick={() => setSelectedPlayerKey(rankingEntryKey(player))}
+              className={`interactive grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 text-left md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${
+                selected ? "bg-brand text-white" : player.isCurrentUser ? "bg-accent/20" : ""
+              }`}
+            >
+              <span className={`text-center text-sm font-black ${selected ? "text-white/75" : "text-muted"}`}>{rankingPositionLabel(player, entries, hasProvisional)}</span>
+              <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name} {player.isCurrentUser && <span className={`ml-1 rounded-full px-2 py-0.5 text-[9px] font-black ${selected ? "bg-accent text-brand-strong" : "bg-brand text-white"}`}>Você</span>}</p><p className={`text-xs md:hidden ${selected ? "text-white/62" : "text-muted"}`}>{pluralize(player.exact, "cravada", "cravadas")} · {pluralize(player.correct, "resultado", "resultados")}</p></div></div>
+              <span className={`text-right text-sm font-black ${selected ? "text-accent" : "text-brand"}`}>
+                {hasProvisional ? player.provisionalPoints ?? player.points : player.points} pts
+                {hasProvisional && player.provisionalPoints !== player.points && (
+                  <small className={`block text-[9px] font-bold ${selected ? "text-white/62" : "text-muted"}`}>{player.points} oficial</small>
+                )}
+              </span>
+              <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.exact, "exato", "exatos")}</span>
+              <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.correct, "resultado", "resultados")}</span>
+            </button>
+            {selected && (
+              <RankingPlayerReport
+                player={player}
+                entries={entries}
+                hasProvisional={hasProvisional}
+                matchComparisons={matchComparisons}
+              />
+            )}
+          </div>
         )})}
         {!loading && entries.length === 0 && <p className="p-6 text-center text-sm text-muted">O ranking aparece assim que o bolão tiver participantes.</p>}
       </div>
-      {!loading && selectedPlayer && (
-        <RankingPlayerReport
-          player={selectedPlayer}
-          entries={entries}
-          hasProvisional={hasProvisional}
-          matchComparisons={matchComparisons}
-        />
-      )}
     </section>
   );
 }

@@ -8,9 +8,11 @@ import {
   ListChecks,
   Radio,
 } from "lucide-react";
+import { GamesMatchExplorer } from "@/components/games-match-explorer";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchTimeline } from "@/components/match-timeline";
 import { getMatches } from "@/lib/data/matches";
+import { getPredictionComparisonOverview } from "@/lib/data/prediction-comparisons";
 import { isLiveMatch } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
@@ -21,6 +23,7 @@ export const metadata: Metadata = {
 
 export default async function GamesPage() {
   const matches = await getMatches();
+  const comparisonOverview = await getPredictionComparisonOverview(matches);
   const liveMatches = matches.filter(isLiveMatch);
   const nextMatches = selectUpcomingMatches(matches, 6);
   const recentMatches = selectRecentMatches(matches, 6);
@@ -99,22 +102,27 @@ export default async function GamesPage() {
               title="Ao vivo"
               matches={liveMatches}
               live
+              showPrediction
             />
           ) : null}
           <ScheduleRail
             eyebrow="Próximos da fila"
             title="Próximos jogos"
             matches={nextMatches.slice(0, 6)}
+            showPrediction
           />
           {recentMatches.length > 0 ? (
             <ScheduleRail
               eyebrow="Já passaram"
               title="Últimos resultados"
               matches={recentMatches}
+              showPrediction
             />
           ) : null}
         </div>
       </section>
+
+      <GamesMatchExplorer matches={matches} comparisonOverview={comparisonOverview} />
 
       <section className="mt-8 space-y-6">
         <div>
@@ -128,7 +136,7 @@ export default async function GamesPage() {
                 {date}
               </h3>
             </div>
-            <MatchTimeline matches={groupMatches} />
+            <MatchTimeline matches={groupMatches} showPrediction />
           </section>
         ))}
       </section>
@@ -141,11 +149,13 @@ function ScheduleRail({
   title,
   matches,
   live = false,
+  showPrediction = false,
 }: {
   eyebrow: string;
   title: string;
   matches: DemoMatch[];
   live?: boolean;
+  showPrediction?: boolean;
 }) {
   return (
     <section className="min-w-0">
@@ -162,7 +172,7 @@ function ScheduleRail({
           <CalendarDays className="size-4 text-brand" />
         )}
       </div>
-      <MatchTimeline matches={matches} variant="rail" />
+      <MatchTimeline matches={matches} variant="rail" showPrediction={showPrediction} />
     </section>
   );
 }

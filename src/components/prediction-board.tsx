@@ -69,7 +69,7 @@ export function PredictionBoard({
     ? predictions[selectedFinishedMatch.id] ?? selectedFinishedMatch.prediction ?? null
     : null;
   const selectedFinishedResult = selectedFinishedMatch
-    ? resultForMatch(selectedFinishedMatch) ?? undefined
+    ? resultForMatch(selectedFinishedMatch) ?? selectedFinishedMatch.liveResult ?? undefined
     : undefined;
   const selectedComparisons = useMemo(() => {
     if (!selectedFinishedMatch) return [];
@@ -192,7 +192,7 @@ export function PredictionBoard({
   );
 }
 
-function FinishedMatchesReview({
+export function FinishedMatchesReview({
   matches,
   selectedMatch,
   selectedPrediction,
@@ -200,6 +200,8 @@ function FinishedMatchesReview({
   comparisons,
   comparisonSource,
   onSelectMatch,
+  eyebrow = "Finalizados e bloqueados",
+  title = "Comparar palpites do bolão",
 }: {
   matches: DemoMatch[];
   selectedMatch: DemoMatch;
@@ -208,6 +210,8 @@ function FinishedMatchesReview({
   comparisons: MatchPoolComparison[];
   comparisonSource: PredictionComparisonOverview["source"];
   onSelectMatch: (matchId: string) => void;
+  eyebrow?: string;
+  title?: string;
 }) {
   const userScore =
     selectedResult && selectedPrediction
@@ -220,9 +224,9 @@ function FinishedMatchesReview({
       <div className="border-b p-4 md:p-5">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="eyebrow">Finalizados e bloqueados</p>
+            <p className="eyebrow">{eyebrow}</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight">
-              Comparar palpites do bolão
+              {title}
             </h2>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -343,7 +347,10 @@ function PoolComparisonPanel({
   comparison: MatchPoolComparison;
   match: DemoMatch;
 }) {
-  const entries = [...comparison.entries].sort(compareEntriesForPanel).slice(0, 8);
+  const entries = [...comparison.entries]
+    .sort((left, right) => compareEntriesForPanel(left, right, match))
+    .slice(0, 8);
+  const averagePoints = comparisonAveragePoints(comparison, match);
 
   return (
     <div className="rounded-[1.25rem] border bg-surface-muted p-4">
@@ -359,7 +366,7 @@ function PoolComparisonPanel({
           <MiniMetric label="Palpites" value={comparison.predictionCount} />
           <MiniMetric label="Cravadas" value={comparison.exactCount} />
           <MiniMetric label="Acertos" value={comparison.resultCount} />
-          <MiniMetric label="Média" value={comparison.averagePoints ?? "—"} />
+          <MiniMetric label="Média" value={averagePoints ?? "—"} />
           <MiniMetric
             label="Mesmo"
             value={comparison.samePredictionCount}
@@ -370,7 +377,7 @@ function PoolComparisonPanel({
       <OutcomeDistribution comparison={comparison} match={match} />
       <div className="mt-4 divide-y rounded-2xl border bg-surface">
         {entries.map((entry) => (
-          <ComparisonRow key={`${comparison.poolId}-${entry.userId ?? entry.name}`} entry={entry} />
+          <ComparisonRow key={`${comparison.poolId}-${entry.userId ?? entry.name}`} entry={entry} match={match} />
         ))}
       </div>
       {comparison.hiddenCount > 0 ? (
@@ -382,8 +389,15 @@ function PoolComparisonPanel({
   );
 }
 
-function ComparisonRow({ entry }: { entry: PredictionComparisonEntry }) {
+function ComparisonRow({
+  entry,
+  match,
+}: {
+  entry: PredictionComparisonEntry;
+  match: DemoMatch;
+}) {
   const updatedAt = formatShortDateTime(entry.updatedAt);
+  const points = entryPoints(entry, match);
 
   return (
     <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 ${entry.isCurrentUser ? "bg-accent/20" : ""}`}>
@@ -406,7 +420,7 @@ function ComparisonRow({ entry }: { entry: PredictionComparisonEntry }) {
       </div>
       <div className="text-right">
         <p className="text-sm font-black text-brand">
-          {entry.score ? `${entry.score.totalPoints} pts` : "—"}
+          {points === null ? "—" : `${points} pts`}
         </p>
         <p className="text-[10px] font-bold text-muted">#{entry.position}</p>
       </div>
@@ -531,8 +545,8 @@ function selectedResultForButton(
   selectedMatch: DemoMatch,
   selectedResult?: MatchResult,
 ) {
-  if (match.id === selectedMatch.id) return selectedResult ?? match.result;
-  return match.result;
+  if (match.id === selectedMatch.id) return selectedResult ?? match.result ?? match.liveResult;
+  return match.result ?? match.liveResult;
 }
 
 function CompactTeam({
@@ -634,13 +648,30 @@ function MiniMetric({
 function compareEntriesForPanel(
   left: PredictionComparisonEntry,
   right: PredictionComparisonEntry,
+  match: DemoMatch,
 ) {
   if (left.isCurrentUser !== right.isCurrentUser) return left.isCurrentUser ? -1 : 1;
   return (
-    (right.score?.totalPoints ?? -1) - (left.score?.totalPoints ?? -1) ||
+    (entryPoints(right, match) ?? -1) - (entryPoints(left, match) ?? -1) ||
     left.position - right.position ||
     left.name.localeCompare(right.name, "pt-BR")
   );
+}
+
+function entryPoints(entry: PredictionComparisonEntry, match: DemoMatch) {
+  const result = match.result ?? match.liveResult;
+  if (entry.prediction && result) {
+    return calculateScore(entry.prediction, result, match.stage).totalPoints;
+  }
+  return entry.score?.totalPoints ?? null;
+}
+
+function comparisonAveragePoints(comparison: MatchPoolComparison, match: DemoMatch) {
+  const points = comparison.entries
+    .map((entry) => entryPoints(entry, match))
+    .filter((value): value is number => value !== null);
+  if (points.length === 0) return comparison.averagePoints;
+  return Math.round(points.reduce((total, value) => total + value, 0) / points.length);
 }
 
 function summarizeComparisonTotals(comparisons: MatchPoolComparison[]) {
