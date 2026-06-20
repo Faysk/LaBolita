@@ -22,8 +22,10 @@ import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { PoolFlag } from "@/components/pool-flag";
 import { TeamFlag } from "@/components/team-flag";
 import { UserAvatar } from "@/components/user-avatar";
+import { UserAlerts } from "@/components/user-alerts";
 import { demoRanking } from "@/lib/demo-data";
 import { calculateDemoRanking } from "@/lib/demo-engine";
+import type { AdminAlertView } from "@/lib/data/admin-alerts";
 import type { PoolsOverview } from "@/lib/data/pools";
 import type { SpecialMarketsOverview } from "@/lib/data/specials";
 import {
@@ -65,10 +67,12 @@ type PoolSnapshot = {
 };
 
 export function UserDashboard({
+  alerts,
   matches,
   poolsOverview,
   specialsOverview,
 }: {
+  alerts: AdminAlertView[];
   matches: DemoMatch[];
   poolsOverview: PoolsOverview;
   specialsOverview: SpecialMarketsOverview;
@@ -155,6 +159,8 @@ export function UserDashboard({
           <DashboardAction href="/boloes" icon={Trophy}>Bolões</DashboardAction>
         </div>
       </div>
+
+      <UserAlerts alerts={alerts} />
 
       <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <DashboardMetric

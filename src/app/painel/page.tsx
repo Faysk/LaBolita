@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { LiveRefresh } from "@/components/live-refresh";
 import { UserDashboard } from "@/components/user-dashboard";
 import { requireUser } from "@/lib/auth";
+import { getAdminAlertsForCurrentUser } from "@/lib/data/admin-alerts";
 import { getMatches } from "@/lib/data/matches";
 import { getPoolsOverview } from "@/lib/data/pools";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
@@ -15,9 +16,10 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   await requireUser("/painel");
   const matches = await getMatches();
-  const [poolsOverview, specialsOverview] = await Promise.all([
+  const [poolsOverview, specialsOverview, alerts] = await Promise.all([
     getPoolsOverview({ includeAllRankings: true }),
     getSpecialMarketsOverview({ matches }),
+    getAdminAlertsForCurrentUser(),
   ]);
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
@@ -27,6 +29,7 @@ export default async function DashboardPage() {
     <>
       <LiveRefresh active={matches.some(isLiveMatch) || awaitingOfficial} />
       <UserDashboard
+        alerts={alerts}
         matches={matches}
         poolsOverview={poolsOverview}
         specialsOverview={specialsOverview}

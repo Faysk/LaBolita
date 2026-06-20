@@ -83,6 +83,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
           Ajustes globais são reversíveis e registrados no histórico de auditoria.
         </p>
         <TermsEnforcementControl enabled={overview.termsEnforcementEnabled} />
+        <AdminAlertComposer />
       </div>
       <AdminCommandCenter summary={overview.summary} />
       <div className="bg-surface/35 p-5 md:p-6">
@@ -349,6 +350,187 @@ function TermsEnforcementControl({ enabled }: { enabled: boolean }) {
       </button>
       {error && <p className="text-xs font-bold text-red-200 md:col-span-3">{error}</p>}
     </div>
+  );
+}
+
+function AdminAlertComposer() {
+  const router = useRouter();
+  const [title, setTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const [severity, setSeverity] = useState<"info" | "success" | "warning" | "critical">("info");
+  const [audience, setAudience] = useState<"all" | "admins" | "pool_owners" | "specific_user">("all");
+  const [targetUserId, setTargetUserId] = useState("");
+  const [linkHref, setLinkHref] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
+  const [expiresInHours, setExpiresInHours] = useState("72");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function publish(event: React.FormEvent) {
+    event.preventDefault();
+    const supabase = createBrowserSupabaseClient();
+    if (!supabase || busy) return;
+    setBusy(true);
+    setError(null);
+    setSuccess(null);
+
+    const expiresAt =
+      expiresInHours === "never"
+        ? null
+        : new Date(Date.now() + Number(expiresInHours) * 60 * 60 * 1000).toISOString();
+
+    const { error: rpcError } = await supabase.rpc("create_admin_alert", {
+      p_title: title,
+      p_message: message,
+      p_severity: severity,
+      p_audience: audience,
+      p_target_user_id: audience === "specific_user" ? targetUserId.trim() : null,
+      p_link_href: linkHref.trim() || null,
+      p_link_label: linkLabel.trim() || null,
+      p_expires_at: expiresAt,
+      p_reason: reason,
+    });
+
+    if (rpcError) {
+      setError(friendlyServerError(rpcError, "Não foi possível publicar o alerta."));
+    } else {
+      setTitle("");
+      setMessage("");
+      setTargetUserId("");
+      setLinkHref("");
+      setLinkLabel("");
+      setReason("");
+      setSuccess("Alerta publicado.");
+      navigator.vibrate?.(25);
+      router.refresh();
+    }
+    setBusy(false);
+  }
+
+  const targetMissing = audience === "specific_user" && targetUserId.trim().length < 30;
+  const invalidLink = linkHref.trim().length > 0 && !linkHref.trim().startsWith("/");
+  const disabled =
+    busy ||
+    title.trim().length < 3 ||
+    message.trim().length < 3 ||
+    reason.trim().length < 3 ||
+    targetMissing ||
+    invalidLink;
+
+  return (
+    <form
+      onSubmit={publish}
+      className="mt-4 grid gap-3 rounded-2xl border border-white/15 bg-white/10 p-3"
+    >
+      <div className="flex items-center gap-2">
+        <Bell className="size-4 text-accent" />
+        <div>
+          <p className="text-xs font-black uppercase tracking-wider text-white/60">
+            Alertas
+          </p>
+          <p className="text-sm font-bold">Publicar aviso no app</p>
+        </div>
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-2">
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          minLength={3}
+          maxLength={80}
+          placeholder="Título"
+          className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={audience}
+            onChange={(event) => setAudience(event.target.value as typeof audience)}
+            className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-accent"
+          >
+            <option value="all">Todos</option>
+            <option value="admins">Admins</option>
+            <option value="pool_owners">Donos de bolão</option>
+            <option value="specific_user">Usuário</option>
+          </select>
+          <select
+            value={severity}
+            onChange={(event) => setSeverity(event.target.value as typeof severity)}
+            className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-accent"
+          >
+            <option value="info">Info</option>
+            <option value="success">Sucesso</option>
+            <option value="warning">Atenção</option>
+            <option value="critical">Crítico</option>
+          </select>
+        </div>
+      </div>
+
+      <textarea
+        value={message}
+        onChange={(event) => setMessage(event.target.value)}
+        minLength={3}
+        maxLength={360}
+        rows={3}
+        placeholder="Mensagem"
+        className="resize-none rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
+      />
+
+      <div className="grid gap-2 md:grid-cols-[1fr_1fr_8rem]">
+        <input
+          value={audience === "specific_user" ? targetUserId : ""}
+          disabled={audience !== "specific_user"}
+          onChange={(event) => setTargetUserId(event.target.value)}
+          placeholder="ID do usuário"
+          className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent disabled:opacity-45"
+        />
+        <input
+          value={linkHref}
+          onChange={(event) => setLinkHref(event.target.value)}
+          placeholder="Link interno, ex.: /especiais"
+          className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
+        />
+        <input
+          value={linkLabel}
+          onChange={(event) => setLinkLabel(event.target.value)}
+          placeholder="Botão"
+          className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
+        />
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-[9rem_1fr_auto]">
+        <select
+          value={expiresInHours}
+          onChange={(event) => setExpiresInHours(event.target.value)}
+          className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none focus:border-accent"
+        >
+          <option value="24">24h</option>
+          <option value="72">3 dias</option>
+          <option value="168">7 dias</option>
+          <option value="never">Sem expirar</option>
+        </select>
+        <input
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          minLength={3}
+          maxLength={200}
+          placeholder="Motivo obrigatório"
+          className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
+        />
+        <button
+          type="submit"
+          disabled={disabled}
+          className="interactive flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-black text-brand-strong disabled:opacity-40"
+        >
+          {busy && <LoaderCircle className="size-3 animate-spin" />}
+          Publicar
+        </button>
+      </div>
+      {invalidLink && <p className="text-xs font-bold text-red-200">Use apenas caminhos internos iniciando com /.</p>}
+      {error && <p className="text-xs font-bold text-red-200">{error}</p>}
+      {success && <p className="text-xs font-bold text-emerald-100">{success}</p>}
+    </form>
   );
 }
 

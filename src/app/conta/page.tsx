@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AccountSettingsPanel } from "@/components/account-settings-panel";
+import { UserAlerts } from "@/components/user-alerts";
 import { requireUser } from "@/lib/auth";
+import { getAdminAlertsForCurrentUser } from "@/lib/data/admin-alerts";
 import { getMatches } from "@/lib/data/matches";
 import {
   normalizeThemePreference,
@@ -20,7 +22,10 @@ export default async function AccountPage() {
   if (error) throw error;
   if (!profile) throw new Error("Perfil não encontrado.");
 
-  const matches = await getMatches();
+  const [matches, alerts] = await Promise.all([
+    getMatches(),
+    getAdminAlertsForCurrentUser(),
+  ]);
   const sampleMatch = matches.find((match) => !match.result) ?? matches[0] ?? null;
 
   return (
@@ -34,6 +39,8 @@ export default async function AccountPage() {
           Ajuste como seu nome aparece nos rankings, controle a privacidade da foto e escolha como os horários dos jogos aparecem para você.
         </p>
       </div>
+
+      <UserAlerts alerts={alerts} compact />
 
       <AccountSettingsPanel
         displayName={profile.display_name}
