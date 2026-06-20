@@ -6,6 +6,7 @@ import {
   Activity,
   Bell,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -395,9 +396,9 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
             <Database className="size-4 text-brand" />
             <h3 className="text-sm font-black">Saúde das conexões</h3>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {summary.connections.map((connection) => (
-              <ConnectionPill key={connection.key} connection={connection} />
+              <ConnectionStatusCard key={connection.key} connection={connection} />
             ))}
           </div>
         </div>
@@ -407,7 +408,13 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
             <Bell className="size-4 text-brand" />
             <h3 className="text-sm font-black">Atenção agora</h3>
           </div>
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
+          <ProgressiveList
+            initialCount={4}
+            step={4}
+            moreLabel="Ver mais alertas"
+            className="mt-3 grid gap-2 md:grid-cols-2"
+            buttonClassName="interactive mt-3 flex w-full items-center justify-center gap-2 rounded-xl border bg-surface px-3 py-2 text-[10px] font-black text-brand hover:border-brand/60 md:col-span-2"
+          >
             {summary.nextActions.map((action) => (
               <div
                 key={`${action.label}-${action.detail}`}
@@ -423,7 +430,7 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
                 <p className="mt-1 text-[11px] leading-4">{action.detail}</p>
               </div>
             ))}
-          </div>
+          </ProgressiveList>
         </div>
       </div>
 
@@ -478,7 +485,7 @@ function MetricTile({
   );
 }
 
-function ConnectionPill({
+function ConnectionStatusCard({
   connection,
 }: {
   connection: AdminSummary["connections"][number];
@@ -499,15 +506,29 @@ function ConnectionPill({
       : connection.status === "warn"
         ? "status-warning"
         : "status-success";
+  const statusLabel =
+    connection.status === "danger"
+      ? "Crítico"
+      : connection.status === "warn"
+        ? "Atenção"
+        : "OK";
 
   return (
-    <span
-      title={connection.detail}
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${tone}`}
-    >
-      <Icon className="size-3.5" />
-      {connection.label}
-    </span>
+    <details className={`group overflow-hidden rounded-xl border ${tone}`}>
+      <summary className="interactive flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2">
+          <Icon className="size-3.5 shrink-0" />
+          <span className="truncate text-xs font-black">{connection.label}</span>
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-black">
+          {statusLabel}
+          <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+        </span>
+      </summary>
+      <p className="border-t border-current/15 px-3 py-2 text-[11px] font-bold leading-4">
+        {connection.detail}
+      </p>
+    </details>
   );
 }
 

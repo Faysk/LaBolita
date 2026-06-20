@@ -330,7 +330,13 @@ function LivePanel({
           Pontos mudando em tempo real
         </h2>
         {liveMatches.length > 1 ? (
-          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+          <ProgressiveList
+            initialCount={4}
+            step={4}
+            moreLabel="Ver mais jogos ao vivo"
+            className="mt-5 flex gap-2 overflow-x-auto pb-1"
+            buttonClassName="interactive mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-black text-accent hover:bg-white/15"
+          >
             {liveMatches.map((item) => (
               <button
                 key={item.match.id}
@@ -356,7 +362,7 @@ function LivePanel({
                 </span>
               </button>
             ))}
-          </div>
+          </ProgressiveList>
         ) : null}
         <div className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
@@ -401,11 +407,16 @@ function LivePanel({
                 {liveMatches.length} jogos mexendo nos rankings agora.
               </p>
             )}
-            <div className="grid gap-2">
+            <ProgressiveList
+              initialCount={4}
+              step={4}
+              moreLabel="Ver mais impactos"
+              className="grid gap-2"
+            >
               {liveMatches.map((item) => (
                 <LiveMatchImpact key={item.match.id} item={item} />
               ))}
-            </div>
+            </ProgressiveList>
           </div>
         ) : (
           <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
@@ -660,7 +671,7 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
               </>
             ) : (
               <>
-                Ver mais participantes <ChevronDown className="size-4" />
+                Ver mais participantes ({ordered.length - compactRows.length}) <ChevronDown className="size-4" />
               </>
             )}
           </button>
@@ -712,7 +723,12 @@ function PoolSnapshotStrip({
       <p className="mb-2 text-xs font-black uppercase tracking-[0.12em] text-muted">
         Bolões em movimento
       </p>
-      <div className="flex gap-3 overflow-x-auto pb-1">
+      <ProgressiveList
+        initialCount={4}
+        step={4}
+        moreLabel="Ver mais bolões"
+        className="flex gap-3 overflow-x-auto pb-1"
+      >
         {snapshots.map((snapshot) => {
           const selected = snapshot.pool.id === selectedPoolId;
           const player = snapshot.currentPlayer;
@@ -757,7 +773,7 @@ function PoolSnapshotStrip({
             </button>
           );
         })}
-      </div>
+      </ProgressiveList>
     </div>
   );
 }

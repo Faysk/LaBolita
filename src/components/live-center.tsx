@@ -335,7 +335,13 @@ export function LiveCenter({
           </div>
 
           {poolOptions.length > 1 ? (
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            <ProgressiveList
+              initialCount={5}
+              step={5}
+              moreLabel="Ver mais bolões"
+              className="mt-4 flex gap-2 overflow-x-auto pb-1"
+              buttonClassName="interactive mt-2 inline-flex items-center gap-2 rounded-full border bg-surface-muted px-3 py-1.5 text-[10px] font-black text-brand hover:border-brand/60"
+            >
               {poolOptions.map((pool) => (
                 <button
                   key={pool.id}
@@ -350,7 +356,7 @@ export function LiveCenter({
                   {pool.name}
                 </button>
               ))}
-            </div>
+            </ProgressiveList>
           ) : null}
 
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -397,7 +403,7 @@ export function LiveCenter({
                   </>
                 ) : (
                   <>
-                    Ver mais participantes <ChevronDown className="size-4" />
+                    Ver mais participantes ({orderedRanking.length - compactRankingRows.length}) <ChevronDown className="size-4" />
                   </>
                 )}
               </button>
@@ -545,7 +551,8 @@ export function LiveCenter({
                     </>
                   ) : (
                     <>
-                      Ver mais palpites <ChevronDown className="size-4" />
+                      Ver mais palpites ({orderedPredictionEntries.length - compactPredictionRows.length}){" "}
+                      <ChevronDown className="size-4" />
                     </>
                   )}
                 </button>
