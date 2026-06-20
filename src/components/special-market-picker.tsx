@@ -6,10 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   LoaderCircle,
   Save,
   Search,
+  Sparkles,
   X,
 } from "lucide-react";
 import {
@@ -40,38 +44,63 @@ type SyncState = {
   ok?: boolean;
 };
 
-export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
+type NextMarketLink = {
+  href: string;
+  label: string;
+} | null;
+
+export function SpecialMarketPicker({
+  market,
+  nextMarket = null,
+}: {
+  market: SpecialMarketView;
+  nextMarket?: NextMarketLink;
+}) {
   const router = useRouter();
   const supabase = createBrowserSupabaseClient();
   const display = specialMarketDisplay(market.key);
   const Icon = display.icon;
+  const initialSelection = Array.from({ length: market.pickCount }, (_, index) => {
+    return market.predictions[index]?.key ?? "";
+  });
+  const initialActiveKey =
+    initialSelection.find(Boolean) ??
+    highlightSpecialOptions(market.key, market.options, 1)[0]?.key ??
+    market.options[0]?.key ??
+    "";
   const optionByKey = useMemo(
     () => new Map(market.options.map((option) => [option.key, option])),
     [market.options],
   );
-  const [selectedKeys, setSelectedKeys] = useState(() =>
-    Array.from({ length: market.pickCount }, (_, index) => {
-      return market.predictions[index]?.key ?? "";
-    }),
-  );
+  const [selectedKeys, setSelectedKeys] = useState(initialSelection);
+  const [activeKey, setActiveKey] = useState(initialActiveKey);
   const [search, setSearch] = useState("");
-  const [visibleCount, setVisibleCount] = useState(60);
+  const [visibleCount, setVisibleCount] = useState(36);
   const [sync, setSync] = useState<SyncState>({});
+
   const selectedOptions = selectedKeys
     .map((key) => optionByKey.get(key))
     .filter((option): option is SpecialOption => Boolean(option));
   const complete = selectedOptions.length === market.pickCount;
-  const dirty =
-    selectedKeys.join("|") !==
-    Array.from({ length: market.pickCount }, (_, index) => market.predictions[index]?.key ?? "").join("|");
+  const dirty = selectedKeys.join("|") !== initialSelection.join("|");
   const highlighted = useMemo(
-    () => highlightSpecialOptions(market.key, market.options, 12),
+    () => highlightSpecialOptions(market.key, market.options, 18),
     [market.key, market.options],
   );
   const filteredOptions = useMemo(
     () => visibleSpecialOptions(market.options, search, selectedKeys, market.key),
     [market.key, market.options, search, selectedKeys],
   );
+  const deckOptions = useMemo(() => {
+    if (search.trim()) return filteredOptions;
+    return highlighted.length > 0 ? highlighted : filteredOptions;
+  }, [filteredOptions, highlighted, search]);
+  const activeIndex = deckOptions.findIndex((option) => option.key === activeKey);
+  const safeActiveIndex = activeIndex >= 0 ? activeIndex : 0;
+  const activeOption = deckOptions[safeActiveIndex] ?? market.options[0] ?? null;
+  const activeSelected = activeOption
+    ? selectedKeys.includes(activeOption.key)
+    : false;
   const visibleOptions = filteredOptions.slice(0, visibleCount);
   const saveLabel = market.predictions.length > 0 ? "Salvar alteração" : "Salvar palpite";
   const canSave = complete && dirty && !market.locked && !sync.busy;
@@ -91,6 +120,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
 
   function chooseOption(option: SpecialOption) {
     if (market.locked || sync.busy) return;
+    setActiveKey(option.key);
     setSelectedKeys((current) => {
       const next = [...current];
       const selectedIndex = next.indexOf(option.key);
@@ -120,6 +150,12 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
       ),
     );
     setSync({});
+  }
+
+  function moveDeck(direction: -1 | 1) {
+    if (deckOptions.length === 0) return;
+    const nextIndex = wrapIndex(safeActiveIndex + direction, deckOptions.length);
+    setActiveKey(deckOptions[nextIndex].key);
   }
 
   async function save() {
@@ -162,7 +198,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
             Voltar aos especiais
           </LinkPendingLabel>
         </Link>
-        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)] lg:items-start">
+        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
           <div className="flex flex-col pt-1 lg:pt-2">
             <div className="inline-flex self-start items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-accent">
               <Icon className="size-4" />
@@ -172,61 +208,32 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
               {display.heroTitle}
             </h1>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-white/72 md:text-base">
-              {display.teaser} Você pode alterar até {SPECIAL_LOCK_DATE_LABEL}.
+              {display.teaser} Passe as cartas, busque pelo nome e salve sua
+              escolha até {SPECIAL_LOCK_DATE_LABEL}.
             </p>
           </div>
-          <div className="flex flex-col self-start rounded-[1.7rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/10 md:p-5">
+          <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-black uppercase tracking-[0.14em] text-white/55">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/55">
                 {display.pickLabel}
-              </span>
+              </p>
               <span className={`rounded-full px-3 py-1 text-[10px] font-black ${
                 market.locked ? "status-neutral" : complete ? "status-success" : "status-warning"
               }`}>
-                {market.locked ? "Bloqueado" : complete ? "Pronto" : "Pendente"}
+                {market.locked ? "Bloqueado" : complete ? "Completo" : "Pendente"}
               </span>
             </div>
-            <div className="mt-4 flex-1">
-              {selectedOptions.length > 0 ? (
-                <div className="grid gap-3">
-                  {selectedOptions.map((option) => (
-                    <SelectedOptionRow
-                      key={option.key}
-                      option={option}
-                      locked={market.locked || Boolean(sync.busy)}
-                      onRemove={() => removeOption(option.key)}
-                      featured={market.pickCount === 1}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-[1.35rem] border border-white/15 bg-black/10 p-4">
-                  <p className="text-sm leading-6 text-white/68">{display.emptyDetail}</p>
-                  <p className="mt-3 text-xs font-bold text-white/45">
-                    Você salva agora e ainda pode trocar até {SPECIAL_LOCK_DATE_LABEL}.
-                  </p>
-                </div>
-              )}
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/12">
+              <span
+                className="block h-full rounded-full bg-accent"
+                style={{ width: `${Math.round((selectedOptions.length / market.pickCount) * 100)}%` }}
+              />
             </div>
-            <button
-              type="button"
-              onClick={save}
-              disabled={!canSave}
-              className="interactive mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong shadow-lg shadow-black/10 disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/45 disabled:shadow-none"
-            >
-              {sync.busy ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
-              {saveLabel}
-            </button>
-            {sync.message && (
-              <p
-                aria-live="polite"
-                className={`mt-3 rounded-xl px-3 py-2 text-xs font-bold ${
-                  sync.ok ? "status-success" : "status-danger"
-                }`}
-              >
-                {sync.message}
-              </p>
-            )}
+            <p className="mt-3 text-sm font-bold text-white/70">
+              {selectedOptions.length}/{market.pickCount} carta
+              {market.pickCount === 1 ? "" : "s"} escolhida
+              {market.pickCount === 1 ? "" : "s"}
+            </p>
           </div>
         </div>
       </section>
@@ -243,64 +250,201 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
         </section>
       )}
 
-      <section className="grid items-start gap-5 lg:grid-cols-[1.25fr_0.95fr]">
-        <div className="card self-start p-5">
-          <p className="eyebrow">Escolha com contexto</p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight">
-            {selectedOptions.length > 0 ? "Detalhes da sua escolha" : "Aguardando seleção"}
-          </h2>
-          <div className="mt-4 grid gap-3">
-            {selectedOptions.length > 0 ? (
-              selectedOptions.map((option) => (
-                <OptionDetail key={option.key} marketKey={market.key} option={option} />
-              ))
-            ) : (
-              <p className="rounded-2xl border bg-surface-muted p-4 text-sm leading-6 text-muted">
-                {display.emptyDetail}
+      <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_25rem]">
+        <div className="card overflow-hidden p-4 md:p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="eyebrow">
+                {search.trim() ? "Resultado da busca" : "Baralho de destaques"}
               </p>
-            )}
-          </div>
-        </div>
-
-        <div className="card self-start p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="max-w-xl text-[10px] font-black uppercase leading-5 tracking-[0.14em] text-brand">
-                {display.dataNote}
-              </p>
-              <h2 className="mt-3 text-2xl font-black leading-tight tracking-tight">
-                {display.highlightTitle}
+              <h2 className="mt-1 text-2xl font-black tracking-tight">
+                Passe as figurinhas
               </h2>
             </div>
-            <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-[10px] font-black text-brand-strong">
-              {highlighted.length} destaques
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => moveDeck(-1)}
+                disabled={deckOptions.length < 2}
+                className="interactive inline-flex size-11 items-center justify-center rounded-2xl border bg-surface text-brand disabled:cursor-not-allowed disabled:opacity-45"
+                aria-label="Carta anterior"
+              >
+                <ChevronLeft className="size-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveDeck(1)}
+                disabled={deckOptions.length < 2}
+                className="interactive inline-flex size-11 items-center justify-center rounded-2xl border bg-surface text-brand disabled:cursor-not-allowed disabled:opacity-45"
+                aria-label="Próxima carta"
+              >
+                <ChevronRight className="size-5" />
+              </button>
+            </div>
+          </div>
+
+          {activeOption ? (
+            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(15rem,0.9fr)_minmax(0,1fr)] lg:items-stretch">
+              <div className="relative min-h-[24rem] overflow-hidden rounded-[1.7rem] border border-white/15 bg-brand-strong p-4 text-white">
+                <div className="absolute left-5 top-6 h-72 w-44 rotate-[-10deg] rounded-[1.5rem] border border-white/10 bg-white/8" />
+                <div className="absolute right-5 top-9 h-72 w-44 rotate-[10deg] rounded-[1.5rem] border border-white/10 bg-white/8" />
+                <div className="relative z-10 flex h-full min-h-[22rem] flex-col items-center justify-center gap-4">
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
+                    {safeActiveIndex + 1}/{Math.max(deckOptions.length, 1)}
+                  </span>
+                  <div className="flex w-full max-w-[22rem] justify-center">
+                    <SpecialOptionSticker
+                      option={activeOption}
+                      variant="feature"
+                      selected={activeSelected}
+                    />
+                  </div>
+                  {activeSelected ? (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand-strong">
+                      <CheckCircle2 className="size-4" />
+                      Na sua seleção
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex flex-col rounded-[1.5rem] border bg-surface-muted p-4 md:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+                      {optionTypeLabel(activeOption)}
+                    </p>
+                    <h3 className="mt-1 text-3xl font-black leading-tight tracking-tight">
+                      {activeOption.fullName ?? activeOption.label}
+                    </h3>
+                    <p className="mt-1 text-sm font-bold text-muted">
+                      {summarizeSpecialOption(activeOption)}
+                    </p>
+                  </div>
+                  <Sparkles className="size-5 shrink-0 text-brand" />
+                </div>
+                <p className="mt-4 text-sm leading-6 text-muted">
+                  {activeOption.position
+                    ? shortPlayerInsight(activeOption)
+                    : shortTeamInsight(activeOption)}
+                </p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <DeckMetric label="Seleção" value={activeOption.teamName} />
+                  <DeckMetric
+                    label={activeOption.position ? "Posição" : "Grupo"}
+                    value={
+                      activeOption.position
+                        ? positionLabel(activeOption.position)
+                        : activeOption.groupName ?? "—"
+                    }
+                  />
+                  <DeckMetric
+                    label={activeOption.position ? "Camisa" : "Gols pró"}
+                    value={activeOption.position ? `#${activeOption.number ?? "—"}` : activeOption.teamStats?.goalsFor ?? "—"}
+                  />
+                  <DeckMetric
+                    label={activeOption.position ? "Experiência" : "Pontos"}
+                    value={activeOption.position ? `${activeOption.caps ?? 0} jogos` : activeOption.teamStats?.points ?? "—"}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => chooseOption(activeOption)}
+                  disabled={market.locked || Boolean(sync.busy)}
+                  className={`interactive mt-auto inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl px-4 text-sm font-black disabled:cursor-not-allowed disabled:opacity-55 ${
+                    activeSelected
+                      ? "border bg-surface text-danger-fg"
+                      : "bg-accent text-brand-strong shadow-lg shadow-black/10"
+                  }`}
+                >
+                  {activeSelected ? <X className="size-4" /> : <CheckCircle2 className="size-4" />}
+                  {choiceButtonLabel({
+                    activeSelected,
+                    complete,
+                    pickCount: market.pickCount,
+                    selectedCount: selectedOptions.length,
+                  })}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-[1.5rem] border bg-surface-muted p-5 text-sm font-bold text-muted">
+              Nenhuma carta disponível para este especial.
+            </div>
+          )}
+        </div>
+
+        <aside className="card p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="eyebrow">Sua seleção</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight">
+                {complete ? "Pronta para salvar" : `${remainingChoices} pendente${remainingChoices === 1 ? "" : "s"}`}
+              </h2>
+            </div>
+            <span className="rounded-full border bg-surface-muted px-3 py-1 text-xs font-black text-muted">
+              {selectedOptions.length}/{market.pickCount}
             </span>
           </div>
           <div className="mt-4 grid gap-3">
-            {highlighted.map((option) => (
-              <OptionCard
-                key={option.key}
-                option={option}
-                selected={selectedKeys.includes(option.key)}
-                disabled={market.locked || Boolean(sync.busy)}
-                density="highlight"
-                onSelect={() => chooseOption(option)}
-              />
-            ))}
+            {Array.from({ length: market.pickCount }, (_, index) => {
+              const option = selectedOptions[index];
+              return option ? (
+                <SelectedOptionRow
+                  key={option.key}
+                  option={option}
+                  locked={market.locked || Boolean(sync.busy)}
+                  onRemove={() => removeOption(option.key)}
+                  featured={market.pickCount === 1}
+                />
+              ) : (
+                <EmptySelectionSlot key={`empty-${index}`} index={index} displayLabel={display.pickLabel} />
+              );
+            })}
           </div>
-        </div>
+          <button
+            type="button"
+            onClick={save}
+            disabled={!canSave}
+            className="interactive mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong shadow-lg shadow-black/10 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted disabled:shadow-none"
+          >
+            {sync.busy ? <LoaderCircle className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {saveLabel}
+          </button>
+          {sync.message && (
+            <p
+              aria-live="polite"
+              className={`mt-3 rounded-xl px-3 py-2 text-xs font-bold ${
+                sync.ok ? "status-success" : "status-danger"
+              }`}
+            >
+              {sync.message}
+            </p>
+          )}
+          {sync.ok && nextMarket ? (
+            <Link
+              href={nextMarket.href}
+              prefetch={false}
+              className="interactive mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border bg-surface px-4 text-sm font-black text-brand hover:border-brand/70"
+            >
+              <LinkPendingLabel pendingLabel="Abrindo próximo...">
+                Próximo especial: {nextMarket.label}
+                <ArrowRight className="size-4" />
+              </LinkPendingLabel>
+            </Link>
+          ) : null}
+        </aside>
       </section>
 
       <section className="card p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="eyebrow">Lista completa</p>
+            <p className="eyebrow">Busca rápida</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight">
-              Figurinhas disponíveis
+              Todas as figurinhas
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               Mostrando {visibleOptions.length} de {filteredOptions.length} opções.
-              Use a busca para ir direto ao jogador ou seleção.
             </p>
           </div>
           <div className="text-xs font-bold text-muted">
@@ -311,7 +455,10 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <input
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setVisibleCount(36);
+            }}
             placeholder={display.searchPlaceholder}
             className="w-full rounded-2xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold outline-none placeholder:text-muted focus:border-brand"
           />
@@ -331,7 +478,7 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           <div className="mt-5 flex justify-center">
             <button
               type="button"
-              onClick={() => setVisibleCount((current) => current + 60)}
+              onClick={() => setVisibleCount((current) => current + 36)}
               className="interactive min-h-11 rounded-2xl border bg-surface px-5 text-sm font-black text-brand hover:border-brand/70"
             >
               Mostrar mais figurinhas
@@ -339,6 +486,21 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
           </div>
         )}
       </section>
+
+      {selectedOptions.length > 0 ? (
+        <section className="card p-5">
+          <p className="eyebrow">Análise das cartas escolhidas</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight">
+            Detalhes do seu palpite
+          </h2>
+          <div className="mt-4 grid gap-3">
+            {selectedOptions.map((option) => (
+              <OptionDetail key={option.key} marketKey={market.key} option={option} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {showStickySave && stickyOption ? (
         <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 px-4 md:bottom-5 md:left-auto md:right-5 md:w-[min(34rem,calc(100vw-2rem))]">
           <div className="rounded-[1.4rem] border border-white/15 bg-brand-strong/95 p-3 text-white shadow-2xl shadow-black/35 backdrop-blur-xl">
@@ -368,6 +530,18 @@ export function SpecialMarketPicker({ market }: { market: SpecialMarketView }) {
                 {sync.message}
               </p>
             ) : null}
+            {sync.ok && nextMarket ? (
+              <Link
+                href={nextMarket.href}
+                prefetch={false}
+                className="interactive mt-2 inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-black text-white"
+              >
+                <LinkPendingLabel pendingLabel="Abrindo próximo...">
+                  Ir para {nextMarket.label}
+                  <ArrowRight className="size-3.5" />
+                </LinkPendingLabel>
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -379,26 +553,19 @@ function OptionCard({
   option,
   selected,
   disabled,
-  density = "default",
   onSelect,
 }: {
   option: SpecialOption;
   selected: boolean;
   disabled: boolean;
-  density?: "default" | "highlight";
   onSelect: () => void;
 }) {
-  const highlight = density === "highlight";
-  const layoutClass = highlight
-    ? "min-h-24 grid-cols-[auto_minmax(0,1fr)_auto] gap-3 p-3"
-    : "min-h-32 grid-cols-[auto_minmax(0,1fr)] gap-4 p-3 pr-10 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:pr-3";
-
   return (
     <button
       type="button"
       onClick={onSelect}
       disabled={disabled}
-      className={`interactive relative grid w-full items-center overflow-hidden rounded-2xl border text-left disabled:cursor-not-allowed disabled:opacity-60 ${layoutClass} ${
+      className={`interactive relative grid min-h-32 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-4 overflow-hidden rounded-2xl border p-3 pr-10 text-left disabled:cursor-not-allowed disabled:opacity-60 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:pr-3 ${
         selected
           ? "border-brand bg-success-bg text-success-fg"
           : "bg-surface-muted hover:border-brand/70"
@@ -406,17 +573,17 @@ function OptionCard({
     >
       <SpecialOptionSticker
         option={option}
-        variant={highlight ? "avatar" : "thumb"}
+        variant="thumb"
         selected={selected}
       />
       <span className="min-w-0 flex-1">
-        <span className={`${highlight ? "line-clamp-1" : "line-clamp-2"} text-sm font-black leading-tight text-foreground`}>
+        <span className="line-clamp-2 text-sm font-black leading-tight text-foreground">
           {option.label}
         </span>
-        <span className={`${highlight ? "mt-0.5" : "mt-1"} block line-clamp-2 text-xs font-bold leading-4 text-muted`}>
+        <span className="mt-1 block line-clamp-2 text-xs font-bold leading-4 text-muted">
           {option.description}
         </span>
-        <span className={`${highlight ? "mt-1.5" : "mt-2"} flex flex-wrap gap-1.5`}>
+        <span className="mt-2 flex flex-wrap gap-1.5">
           {option.position && (
             <Chip>{positionLabel(option.position)}</Chip>
           )}
@@ -430,13 +597,7 @@ function OptionCard({
         </span>
       </span>
       {selected && (
-        <CheckCircle2
-          className={`size-5 shrink-0 text-brand ${
-            highlight
-              ? ""
-              : "absolute right-3 top-1/2 -translate-y-1/2 sm:static sm:translate-y-0"
-          }`}
-        />
+        <CheckCircle2 className="absolute right-3 top-1/2 size-5 shrink-0 -translate-y-1/2 text-brand sm:static sm:translate-y-0" />
       )}
     </button>
   );
@@ -455,17 +616,17 @@ function SelectedOptionRow({
 }) {
   if (featured) {
     return (
-      <div className="relative grid gap-3 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
+      <div className="relative grid gap-3 rounded-[1.35rem] border bg-surface-muted p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
         <SpecialOptionSticker option={option} variant="card" selected />
         <div className="min-w-0">
           <p className="text-lg font-black leading-tight">{option.label}</p>
-          <p className="mt-1 text-sm font-bold text-white/62">
+          <p className="mt-1 text-sm font-bold text-muted">
             {summarizeSpecialOption(option)}
           </p>
-          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
+          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-brand">
             {option.position ? `${positionLabel(option.position)} · camisa ${option.number}` : "Seleção"}
           </p>
-          <p className="mt-3 line-clamp-3 text-xs leading-5 text-white/62">
+          <p className="mt-3 line-clamp-3 text-xs leading-5 text-muted">
             {option.position ? shortPlayerInsight(option) : shortTeamInsight(option)}
           </p>
         </div>
@@ -473,7 +634,7 @@ function SelectedOptionRow({
           <button
             type="button"
             onClick={onRemove}
-            className="interactive absolute right-3 top-3 rounded-full border border-white/15 bg-white/10 p-2 text-white/75"
+            className="interactive absolute right-3 top-3 rounded-full border bg-surface p-2 text-muted"
             aria-label={`Remover ${option.label}`}
           >
             <X className="size-3.5" />
@@ -484,12 +645,12 @@ function SelectedOptionRow({
   }
 
   return (
-    <div className="relative grid gap-3 rounded-[1.35rem] border border-white/15 bg-black/10 p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
+    <div className="relative grid gap-3 rounded-[1.35rem] border bg-surface-muted p-3 pr-12 sm:grid-cols-[auto_1fr] sm:items-center">
       <SpecialOptionAvatar option={option} size="lg" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black">{option.label}</p>
-        <p className="truncate text-xs text-white/58">{summarizeSpecialOption(option)}</p>
-        <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent/85">
+        <p className="truncate text-xs text-muted">{summarizeSpecialOption(option)}</p>
+        <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand">
           {option.position ? `${positionLabel(option.position)} · camisa ${option.number}` : "Seleção"}
         </p>
       </div>
@@ -497,12 +658,32 @@ function SelectedOptionRow({
         <button
           type="button"
           onClick={onRemove}
-          className="interactive absolute right-3 top-3 rounded-full border border-white/15 bg-white/10 p-2 text-white/75"
+          className="interactive absolute right-3 top-3 rounded-full border bg-surface p-2 text-muted"
           aria-label={`Remover ${option.label}`}
         >
           <X className="size-3.5" />
         </button>
       )}
+    </div>
+  );
+}
+
+function EmptySelectionSlot({
+  index,
+  displayLabel,
+}: {
+  index: number;
+  displayLabel: string;
+}) {
+  return (
+    <div className="grid min-h-20 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-[1.35rem] border border-dashed bg-surface-muted p-3">
+      <span className="inline-flex size-12 items-center justify-center rounded-2xl border bg-surface text-sm font-black text-muted">
+        {index + 1}
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-black text-muted">Escolha pendente</p>
+        <p className="truncate text-xs font-bold text-muted">{displayLabel}</p>
+      </div>
     </div>
   );
 }
@@ -675,12 +856,51 @@ function DetailStat({
   );
 }
 
+function DeckMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl border bg-surface p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+        {label}
+      </p>
+      <p className="mt-1 line-clamp-2 text-sm font-black leading-tight">{value}</p>
+    </div>
+  );
+}
+
 function Chip({ children }: { children: ReactNode }) {
   return (
     <span className="rounded-full border bg-surface px-2 py-0.5 text-[10px] font-black text-muted">
       {children}
     </span>
   );
+}
+
+function choiceButtonLabel({
+  activeSelected,
+  complete,
+  pickCount,
+  selectedCount,
+}: {
+  activeSelected: boolean;
+  complete: boolean;
+  pickCount: number;
+  selectedCount: number;
+}) {
+  if (activeSelected) return "Remover carta";
+  if (pickCount === 1 && selectedCount > 0) return "Trocar por esta carta";
+  if (complete) return "Trocar última por esta carta";
+  return "Escolher esta carta";
+}
+
+function optionTypeLabel(option: SpecialOption) {
+  if (!option.position) return "Seleção";
+  return positionLabel(option.position);
 }
 
 function shortPlayerInsight(option: SpecialOption) {
@@ -732,6 +952,10 @@ function visibleSpecialOptions(
 function compactSelection(keys: string[], pickCount: number) {
   return [...keys.filter(Boolean), ...Array.from({ length: pickCount }, () => "")]
     .slice(0, pickCount);
+}
+
+function wrapIndex(index: number, length: number) {
+  return ((index % length) + length) % length;
 }
 
 function positionLabel(position: NonNullable<SpecialOption["position"]>) {

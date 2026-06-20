@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
 import {
   specialMarketDisplay,
+  specialMarketPath,
   specialMarketKeyFromSlug,
 } from "@/lib/special-market-display";
 
@@ -32,6 +33,7 @@ export default async function SpecialMarketPage({
   }
 
   const display = specialMarketDisplay(market.key);
+  const nextOpenMarket = nextPendingSpecialMarket(overview.markets, market.key);
 
   return (
     <main className="page-container py-7 md:py-10">
@@ -41,7 +43,34 @@ export default async function SpecialMarketPage({
           {display.heroTitle}
         </h1>
       </div>
-      <SpecialMarketPicker market={market} />
+      <SpecialMarketPicker
+        market={market}
+        nextMarket={
+          nextOpenMarket
+            ? {
+                href: specialMarketPath(nextOpenMarket.key),
+                label: specialMarketDisplay(nextOpenMarket.key).shortTitle,
+              }
+            : null
+        }
+      />
     </main>
+  );
+}
+
+function nextPendingSpecialMarket(
+  markets: NonNullable<Awaited<ReturnType<typeof getSpecialMarketsOverview>>["markets"]>,
+  currentKey: string,
+) {
+  const currentIndex = markets.findIndex((market) => market.key === currentKey);
+  const ordered = currentIndex >= 0
+    ? [...markets.slice(currentIndex + 1), ...markets.slice(0, currentIndex)]
+    : markets;
+
+  return ordered.find(
+    (market) =>
+      market.key !== currentKey &&
+      !market.locked &&
+      market.predictions.length < market.pickCount,
   );
 }

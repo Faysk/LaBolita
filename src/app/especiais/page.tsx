@@ -23,9 +23,9 @@ export default async function SpecialPredictionsPage() {
             Palpites especiais
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
-            Uma área para escolher artilheiro, assistências, prêmios individuais,
-            seleções destaque e caminho até a final. Entre em cada card para ver
-            dados do elenco e salvar sua escolha.
+            Registre os palpites finais da Copa: artilheiro, assistências,
+            prêmios individuais, seleções destaque e caminho até a final. Cada
+            especial abre um baralho de cartas para buscar, comparar e salvar.
           </p>
         </div>
         <Link
