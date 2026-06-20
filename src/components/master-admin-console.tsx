@@ -827,8 +827,21 @@ function MasterPoolCard({ pool }: { pool: MasterPool }) {
   return (
     <article className="rounded-2xl border bg-surface-muted/80 p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 gap-3"><CountryFlag code={flagCode} size="sm" /><div><p className="font-black">{pool.poolName}</p><p className="mt-1 text-xs text-muted">Dono: {pool.ownerName} · {pool.memberCount} jogadores · {pool.inviteCode}</p></div></div>
+        <div className="flex min-w-0 gap-3">
+          <CountryFlag code={flagCode} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate font-black">{pool.poolName}</p>
+            <p className="mt-1 truncate text-xs text-muted">
+              Dono: {pool.ownerName} · {pool.memberCount} jogadores
+            </p>
+          </div>
+        </div>
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${pool.archivedAt ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-brand"}`}>{pool.archivedAt ? "Arquivado" : "Ativo"}</span>
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        <MasterPoolFact label="Convite" value={pool.inviteCode} />
+        <MasterPoolFact label="Visibilidade" value={pool.isPublic ? "Público" : "Privado"} />
+        <MasterPoolFact label="Membros" value={String(pool.memberCount)} />
       </div>
       <div className="mt-4 grid gap-2">
         <input value={name} minLength={3} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${pool.poolName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
@@ -844,17 +857,60 @@ function MasterPoolCard({ pool }: { pool: MasterPool }) {
         <button type="button" disabled={busy} onClick={loadMembers} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-40"><Users className="size-3" /> Participantes</button>
       </div>
       {members && (
-        <div className="mt-3 divide-y rounded-xl border bg-surface">
-          {members.map((member) => (
-            <div key={member.user_id} className="flex items-center gap-2 px-3 py-2">
-              <span className="min-w-0 flex-1 truncate text-xs font-bold">{member.display_name} · {member.role}</span>
-              {member.role !== "owner" && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => removeMember(member.user_id)} className="interactive rounded-lg px-2 py-1 text-[10px] font-black text-danger-fg hover:bg-danger-bg disabled:opacity-40">Remover</button>}
-            </div>
-          ))}
+        <div className="mt-3 rounded-xl border bg-surface p-2">
+          <div className="flex items-center justify-between gap-3 px-1 pb-2">
+            <p className="text-xs font-black text-muted">Participantes carregados</p>
+            <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-black text-muted">
+              {members.length}
+            </span>
+          </div>
+          <ProgressiveList
+            initialCount={6}
+            step={6}
+            moreLabel="Ver mais participantes"
+            className="grid gap-2"
+          >
+            {members.map((member) => (
+              <details key={member.user_id} className="group overflow-hidden rounded-xl border bg-surface-muted/55">
+                <summary className="interactive flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs font-black">{member.display_name}</span>
+                    <span className="mt-0.5 block text-[10px] font-bold text-muted">
+                      {roleLabel(member.role)}
+                    </span>
+                  </span>
+                  <ChevronDown className="size-4 shrink-0 text-brand transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="grid gap-2 border-t bg-surface/70 p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                  <AuditDetail label="Usuário" value={shortId(member.user_id)} />
+                  <AuditDetail label="Acesso" value={roleLabel(member.role)} />
+                  {member.role !== "owner" ? (
+                    <button
+                      type="button"
+                      disabled={busy || reason.trim().length < 3}
+                      onClick={() => removeMember(member.user_id)}
+                      className="interactive rounded-xl border bg-surface px-3 py-2 text-[10px] font-black text-danger-fg hover:bg-danger-bg disabled:opacity-40"
+                    >
+                      Remover
+                    </button>
+                  ) : null}
+                </div>
+              </details>
+            ))}
+          </ProgressiveList>
         </div>
       )}
       {error && <p aria-live="polite" className="mt-2 rounded-xl bg-danger-bg px-3 py-2 text-xs font-bold text-danger-fg">{error}</p>}
     </article>
+  );
+}
+
+function MasterPoolFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-xl border bg-surface px-2 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.08em] text-muted">{label}</p>
+      <p className="mt-0.5 truncate text-xs font-black">{value}</p>
+    </div>
   );
 }
 
@@ -1176,7 +1232,12 @@ function UserReportPanel({
           <h3 className="text-sm font-black">Sinais de atenção</h3>
         </div>
         {riskSignals.length > 0 ? (
-          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <ProgressiveList
+            initialCount={4}
+            step={4}
+            moreLabel="Ver mais sinais"
+            className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4"
+          >
             {riskSignals.map((signal) => (
               <AccountSignal
                 key={signal.id}
@@ -1186,7 +1247,7 @@ function UserReportPanel({
                 tone={signal.tone}
               />
             ))}
-          </div>
+          </ProgressiveList>
         ) : (
           <div className="mt-3 flex items-start gap-2 rounded-xl border bg-surface px-3 py-2">
             <ShieldCheck className="mt-0.5 size-4 text-brand" />
@@ -1555,51 +1616,60 @@ function AuditList({
 
   return (
     <div className="mt-5 overflow-hidden rounded-2xl border bg-surface">
-      {formatted.map((entry) => {
-        const actor = entry.actorId
-          ? `Admin ${shortId(entry.actorId)}`
-          : entry.userId
-            ? `Usuário ${shortId(entry.userId)}`
-            : "Sistema";
-        return (
-          <details key={entry.id} className="group border-b last:border-b-0">
-            <summary className="grid cursor-pointer list-none gap-3 px-4 py-4 transition-colors hover:bg-surface-muted/65 md:grid-cols-[8rem_minmax(0,1fr)_12rem] md:items-center [&::-webkit-details-marker]:hidden">
-              <div className="flex items-center gap-2 text-xs font-bold text-muted md:block">
-                <ChevronRight className="size-4 shrink-0 text-brand transition-transform group-open:rotate-90 md:hidden" />
-                <span>{entry.date}</span>
-              </div>
-              <div className="min-w-0">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${auditSourceTone(entry.source)}`}>
-                    {auditSourceLabel(entry.source)}
-                  </span>
-                  <span className="min-w-0 truncate text-sm font-black text-brand">{entry.title || auditActionLabel(entry.action)}</span>
+      {formatted.length > 0 ? (
+        <ProgressiveList
+          initialCount={10}
+          step={10}
+          moreLabel="Ver mais eventos"
+          className=""
+        >
+          {formatted.map((entry) => {
+            const actor = entry.actorId
+              ? `Admin ${shortId(entry.actorId)}`
+              : entry.userId
+                ? `Usuário ${shortId(entry.userId)}`
+                : "Sistema";
+            return (
+              <details key={entry.id} className="group border-b last:border-b-0">
+                <summary className="grid cursor-pointer list-none gap-3 px-4 py-4 transition-colors hover:bg-surface-muted/65 md:grid-cols-[8rem_minmax(0,1fr)_12rem] md:items-center [&::-webkit-details-marker]:hidden">
+                  <div className="flex items-center gap-2 text-xs font-bold text-muted md:block">
+                    <ChevronRight className="size-4 shrink-0 text-brand transition-transform group-open:rotate-90 md:hidden" />
+                    <span>{entry.date}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${auditSourceTone(entry.source)}`}>
+                        {auditSourceLabel(entry.source)}
+                      </span>
+                      <span className="min-w-0 truncate text-sm font-black text-brand">{entry.title || auditActionLabel(entry.action)}</span>
+                    </div>
+                    <p className="mt-1 min-w-0 truncate text-xs text-muted">
+                      {entityTypeLabel(entry.entityType)} · {shortId(entry.entityId)}
+                      {entry.summary ? ` · ${entry.summary}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 text-xs font-bold text-muted md:justify-end">
+                    <span className="truncate">{actor}</span>
+                    <ChevronRight className="hidden size-4 shrink-0 text-brand transition-transform group-open:rotate-90 md:block" />
+                  </div>
+                </summary>
+                <div className="border-t bg-surface-muted/45 px-4 py-4">
+                  <div className="grid gap-2 md:grid-cols-4">
+                    <AuditDetail label="Origem" value={auditSourceLabel(entry.source)} />
+                    <AuditDetail label="Ator" value={actor} />
+                    <AuditDetail label="Entidade" value={`${entityTypeLabel(entry.entityType)} · ${shortId(entry.entityId)}`} />
+                    <AuditDetail label="Registro" value={`#${entry.numericId}`} />
+                  </div>
+                  <pre className="mt-3 max-h-72 overflow-auto rounded-xl border bg-surface p-3 text-[11px] leading-5 text-muted">
+                    {entry.details}
+                  </pre>
                 </div>
-                <p className="mt-1 min-w-0 truncate text-xs text-muted">
-                  {entityTypeLabel(entry.entityType)} · {shortId(entry.entityId)}
-                  {entry.summary ? ` · ${entry.summary}` : ""}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-2 text-xs font-bold text-muted md:justify-end">
-                <span className="truncate">{actor}</span>
-                <ChevronRight className="hidden size-4 shrink-0 text-brand transition-transform group-open:rotate-90 md:block" />
-              </div>
-            </summary>
-            <div className="border-t bg-surface-muted/45 px-4 py-4">
-              <div className="grid gap-2 md:grid-cols-4">
-                <AuditDetail label="Origem" value={auditSourceLabel(entry.source)} />
-                <AuditDetail label="Ator" value={actor} />
-                <AuditDetail label="Entidade" value={`${entityTypeLabel(entry.entityType)} · ${shortId(entry.entityId)}`} />
-                <AuditDetail label="Registro" value={`#${entry.numericId}`} />
-              </div>
-              <pre className="mt-3 max-h-72 overflow-auto rounded-xl border bg-surface p-3 text-[11px] leading-5 text-muted">
-                {entry.details}
-              </pre>
-            </div>
-          </details>
-        );
-      })}
-      {entries.length === 0 && (
+              </details>
+            );
+          })}
+        </ProgressiveList>
+      ) : null}
+      {formatted.length === 0 && (
         <p className="p-5 text-sm text-muted">
           {hasActiveFilters
             ? "Nenhum evento encontrado com esses filtros."
