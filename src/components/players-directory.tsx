@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Goal, Images, ShieldCheck, Trophy, Users } from "lucide-react";
+import { ChevronDown, Goal, Images, ShieldCheck, Trophy, Users } from "lucide-react";
 import { PageShortcuts } from "@/components/page-shortcuts";
 import {
   PlayersCatalog,
@@ -210,24 +210,76 @@ function Leaderboard({
         className="mt-5 grid gap-2"
       >
         {players.map((player, index) => (
-          <div key={`${player.team.code}-${player.number}`} className="min-w-0 rounded-2xl bg-surface-muted p-3">
-            <div className="flex items-center gap-3">
-              <span className="w-6 shrink-0 text-center text-sm font-black text-muted">{index + 1}</span>
-              <PlayerMiniPortrait player={player} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black">{player.name}</p>
-                <p className="truncate text-xs text-muted">
-                  {teamForPlayer(player, teamsByCode).name} · {positionShortLabel(player.position)} · {player.club}
-                </p>
-              </div>
-              <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand-strong">
-                {metric(player)}
-              </span>
-            </div>
-          </div>
+          <PlayerLeaderboardRow
+            key={`${player.team.code}-${player.number}`}
+            index={index}
+            player={player}
+            team={teamForPlayer(player, teamsByCode)}
+            metric={metric(player)}
+          />
         ))}
       </ProgressiveList>
     </section>
+  );
+}
+
+function PlayerLeaderboardRow({
+  index,
+  player,
+  team,
+  metric,
+}: {
+  index: number;
+  player: PlayerWithTeam;
+  team: DemoTeam;
+  metric: string;
+}) {
+  const hasSticker = Boolean(playerStickerAsset(stickerKey(player)));
+
+  return (
+    <details className="group min-w-0 overflow-hidden rounded-2xl bg-surface-muted">
+      <summary className="interactive flex cursor-pointer list-none items-center gap-3 p-3 [&::-webkit-details-marker]:hidden">
+        <span className="w-6 shrink-0 text-center text-sm font-black text-muted">
+          {index + 1}
+        </span>
+        <PlayerMiniPortrait player={player} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black">{player.name}</p>
+          <p className="truncate text-xs text-muted">
+            {team.name} · {positionShortLabel(player.position)} · {player.club}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand-strong">
+          {metric}
+        </span>
+        <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="grid gap-2 border-t border-surface p-3 pt-3 sm:grid-cols-4">
+        <LeaderboardDetail label="Seleção" value={team.name} />
+        <LeaderboardDetail label="Posição" value={positionLabel(player.position)} />
+        <LeaderboardDetail label="Clube" value={player.club} />
+        <LeaderboardDetail label="Idade" value={`${playerAge(player)} anos`} />
+        <LeaderboardDetail label="Camisa" value={`#${player.number}`} />
+        <LeaderboardDetail label="Jogos" value={`${player.caps}`} />
+        <LeaderboardDetail label="Gols" value={`${player.goals}`} />
+        <LeaderboardDetail
+          label="Figurinha"
+          value={hasSticker ? "Publicada" : "Pendente"}
+        />
+      </div>
+      <p className="border-t border-surface px-3 py-2 text-xs font-bold text-muted">
+        {player.fullName}
+      </p>
+    </details>
+  );
+}
+
+function LeaderboardDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <dl className="min-w-0 rounded-xl bg-surface px-3 py-2">
+      <dt className="text-[9px] font-black uppercase tracking-wider text-muted">{label}</dt>
+      <dd className="mt-0.5 truncate text-xs font-black">{value}</dd>
+    </dl>
   );
 }
 

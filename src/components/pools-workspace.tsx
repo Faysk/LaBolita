@@ -468,20 +468,41 @@ export function PoolsWorkspace({
       </section>
 
       {archivedPools.length > 0 && (
-        <details className="card mt-8 p-5">
-          <summary className="cursor-pointer text-sm font-black text-muted">Bolões arquivados ({archivedPools.length})</summary>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {archivedPools.map((pool) => (
-              <button
-                key={pool.id}
-                type="button"
-                onClick={() => setManagedPoolId(pool.id)}
-                className="interactive rounded-2xl border bg-surface-muted p-4 text-left"
-              >
-                <span className="flex items-center gap-2 font-black"><Archive className="size-4" /> {pool.name}</span>
-                <span className="mt-1 block text-xs text-muted">Um administrador global pode recuperar.</span>
-              </button>
-            ))}
+        <details className="card group mt-8 overflow-hidden">
+          <summary className="interactive flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-brand">
+                <Archive className="size-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-black">
+                  Bolões arquivados
+                </span>
+                <span className="mt-0.5 block text-xs font-bold text-muted">
+                  {archivedPools.length} fora da lista principal
+                </span>
+              </span>
+            </span>
+            <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="border-t p-5">
+            <p className="mb-4 text-sm leading-6 text-muted">
+              Bolões arquivados ficam preservados para consulta e podem ser
+              recuperados por um administrador global.
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              {archivedPools.map((pool) => (
+                <button
+                  key={pool.id}
+                  type="button"
+                  onClick={() => setManagedPoolId(pool.id)}
+                  className="interactive rounded-2xl border bg-surface-muted p-4 text-left"
+                >
+                  <span className="flex items-center gap-2 font-black"><Archive className="size-4" /> {pool.name}</span>
+                  <span className="mt-1 block text-xs text-muted">Um administrador global pode recuperar.</span>
+                </button>
+              ))}
+            </div>
           </div>
         </details>
       )}
