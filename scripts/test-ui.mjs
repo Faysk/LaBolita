@@ -58,8 +58,10 @@ try {
 
   await page.goto(`${BASE_URL}/ao-vivo`);
   await page.getByRole("heading", { name: /Tudo pronto para acompanhar|O jogo está mexendo/ }).waitFor();
+  await page.getByText(/Atualização automática|atualizar sozinha/).waitFor();
   await page.getByText("Seu palpite", { exact: true }).waitFor();
   await page.getByText("Distribuição dos palpites").waitFor();
+  await page.getByText("Cravadas").first().waitFor();
   await page.getByRole("link", { name: "Abrir bolões" }).waitFor();
   await waitForFlagFallbacks(page);
 
@@ -251,6 +253,8 @@ try {
   await page.getByText("Ranking em movimento").waitFor();
   await page.getByText("Bolões em movimento").waitFor();
   await page.getByText("mantém").first().waitFor();
+  await page.getByRole("button", { name: /Faysk/ }).first().click();
+  await page.getByText(/pts atrás de|na disputa pela ponta/).first().waitFor();
   await waitForFlagFallbacks(page);
 
   await page.goto(BASE_URL);

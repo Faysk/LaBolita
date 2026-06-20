@@ -7,6 +7,8 @@ import {
   BarChart3,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   ListChecks,
   Minus,
@@ -92,6 +94,22 @@ export function LiveCenter({
       : poolsOverview.ranking;
   const orderedRanking = orderRanking(ranking);
   const currentPlayer = orderedRanking.find((player) => player.isCurrentUser) ?? null;
+  const [rankingExpanded, setRankingExpanded] = useState(false);
+  const [selectedRankingKey, setSelectedRankingKey] = useState(
+    () => (currentPlayer ? rankingEntryKey(currentPlayer) : ""),
+  );
+  const compactRankingRows = orderedRanking.slice(0, 6);
+  const visibleRankingRows = rankingExpanded ? orderedRanking : compactRankingRows;
+  const rankingFallbackKey = currentPlayer
+    ? rankingEntryKey(currentPlayer)
+    : orderedRanking[0]
+      ? rankingEntryKey(orderedRanking[0])
+      : "";
+  const activeRankingKey = orderedRanking.some(
+    (player) => rankingEntryKey(player) === selectedRankingKey,
+  )
+    ? selectedRankingKey
+    : rankingFallbackKey;
   const currentPrediction = selectedMatch
     ? findCurrentPrediction(selectedMatch, selectedComparison)
     : null;
@@ -105,6 +123,27 @@ export function LiveCenter({
   const bestPartial = selectedMatch && selectedComparison
     ? bestPartialEntry(selectedComparison, selectedMatch)
     : null;
+  const orderedPredictionEntries = selectedComparison
+    ? [...selectedComparison.entries].sort((left, right) =>
+        comparePredictionEntries(left, right, selectedMatch),
+      )
+    : [];
+  const [predictionExpanded, setPredictionExpanded] = useState(false);
+  const [selectedPredictionKey, setSelectedPredictionKey] = useState(
+    () => predictionEntryKey(orderedPredictionEntries.find((entry) => entry.isCurrentUser) ?? orderedPredictionEntries[0]),
+  );
+  const compactPredictionRows = orderedPredictionEntries.slice(0, 8);
+  const visiblePredictionRows = predictionExpanded
+    ? orderedPredictionEntries
+    : compactPredictionRows;
+  const predictionFallbackKey = predictionEntryKey(
+    orderedPredictionEntries.find((entry) => entry.isCurrentUser) ?? orderedPredictionEntries[0],
+  );
+  const activePredictionKey = orderedPredictionEntries.some(
+    (entry) => predictionEntryKey(entry) === selectedPredictionKey,
+  )
+    ? selectedPredictionKey
+    : predictionFallbackKey;
 
   if (!selectedMatch) {
     return (
@@ -160,6 +199,11 @@ export function LiveCenter({
               />
               <HeroMetric label="Bolões" value={poolOptions.length} />
             </div>
+            <p className="mt-3 rounded-2xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-bold leading-5 text-white/68">
+              {liveMatches.length > 0
+                ? "Atualização automática ativa a cada 15 segundos enquanto houver jogo ao vivo."
+                : "Quando houver jogo ao vivo ou resultado pendente, esta tela passa a se atualizar sozinha."}
+            </p>
           </div>
         </div>
       </section>
@@ -305,9 +349,41 @@ export function LiveCenter({
           </div>
 
           <div className="mt-5 space-y-2">
-            {orderedRanking.slice(0, 6).map((player) => (
-              <RankingRow key={rankingEntryKey(player)} player={player} entries={orderedRanking} />
-            ))}
+            {visibleRankingRows.map((player) => {
+              const key = rankingEntryKey(player);
+              const selected = key === activeRankingKey;
+
+              return (
+                <div key={key}>
+                  <RankingRow
+                    player={player}
+                    entries={orderedRanking}
+                    selected={selected}
+                    onSelect={() => setSelectedRankingKey(key)}
+                  />
+                  {selected ? (
+                    <RankingPlayerDetail player={player} entries={orderedRanking} />
+                  ) : null}
+                </div>
+              );
+            })}
+            {orderedRanking.length > compactRankingRows.length ? (
+              <button
+                type="button"
+                onClick={() => setRankingExpanded((current) => !current)}
+                className="interactive flex w-full items-center justify-center gap-2 rounded-2xl border bg-surface-muted px-4 py-3 text-xs font-black text-brand hover:border-brand/60"
+              >
+                {rankingExpanded ? (
+                  <>
+                    Mostrar menos <ChevronUp className="size-4" />
+                  </>
+                ) : (
+                  <>
+                    Carregar mais participantes <ChevronDown className="size-4" />
+                  </>
+                )}
+              </button>
+            ) : null}
             {orderedRanking.length === 0 ? (
               <p className="rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
                 O ranking deste bolão ainda não tem participantes visíveis.
@@ -415,13 +491,41 @@ export function LiveCenter({
 
           {selectedComparison ? (
             <div className="mt-4 space-y-2">
-              {selectedComparison.entries.slice(0, 8).map((entry) => (
-                <PredictionRow
-                  key={entry.userId ?? `${entry.name}-${entry.position}`}
-                  entry={entry}
-                  match={selectedMatch}
-                />
-              ))}
+              {visiblePredictionRows.map((entry) => {
+                const key = predictionEntryKey(entry);
+                const selected = key === activePredictionKey;
+
+                return (
+                  <div key={key}>
+                    <PredictionRow
+                      entry={entry}
+                      match={selectedMatch}
+                      selected={selected}
+                      onSelect={() => setSelectedPredictionKey(key)}
+                    />
+                    {selected ? (
+                      <PredictionDetail entry={entry} match={selectedMatch} />
+                    ) : null}
+                  </div>
+                );
+              })}
+              {orderedPredictionEntries.length > compactPredictionRows.length ? (
+                <button
+                  type="button"
+                  onClick={() => setPredictionExpanded((current) => !current)}
+                  className="interactive flex w-full items-center justify-center gap-2 rounded-2xl border bg-surface-muted px-4 py-3 text-xs font-black text-brand hover:border-brand/60"
+                >
+                  {predictionExpanded ? (
+                    <>
+                      Mostrar menos <ChevronUp className="size-4" />
+                    </>
+                  ) : (
+                    <>
+                      Carregar mais palpites <ChevronDown className="size-4" />
+                    </>
+                  )}
+                </button>
+              ) : null}
               {selectedComparison.hiddenCount > 0 ? (
                 <p className="rounded-2xl bg-surface-muted p-3 text-xs font-bold text-muted">
                   {selectedComparison.hiddenCount} participante sem palpite visível neste jogo.
@@ -529,23 +633,36 @@ function RankingMetric({
 function RankingRow({
   player,
   entries,
+  selected,
+  onSelect,
 }: {
   player: RankingEntry;
   entries: RankingEntry[];
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const movement = rankingMovement(player);
   const MovementIcon = movement.icon;
   const points = player.provisionalPoints ?? player.points;
   const toneClass =
-    movement.tone === "up"
-      ? "status-success"
-      : movement.tone === "down"
-        ? "status-warning"
-        : "bg-surface-muted";
+    selected
+      ? "border-brand bg-brand text-white"
+      : movement.tone === "up"
+        ? "status-success"
+        : movement.tone === "down"
+          ? "status-warning"
+          : player.isCurrentUser
+            ? "border-brand/50 bg-brand/5"
+            : "bg-surface-muted";
 
   return (
-    <div className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border p-3 ${player.isCurrentUser ? "border-brand/50 bg-brand/5" : "bg-surface-muted"}`}>
-      <span className="w-8 text-center text-sm font-black text-brand">
+    <button
+      type="button"
+      aria-expanded={selected}
+      onClick={onSelect}
+      className={`interactive grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border p-3 text-left ${toneClass}`}
+    >
+      <span className={`w-8 text-center text-sm font-black ${selected ? "text-white/80" : "text-brand"}`}>
         {rankingLabel(player, entries, { provisional: Boolean(player.provisionalPosition), tiedSuffix: "=" })}
       </span>
       <div className="flex min-w-0 items-center gap-3">
@@ -559,13 +676,63 @@ function RankingRow({
               </span>
             ) : null}
           </p>
-          <p className="text-xs font-bold text-muted">{points} pts</p>
+          <p className={`text-xs font-bold ${selected ? "text-white/65" : "text-muted"}`}>{points} pts</p>
         </div>
       </div>
-      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black ${toneClass}`}>
+      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black ${selected ? "border-white/20 bg-white/10 text-white" : "bg-surface"}`}>
         <MovementIcon className="size-3" />
         {movement.shortLabel}
       </span>
+    </button>
+  );
+}
+
+function RankingPlayerDetail({
+  player,
+  entries,
+}: {
+  player: RankingEntry;
+  entries: RankingEntry[];
+}) {
+  const leader = entries[0];
+  const points = player.provisionalPoints ?? player.points;
+  const leaderPoints = leader?.provisionalPoints ?? leader?.points ?? points;
+  const gap = Math.max(0, leaderPoints - points);
+  const movement = rankingMovement(player);
+  const MovementIcon = movement.icon;
+
+  return (
+    <div className="mt-2 rounded-2xl border bg-surface-muted p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <RankingDetailStat
+          label="Oficial"
+          value={`${rankingLabel(player, entries)} · ${player.points} pts`}
+        />
+        <RankingDetailStat
+          label="Ao vivo"
+          value={`${rankingLabel(player, entries, { provisional: true, tiedSuffix: "=" })} · ${points} pts`}
+        />
+        <RankingDetailStat label="Cravadas" value={String(player.exact)} />
+        <RankingDetailStat label="Resultados" value={String(player.correct)} />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
+        <span className="inline-flex items-center gap-1 rounded-full border bg-surface px-2 py-1 text-[10px] font-black">
+          <MovementIcon className="size-3" />
+          {movement.label}
+        </span>
+        {leader && gap > 0 ? <span>{gap} pts atrás de {leader.name}</span> : <span>na briga pela liderança</span>}
+      </div>
+    </div>
+  );
+}
+
+function RankingDetailStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border bg-surface px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+        {label}
+      </p>
+      <p className="mt-1 text-xs font-black">{value}</p>
     </div>
   );
 }
@@ -620,15 +787,26 @@ function OutcomeBar({
 function PredictionRow({
   entry,
   match,
+  selected,
+  onSelect,
 }: {
   entry: PredictionComparisonEntry;
   match: DemoMatch;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const points = livePointsForEntry(entry, match);
   const category = liveCategoryForEntry(entry, match);
 
   return (
-    <div className={`grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-2xl border p-3 ${entry.isCurrentUser ? "border-brand/50 bg-brand/5" : "bg-surface-muted"}`}>
+    <button
+      type="button"
+      aria-expanded={selected}
+      onClick={onSelect}
+      className={`interactive grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-2xl border p-3 text-left ${
+        selected ? "border-brand bg-brand text-white" : entry.isCurrentUser ? "border-brand/50 bg-brand/5" : "bg-surface-muted"
+      }`}
+    >
       <div className="flex min-w-0 items-center gap-3">
         <UserAvatar name={entry.name} initials={entry.initials} avatarUrl={entry.avatarUrl} className="size-9" />
         <div className="min-w-0">
@@ -640,15 +818,45 @@ function PredictionRow({
               </span>
             ) : null}
           </p>
-          <p className="text-xs font-bold text-muted">
+          <p className={`text-xs font-bold ${selected ? "text-white/65" : "text-muted"}`}>
             {predictionLabel(entry.prediction)}
             {category ? ` · ${scoreCategoryLabel(category)}` : ""}
           </p>
         </div>
       </div>
-      <span className="self-center rounded-full border bg-surface px-3 py-1.5 text-xs font-black text-brand">
+      <span className={`self-center rounded-full border px-3 py-1.5 text-xs font-black ${selected ? "border-white/20 bg-white/10 text-accent" : "bg-surface text-brand"}`}>
         {points === null ? "—" : `${points} pts`}
       </span>
+    </button>
+  );
+}
+
+function PredictionDetail({
+  entry,
+  match,
+}: {
+  entry: PredictionComparisonEntry;
+  match: DemoMatch;
+}) {
+  const result = visibleScore(match);
+  const points = livePointsForEntry(entry, match);
+  const category = liveCategoryForEntry(entry, match);
+  const updatedAt = formatShortDateTime(entry.updatedAt);
+
+  return (
+    <div className="mt-2 rounded-2xl border bg-surface-muted p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <RankingDetailStat label="Palpite" value={predictionLabel(entry.prediction)} />
+        <RankingDetailStat
+          label={result ? "Placar atual" : "Status"}
+          value={result ? `${result.homeScore} x ${result.awayScore}` : "sem placar"}
+        />
+        <RankingDetailStat label="Pontos" value={points === null ? "—" : `${points} pts`} />
+        <RankingDetailStat label="Ranking" value={`#${entry.position}`} />
+      </div>
+      <p className="mt-3 text-xs font-bold text-muted">
+        {category ? scoreCategoryLabel(category) : "Sem resultado para calcular"}{updatedAt ? ` · alterado ${updatedAt}` : ""}
+      </p>
     </div>
   );
 }
@@ -828,6 +1036,24 @@ function liveCategoryForEntry(entry: PredictionComparisonEntry, match: DemoMatch
   return entry.score?.category ?? null;
 }
 
+function comparePredictionEntries(
+  left: PredictionComparisonEntry,
+  right: PredictionComparisonEntry,
+  match: DemoMatch,
+) {
+  if (left.isCurrentUser !== right.isCurrentUser) return left.isCurrentUser ? -1 : 1;
+  return (
+    (livePointsForEntry(right, match) ?? -1) - (livePointsForEntry(left, match) ?? -1) ||
+    left.position - right.position ||
+    left.name.localeCompare(right.name, "pt-BR")
+  );
+}
+
+function predictionEntryKey(entry?: PredictionComparisonEntry) {
+  if (!entry) return "";
+  return entry.userId ?? `${entry.position}:${entry.name}`;
+}
+
 function rankingEntryKey(player: RankingEntry) {
   return player.userId ?? `${player.position}:${player.name}`;
 }
@@ -835,4 +1061,16 @@ function rankingEntryKey(player: RankingEntry) {
 function scheduledTime(match: DemoMatch) {
   const value = match.scheduledAt ? new Date(match.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER;
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+}
+
+function formatShortDateTime(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }

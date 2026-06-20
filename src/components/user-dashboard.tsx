@@ -7,6 +7,8 @@ import {
   ArrowRight,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CircleAlert,
   CircleDot,
   ListChecks,
@@ -529,6 +531,22 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
         (right.provisionalPosition ?? right.position) ||
       left.name.localeCompare(right.name, "pt-BR"),
   );
+  const [expanded, setExpanded] = useState(false);
+  const [selectedPlayerKey, setSelectedPlayerKey] = useState(
+    () => (snapshot.currentPlayer ? dashboardRankingKey(snapshot.currentPlayer) : ""),
+  );
+  const compactRows = ordered.slice(0, 5);
+  const visibleRows = expanded ? ordered : compactRows;
+  const fallbackPlayerKey = snapshot.currentPlayer
+    ? dashboardRankingKey(snapshot.currentPlayer)
+    : ordered[0]
+      ? dashboardRankingKey(ordered[0])
+      : "";
+  const activePlayerKey = ordered.some(
+    (player) => dashboardRankingKey(player) === selectedPlayerKey,
+  )
+    ? selectedPlayerKey
+    : fallbackPlayerKey;
 
   return (
     <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
@@ -570,33 +588,90 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
         )}
       </div>
       <div className="overflow-hidden rounded-[1.35rem] border bg-surface">
-        {ordered.slice(0, 5).map((player) => (
-          <div
-            key={`${player.position}-${player.name}`}
-            className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 border-b px-4 py-3 last:border-b-0 ${
-              player.isCurrentUser ? "bg-accent/20" : ""
-            }`}
-          >
-            <span className="text-center text-sm font-black text-muted">
-              {rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" })}
-            </span>
-            <div className="flex min-w-0 items-center gap-3">
-              <UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black">{player.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-bold text-muted">
-                    {player.exact} exatas · {player.correct} acertos
-                  </p>
-                  <PlayerMovementChip player={player} />
+        {visibleRows.map((player) => {
+          const key = dashboardRankingKey(player);
+          const selected = key === activePlayerKey;
+
+          return (
+            <div key={key} className="border-b last:border-b-0">
+              <button
+                type="button"
+                aria-expanded={selected}
+                onClick={() => setSelectedPlayerKey(key)}
+                className={`interactive grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left ${
+                  selected ? "bg-brand text-white" : player.isCurrentUser ? "bg-accent/20" : ""
+                }`}
+              >
+                <span className={`text-center text-sm font-black ${selected ? "text-white/75" : "text-muted"}`}>
+                  {rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" })}
+                </span>
+                <div className="flex min-w-0 items-center gap-3">
+                  <UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black">{player.name}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <p className={`text-xs font-bold ${selected ? "text-white/65" : "text-muted"}`}>
+                        {player.exact} exatas · {player.correct} acertos
+                      </p>
+                      {!selected ? <PlayerMovementChip player={player} /> : null}
+                    </div>
+                  </div>
                 </div>
-              </div>
+                <span className={`text-right text-sm font-black ${selected ? "text-accent" : "text-brand"}`}>
+                  {player.provisionalPoints ?? player.points} pts
+                </span>
+              </button>
+              {selected ? (
+                <DashboardRankingDetail player={player} snapshot={snapshot} />
+              ) : null}
             </div>
-            <span className="text-right text-sm font-black text-brand">
-              {player.provisionalPoints ?? player.points} pts
-            </span>
-          </div>
-        ))}
+          );
+        })}
+        {ordered.length > compactRows.length ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            className="interactive flex w-full items-center justify-center gap-2 px-4 py-3 text-xs font-black text-brand hover:bg-surface-muted"
+          >
+            {expanded ? (
+              <>
+                Mostrar menos <ChevronUp className="size-4" />
+              </>
+            ) : (
+              <>
+                Carregar mais participantes <ChevronDown className="size-4" />
+              </>
+            )}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function DashboardRankingDetail({
+  player,
+  snapshot,
+}: {
+  player: RankingEntry;
+  snapshot: PoolSnapshot;
+}) {
+  const points = player.provisionalPoints ?? player.points;
+  const leaderPoints = snapshot.leader?.provisionalPoints ?? snapshot.leader?.points ?? points;
+  const gap = Math.max(0, leaderPoints - points);
+
+  return (
+    <div className="bg-surface-muted px-4 py-3">
+      <div className="grid grid-cols-2 gap-2">
+        <MiniDashboardStat label="Oficial" value={`${rankingLabel(player, snapshot.ranking)} · ${player.points} pts`} />
+        <MiniDashboardStat
+          label="Ao vivo"
+          value={`${rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" })} · ${points} pts`}
+        />
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
+        <PlayerMovementChip player={player} />
+        {gap > 0 && snapshot.leader ? <span>{gap} pts atrás de {snapshot.leader.name}</span> : <span>na disputa pela ponta</span>}
       </div>
     </div>
   );
@@ -1178,4 +1253,8 @@ function rankingMovement(player: RankingEntry): {
 function predictionText(prediction?: ScorePrediction | null) {
   if (!prediction) return "sem palpite";
   return `${prediction.homeScore} x ${prediction.awayScore}`;
+}
+
+function dashboardRankingKey(player: RankingEntry) {
+  return player.userId ?? `${player.position}:${player.name}`;
 }
