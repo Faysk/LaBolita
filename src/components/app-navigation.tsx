@@ -1,112 +1,52 @@
 "use client";
 
 import {
-  BarChart3,
-  CalendarDays,
   CircleEllipsis,
-  CircleHelp,
-  Home,
-  LayoutDashboard,
   Menu,
-  Radio,
-  Sparkles,
-  Target,
-  Trophy,
-  UsersRound,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import {
+  appRouteList,
+  type AppRoute,
+} from "@/lib/app-routes";
 
-type NavigationItem = {
-  href: string;
-  label: string;
-  mobileLabel?: string;
-  description: string;
-  icon: LucideIcon;
-};
-
-const gamesItem: NavigationItem = {
-  href: "/jogos",
-  label: "Jogos",
-  description: "Agenda, placares e caminho para palpitar.",
-  icon: CalendarDays,
-};
-
-const primaryNavigation: NavigationItem[] = [
-  {
-    href: "/",
-    label: "Início",
-    description: "Resumo público da Copa e próximos jogos.",
-    icon: Home,
-  },
-  {
-    href: "/ao-vivo",
-    label: "Ao vivo",
-    description: "Placar, parciais e ranking mexendo.",
-    icon: Radio,
-  },
-  {
-    href: "/palpites",
-    label: "Palpites",
-    description: "Meus placares jogo a jogo.",
-    icon: Target,
-  },
-  {
-    href: "/boloes",
-    label: "Bolões",
-    description: "Meus grupos, rankings e comparações.",
-    icon: BarChart3,
-  },
-  gamesItem,
-];
-
-const supportNavigation: NavigationItem[] = [
-  {
-    href: "/painel",
-    label: "Meu painel",
-    mobileLabel: "Meu painel",
-    description: "Tudo que falta, pontuação e alertas.",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/especiais",
-    label: "Especiais",
-    description: "Artilheiro, campeão e palpites finais.",
-    icon: Sparkles,
-  },
-  {
-    href: "/jogadores",
-    label: "Jogadores",
-    description: "Elencos, figurinhas e dados dos atletas.",
-    icon: UsersRound,
-  },
-  {
-    href: "/competicao",
-    label: "Copa",
-    description: "Seleções, grupos e visão da competição.",
-    icon: Trophy,
-  },
-  {
-    href: "/regras",
-    label: "Regras",
-    description: "Pontuação, bloqueios e desempates.",
-    icon: CircleHelp,
-  },
-];
-
-const mobileQuickNavigation = primaryNavigation.filter(
-  (item) => item.href !== gamesItem.href,
-);
-const mobileMenuNavigation = [gamesItem, ...supportNavigation];
+const desktopPrimaryNavigation = appRouteList([
+  "home",
+  "live",
+  "dashboard",
+  "predictions",
+  "pools",
+] as const);
+const desktopMoreNavigation = appRouteList([
+  "games",
+  "specials",
+  "players",
+  "competition",
+  "rules",
+] as const);
+const mobileQuickNavigation = appRouteList([
+  "home",
+  "live",
+  "predictions",
+  "pools",
+] as const);
+const mobileMenuNavigation = appRouteList([
+  "dashboard",
+  "games",
+  "specials",
+  "players",
+  "competition",
+  "rules",
+] as const);
 
 export function DesktopNavigation() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const supportActive = supportNavigation.some((item) =>
+  const supportActive = desktopMoreNavigation.some((item) =>
     isActivePath(pathname, item.href),
   );
 
@@ -133,7 +73,7 @@ export function DesktopNavigation() {
 
   return (
     <nav className="desktop-nav hidden items-center gap-1 lg:flex" aria-label="Menu principal">
-      {primaryNavigation.map((item) => (
+      {desktopPrimaryNavigation.map((item) => (
         <DesktopNavigationLink
           key={item.href}
           item={item}
@@ -163,7 +103,7 @@ export function DesktopNavigation() {
             className="absolute right-0 top-12 z-50 grid w-80 gap-1 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/15"
           >
             <MenuHeader title="Mais caminhos" description="Consulta, dados e regras." />
-            {supportNavigation.map((item) => (
+            {desktopMoreNavigation.map((item) => (
               <MoreNavigationLink
                 key={item.href}
                 item={item}
@@ -262,7 +202,7 @@ function DesktopNavigationLink({
   item,
   active,
 }: {
-  item: NavigationItem;
+  item: AppRoute;
   active: boolean;
 }) {
   return (
@@ -285,7 +225,7 @@ function MobileNavigationLink({
   active,
   onClick,
 }: {
-  item: NavigationItem;
+  item: AppRoute;
   active: boolean;
   onClick: () => void;
 }) {
@@ -328,7 +268,7 @@ function MoreNavigationLink({
   active,
   onClick,
 }: {
-  item: NavigationItem;
+  item: AppRoute;
   active: boolean;
   onClick: () => void;
 }) {

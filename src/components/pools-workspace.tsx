@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
 import { EmptyState } from "@/components/empty-state";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -308,6 +309,11 @@ export function PoolsWorkspace({
           </button>
         </div>
       </div>
+
+      <PageShortcuts
+        routeKeys={["dashboard", "predictions", "live", "games"]}
+        className="mt-5"
+      />
 
       {notice && (
         <p aria-live="polite" className="mt-5 rounded-2xl border bg-white px-4 py-3 text-sm font-bold text-brand">

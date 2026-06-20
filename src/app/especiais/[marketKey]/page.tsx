@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { SpecialMarketPicker } from "@/components/special-market-picker";
 import { requireUser } from "@/lib/auth";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
@@ -43,6 +44,10 @@ export default async function SpecialMarketPage({
           {display.heroTitle}
         </h1>
       </div>
+      <PageShortcuts
+        routeKeys={["specials", "players", "predictions", "dashboard"]}
+        className="mb-6"
+      />
       <SpecialMarketPicker
         market={market}
         nextMarket={

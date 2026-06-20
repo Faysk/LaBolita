@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { CompetitionOverview } from "@/components/competition-overview";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { getMatches } from "@/lib/data/matches";
 
 export const metadata: Metadata = {
@@ -20,7 +19,7 @@ export default async function CompetitionPage({
 
   return (
     <main className="page-container py-7 md:py-10">
-      <div className="mb-7 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="mb-7">
         <div>
           <p className="eyebrow">Acompanhe a competição</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">Copa 2026</h1>
@@ -28,13 +27,11 @@ export default async function CompetitionPage({
             Veja a classificação dos grupos e o caminho até a final. Placares ao vivo aparecem como provisórios até a confirmação.
           </p>
         </div>
-        <Link
-          href="/jogadores"
-          className="interactive inline-flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-black text-brand"
-        >
-          Dados de jogadores <ArrowRight className="size-4" />
-        </Link>
       </div>
+      <PageShortcuts
+        routeKeys={["games", "players", "specials", "live"]}
+        className="mb-6"
+      />
       <CompetitionOverview matches={matches} view={view} />
     </main>
   );

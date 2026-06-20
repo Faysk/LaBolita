@@ -20,6 +20,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -208,6 +209,11 @@ export function LiveCenter({
           </div>
         </div>
       </section>
+
+      <PageShortcuts
+        routeKeys={["games", "predictions", "pools", "dashboard"]}
+        className="mt-5"
+      />
 
       {focusMatches.length > 1 ? (
         <section className="mt-5 min-w-0 max-w-full pb-2">

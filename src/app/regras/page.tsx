@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CheckCircle2, Clock3, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import {
   SPECIAL_LOCK_DATE_LABEL,
 } from "@/lib/special-market-display";
@@ -57,6 +58,11 @@ export default function RulesPage() {
           cobranças de pênaltis; o classificado ou vencedor é informado separadamente.
         </p>
       </div>
+
+      <PageShortcuts
+        routeKeys={["predictions", "specials", "pools", "games"]}
+        className="mt-6"
+      />
 
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         {[

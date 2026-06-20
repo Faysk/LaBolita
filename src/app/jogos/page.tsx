@@ -11,6 +11,7 @@ import {
 import { GamesMatchExplorer } from "@/components/games-match-explorer";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchTimeline } from "@/components/match-timeline";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { getMatches } from "@/lib/data/matches";
 import { getPredictionComparisonOverview } from "@/lib/data/prediction-comparisons";
 import { isLiveMatch } from "@/lib/match-display";
@@ -53,6 +54,11 @@ export default async function GamesPage() {
           Abrir meus palpites <ArrowRight className="size-4" />
         </Link>
       </div>
+
+      <PageShortcuts
+        routeKeys={["live", "predictions", "pools", "players"]}
+        className="mb-6"
+      />
 
       <section className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <ScheduleMetric

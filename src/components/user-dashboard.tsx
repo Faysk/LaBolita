@@ -14,14 +14,13 @@ import {
   ListChecks,
   Radio,
   Sparkles,
-  Target,
   TrendingDown,
   TrendingUp,
-  Trophy,
   Users,
 } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { EmptyState } from "@/components/empty-state";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -158,11 +157,12 @@ export function UserDashboard({
             Seu placar, o que falta fazer e o impacto dos jogos nos seus bolões.
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <DashboardAction href="/palpites" icon={Target}>Palpites</DashboardAction>
-          <DashboardAction href="/boloes" icon={Trophy}>Bolões</DashboardAction>
-        </div>
       </div>
+
+      <PageShortcuts
+        routeKeys={["predictions", "pools", "live", "specials"]}
+        className="mt-5"
+      />
 
       <UserAlerts alerts={alerts} />
 
@@ -258,26 +258,6 @@ export function UserDashboard({
 
 function useSelectedPoolId(pools: PoolSummary[]) {
   return useState(() => pools[0]?.id ?? "");
-}
-
-function DashboardAction({
-  href,
-  icon: Icon,
-  children,
-}: {
-  href: string;
-  icon: LucideIcon;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-surface px-4 text-sm font-black text-brand hover:border-brand/70"
-    >
-      <Icon className="size-4" />
-      {children}
-    </Link>
-  );
 }
 
 function DashboardMetric({

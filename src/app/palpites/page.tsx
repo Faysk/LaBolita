@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PredictionBoard } from "@/components/prediction-board";
 import { LiveRefresh } from "@/components/live-refresh";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { SpecialPredictionsEntry } from "@/components/special-predictions-entry";
 import { isLiveMatch } from "@/lib/match-display";
 import { requireUser } from "@/lib/auth";
@@ -42,6 +43,10 @@ export default async function PredictionsPage({ searchParams }: PredictionsPageP
           bloqueio de cada jogo. Depois disso, é torcida e calculadora.
         </p>
       </div>
+      <PageShortcuts
+        routeKeys={["dashboard", "games", "specials", "pools"]}
+        className="mb-6"
+      />
       <SpecialPredictionsEntry overview={specialsOverview} />
       <div id="lista-de-jogos" className="scroll-mt-28" aria-hidden="true" />
       <PredictionBoard

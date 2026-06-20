@@ -352,9 +352,10 @@ try {
   await waitForFlagFallbacks(page);
 
   await page.goto(BASE_URL);
-  await page.getByRole("navigation").getByRole("link", { name: "Ao vivo" }).waitFor();
-  await page.getByRole("navigation").getByRole("link", { name: "Bolões" }).waitFor();
-  await page.getByRole("navigation", { name: "Menu principal" }).getByRole("button", { name: "Menu" }).click();
+  const mobileMainNavigation = page.getByRole("navigation", { name: "Menu principal" });
+  await mobileMainNavigation.getByRole("link", { name: "Ao vivo" }).waitFor();
+  await mobileMainNavigation.getByRole("link", { name: "Bolões" }).waitFor();
+  await mobileMainNavigation.getByRole("button", { name: "Menu" }).click();
   await page.getByRole("menuitem", { name: /Jogos/ }).waitFor();
   await page.getByRole("menuitem", { name: /Especiais/ }).waitFor();
   await page.getByRole("menuitem", { name: /Jogadores/ }).waitFor();
@@ -446,11 +447,12 @@ try {
   await desktopPage.goto(`${BASE_URL}/termos`);
   await desktopPage.getByRole("heading", { name: "Termos de Serviço" }).waitFor();
   await desktopPage.goto(BASE_URL);
+  await desktopPage.getByRole("navigation", { name: "Menu principal" }).getByRole("link", { name: "Meu painel" }).waitFor();
   await desktopPage.getByRole("navigation", { name: "Menu principal" }).getByRole("button", { name: /Mais/ }).click();
-  await desktopPage.getByRole("menuitem", { name: /Meu painel/ }).waitFor();
+  await desktopPage.getByRole("menuitem", { name: /Jogos/ }).waitFor();
   await desktopPage.getByRole("menuitem", { name: /Regras/ }).waitFor();
   await desktopPage.keyboard.press("Escape");
-  await desktopPage.getByRole("menuitem", { name: /Meu painel/ }).waitFor({ state: "hidden" });
+  await desktopPage.getByRole("menuitem", { name: /Jogos/ }).waitFor({ state: "hidden" });
   assert.deepEqual(desktopErrors, []);
 
   console.log("UI flow test passed");

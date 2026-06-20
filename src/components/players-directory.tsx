@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
-import { ArrowRight, Goal, Images, ShieldCheck, Sparkles, Trophy, Users } from "lucide-react";
+import { Goal, Images, ShieldCheck, Trophy, Users } from "lucide-react";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import {
   PlayersCatalog,
   type PlayerCatalogItem,
@@ -11,6 +11,7 @@ import { TeamFlag } from "@/components/team-flag";
 import { uniqueTeams } from "@/lib/competition";
 import { getMatches } from "@/lib/data/matches";
 import { PLAYER_STICKER_ASSETS, playerStickerAsset } from "@/lib/player-sticker-assets";
+import { appRoute } from "@/lib/app-routes";
 import { playerOptionKey } from "@/lib/special-markets";
 import {
   allPlayers,
@@ -61,10 +62,22 @@ export async function PlayersDirectory({
   const featuredStickers = players
     .filter((player) => playerStickerAsset(stickerKey(player)))
     .sort((left, right) => right.goals - left.goals || right.caps - left.caps);
+  const contextRoute =
+    backHref === appRoute("games").href
+      ? appRoute("games")
+      : appRoute("competition");
+  const secondaryRoute =
+    contextRoute.href === appRoute("competition").href
+      ? appRoute("games")
+      : appRoute("competition");
+  const contextShortcut = {
+    ...contextRoute,
+    label: backLabel,
+  };
 
   return (
     <main className="page-container py-7 md:py-10">
-      <section className="mb-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.72fr)] lg:items-end">
+      <section className="mb-7">
         <div>
           <p className="eyebrow">Elencos oficiais</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
@@ -78,21 +91,17 @@ export async function PlayersDirectory({
             {sourceVersionLabel()}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 lg:justify-end">
-          <Link
-            href="/especiais"
-            className="interactive inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-black text-white"
-          >
-            Ver especiais <Sparkles className="size-4" />
-          </Link>
-          <Link
-            href={backHref}
-            className="interactive inline-flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-black text-brand"
-          >
-            {backLabel} <ArrowRight className="size-4" />
-          </Link>
-        </div>
       </section>
+
+      <PageShortcuts
+        items={[
+          appRoute("specials"),
+          contextShortcut,
+          appRoute("predictions"),
+          secondaryRoute,
+        ]}
+        className="mb-6"
+      />
 
       <section className="grid gap-4 md:grid-cols-5">
         <InfoCard icon={Users} title="Jogadores" value={String(players.length)} />

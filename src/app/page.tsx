@@ -3,13 +3,11 @@ import {
   ArrowRight,
   CalendarDays,
   Radio,
-  Target,
-  Trophy,
-  UsersRound,
 } from "lucide-react";
 import { LiveRefresh } from "@/components/live-refresh";
 import { MatchTimeline } from "@/components/match-timeline";
 import { NextMatchSummary } from "@/components/next-match-summary";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { SpecialHomeSummary } from "@/components/special-home-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
@@ -53,17 +51,16 @@ export default async function HomePage() {
               Veja jogos, placares e horários sem caçar informação. Quando quiser
               competir, seus palpites e bolões ficam a um toque.
             </p>
-            <div className="mt-6 hidden grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              <HomeAction href="/jogos" icon={CalendarDays}>Agenda completa</HomeAction>
-              <HomeAction href="/palpites" icon={Target}>Meus palpites</HomeAction>
-              <HomeAction href="/boloes" icon={Trophy}>Meus bolões</HomeAction>
-              <HomeAction href="/jogadores" icon={UsersRound}>Jogadores</HomeAction>
-            </div>
           </div>
 
           <NextMatchSummary matches={matches} />
         </div>
       </section>
+
+      <PageShortcuts
+        routeKeys={["games", "predictions", "pools", "players"]}
+        className="mt-5 md:mt-6"
+      />
 
       {hasLiveMatch ? (
         <section className="mt-7 md:mt-10">
@@ -141,24 +138,4 @@ function scheduledTime(match: DemoMatch) {
     ? new Date(match.scheduledAt).getTime()
     : Number.MAX_SAFE_INTEGER;
   return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
-}
-
-function HomeAction({
-  href,
-  icon: Icon,
-  children,
-}: {
-  href: string;
-  icon: typeof CalendarDays;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-3 text-xs font-black text-white hover:bg-white/15"
-    >
-      <Icon className="size-4 text-accent" />
-      {children}
-    </Link>
-  );
 }
