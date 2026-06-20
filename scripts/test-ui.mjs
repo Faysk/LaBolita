@@ -47,10 +47,20 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(BASE_URL);
-  await page.getByRole("heading", { name: "Seu palpite. Sua resenha. Sua taça." }).waitFor();
+  await page.getByRole("heading", { name: /Acompanhe a Copa sem se perder|Tem jogo rolando agora/ }).waitFor();
   await page.getByText("Modo demonstração: agenda parcial").waitFor();
-  await page.getByText("Bolão em destaque").waitFor();
-  await page.getByText("Família Faysk").first().waitFor();
+  await page.getByRole("heading", { name: /Próximos 3 jogos|Agora ao vivo/ }).waitFor();
+  await page.getByTestId(/^timeline-match-/).first().waitFor();
+  await waitForFlagFallbacks(page);
+
+  await page.goto(`${BASE_URL}/jogos`);
+  await page.getByRole("heading", { name: "Jogos da Copa" }).waitFor();
+  await page.getByText("Agenda completa").waitFor();
+  await waitForFlagFallbacks(page);
+
+  await page.goto(`${BASE_URL}/jogadores`);
+  await page.getByRole("heading", { name: "Jogadores da Copa" }).waitFor();
+  await page.getByText("Figurinhas em destaque").waitFor();
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/palpites`);
@@ -207,7 +217,7 @@ try {
   await page.getByTestId("ranking-current-user").getByText("126 pts").waitFor();
 
   await page.goto(BASE_URL);
-  await page.getByTestId("home-ranking-current-user").getByText("126 pts").waitFor();
+  await page.getByRole("navigation").getByRole("link", { name: "Bolões" }).waitFor();
   await page.getByRole("button", { name: "Abrir menu da conta" }).click();
   await page.getByText("Faysk · demonstração").waitFor();
   await page.keyboard.press("Escape");
@@ -233,6 +243,8 @@ try {
   desktopPage.on("pageerror", (error) => desktopErrors.push(error.message));
   for (const path of [
     "/",
+    "/jogos",
+    "/jogadores",
     "/palpites",
     "/especiais",
     "/boloes",

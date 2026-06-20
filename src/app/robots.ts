@@ -4,7 +4,7 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/boloes", "/regras", "/privacidade", "/termos"],
+      allow: ["/", "/jogos", "/jogadores", "/boloes", "/competicao", "/regras", "/privacidade", "/termos"],
       disallow: ["/admin", "/api/", "/auth/", "/aceitar-termos", "/conta", "/conta-suspensa", "/entrar", "/palpites"],
     },
     sitemap: "https://labolita.faysk.dev/sitemap.xml",

@@ -29,7 +29,7 @@ export default async function CompetitionPage({
           </p>
         </div>
         <Link
-          href="/competicao/jogadores"
+          href="/jogadores"
           className="interactive inline-flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-black text-brand"
         >
           Dados de jogadores <ArrowRight className="size-4" />
