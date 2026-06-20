@@ -213,32 +213,14 @@ export function UserDashboard({
               <p className="eyebrow">Disputa nos bolões</p>
               <h2 className="mt-1 text-2xl font-black">Ranking em movimento</h2>
             </div>
-            {activePools.length > 1 && (
-              <div className="flex max-w-full gap-2 overflow-x-auto pb-1 md:max-w-md">
-                {activePools.map((pool) => (
-                  <button
-                    key={pool.id}
-                    type="button"
-                    aria-pressed={pool.id === selectedPool?.id}
-                    onClick={() => setSelectedPoolId(pool.id)}
-                    className={`interactive flex min-w-[11rem] items-center gap-2 rounded-2xl border px-3 py-2 text-left ${
-                      pool.id === selectedPool?.id
-                        ? "bg-brand text-white"
-                        : "bg-surface-muted text-foreground hover:border-brand/70"
-                    }`}
-                  >
-                    <PoolFlag code={pool.flagCode} size="sm" />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-black">{pool.name}</span>
-                      <span className={`block text-xs font-bold ${pool.id === selectedPool?.id ? "text-white/65" : "text-muted"}`}>
-                        {pool.members} jogadores
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
+          {snapshots.length > 0 ? (
+            <PoolSnapshotStrip
+              snapshots={snapshots}
+              selectedPoolId={selectedPool?.id ?? ""}
+              onSelect={setSelectedPoolId}
+            />
+          ) : null}
           {selectedSnapshot ? (
             <PoolImpact snapshot={selectedSnapshot} />
           ) : (
@@ -339,19 +321,59 @@ function LivePanel({
   liveMatches: LiveMatchView[];
   selectedSnapshot: PoolSnapshot | null;
 }) {
-  const primary = liveMatches[0];
+  const [selectedMatchId, setSelectedMatchId] = useState(liveMatches[0]?.match.id ?? "");
+  const primary =
+    liveMatches.find((item) => item.match.id === selectedMatchId) ?? liveMatches[0];
   const score = primary.match.liveResult;
+  const totalLivePoints = liveMatches.reduce(
+    (total, item) => total + (item.score?.totalPoints ?? 0),
+    0,
+  );
 
   return (
     <div className="grid gap-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
       <div className="bg-brand-strong p-5 text-white md:p-7">
-        <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase text-accent">
-          <Radio className="size-3.5 animate-pulse" />
-          Agora ao vivo
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase text-accent">
+            <Radio className="size-3.5 animate-pulse" />
+            Agora ao vivo
+          </p>
+          <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/75">
+            {totalLivePoints} pts parciais
+          </span>
+        </div>
         <h2 className="mt-4 text-3xl font-black md:text-5xl">
           Pontos mudando em tempo real
         </h2>
+        {liveMatches.length > 1 ? (
+          <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
+            {liveMatches.map((item) => (
+              <button
+                key={item.match.id}
+                type="button"
+                aria-pressed={item.match.id === primary.match.id}
+                onClick={() => setSelectedMatchId(item.match.id)}
+                className={`interactive min-w-[13rem] rounded-2xl border px-3 py-2 text-left ${
+                  item.match.id === primary.match.id
+                    ? "border-accent bg-white/15"
+                    : "border-white/15 bg-white/8"
+                }`}
+              >
+                <span className="block truncate text-xs font-black text-white">
+                  {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
+                </span>
+                <span className="mt-1 flex items-center justify-between gap-2 text-[10px] font-bold text-white/62">
+                  <span>
+                    {item.match.liveResult
+                      ? `${item.match.liveResult.homeScore} x ${item.match.liveResult.awayScore}`
+                      : "ao vivo"}
+                  </span>
+                  <span className="text-accent">{item.score?.totalPoints ?? 0} pts</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
         <div className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
             <LiveTeam team={primary.match.homeTeam} />
@@ -395,6 +417,11 @@ function LivePanel({
                 {liveMatches.length} jogos mexendo nos rankings agora.
               </p>
             )}
+            <div className="grid gap-2">
+              {liveMatches.map((item) => (
+                <LiveMatchImpact key={item.match.id} item={item} />
+              ))}
+            </div>
           </div>
         ) : (
           <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
@@ -402,6 +429,27 @@ function LivePanel({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function LiveMatchImpact({ item }: { item: LiveMatchView }) {
+  const score = item.match.liveResult;
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-surface-muted p-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-black">
+          {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
+        </p>
+        <p className="mt-1 text-xs font-bold text-muted">
+          Palpite {predictionText(item.prediction)} · parcial{" "}
+          {score ? `${score.homeScore} x ${score.awayScore}` : "ao vivo"}
+        </p>
+      </div>
+      <span className="rounded-xl bg-surface px-3 py-2 text-sm font-black text-brand">
+        {item.score?.totalPoints ?? 0} pts
+      </span>
     </div>
   );
 }
@@ -536,9 +584,12 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
               <UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-black">{player.name}</p>
-                <p className="text-xs font-bold text-muted">
-                  {player.exact} exatas · {player.correct} acertos
-                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-bold text-muted">
+                    {player.exact} exatas · {player.correct} acertos
+                  </p>
+                  <PlayerMovementChip player={player} />
+                </div>
               </div>
             </div>
             <span className="text-right text-sm font-black text-brand">
@@ -548,6 +599,120 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function PoolSnapshotStrip({
+  snapshots,
+  selectedPoolId,
+  onSelect,
+}: {
+  snapshots: PoolSnapshot[];
+  selectedPoolId: string;
+  onSelect: (poolId: string) => void;
+}) {
+  return (
+    <div className="mt-4">
+      <p className="mb-2 text-xs font-black uppercase tracking-[0.12em] text-muted">
+        Bolões em movimento
+      </p>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {snapshots.map((snapshot) => {
+          const selected = snapshot.pool.id === selectedPoolId;
+          const player = snapshot.currentPlayer;
+
+          return (
+            <button
+              key={snapshot.pool.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onSelect(snapshot.pool.id)}
+              className={`interactive grid min-w-[15rem] gap-3 rounded-[1.2rem] border p-3 text-left ${
+                selected ? "bg-brand text-white" : "bg-surface-muted hover:border-brand/70"
+              }`}
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <PoolFlag code={snapshot.pool.flagCode} size="sm" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-black">{snapshot.pool.name}</span>
+                  <span className={`block text-xs font-bold ${selected ? "text-white/65" : "text-muted"}`}>
+                    {snapshot.pool.members} jogadores
+                  </span>
+                </span>
+              </span>
+              <span className="grid grid-cols-3 gap-2 text-center">
+                <SnapshotMiniMetric
+                  selected={selected}
+                  label="Pos."
+                  value={player ? rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" }) : "—"}
+                />
+                <SnapshotMiniMetric
+                  selected={selected}
+                  label="Parcial"
+                  value={player ? `${player.provisionalPoints ?? player.points}` : "—"}
+                />
+                <SnapshotMiniMetric
+                  selected={selected}
+                  label="Mov."
+                  value={snapshot.movement.delta === 0 ? "=" : `${snapshot.movement.delta > 0 ? "+" : ""}${snapshot.movement.delta}`}
+                  tone={snapshot.movement.tone}
+                />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SnapshotMiniMetric({
+  label,
+  value,
+  selected,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  selected: boolean;
+  tone?: "up" | "down" | "neutral";
+}) {
+  const toneClass =
+    selected
+      ? "bg-white/10 text-white"
+      : tone === "up"
+        ? "status-success"
+        : tone === "down"
+          ? "status-warning"
+          : "bg-surface";
+
+  return (
+    <span className={`rounded-xl border px-2 py-1.5 ${toneClass}`}>
+      <span className={`block text-[9px] font-black uppercase ${selected ? "text-white/58" : "text-muted"}`}>
+        {label}
+      </span>
+      <span className={`mt-0.5 block text-xs font-black ${selected ? "text-accent" : ""}`}>
+        {value}
+      </span>
+    </span>
+  );
+}
+
+function PlayerMovementChip({ player }: { player: RankingEntry }) {
+  const movement = rankingMovement(player);
+  const Icon = movement.icon;
+  const toneClass =
+    movement.tone === "up"
+      ? "status-success"
+      : movement.tone === "down"
+        ? "status-warning"
+        : "bg-surface-muted";
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${toneClass}`}>
+      <Icon className="size-3" />
+      {movement.label}
+    </span>
   );
 }
 
@@ -986,6 +1151,28 @@ function compareSnapshots(left: PoolSnapshot, right: PoolSnapshot) {
 function rankingSummary(snapshot: PoolSnapshot) {
   if (!snapshot.currentPlayer) return "ranking aberto";
   return `${rankingLabel(snapshot.currentPlayer, snapshot.ranking, { provisional: true, tiedSuffix: "=" })} · ${snapshot.currentPlayer.provisionalPoints ?? snapshot.currentPlayer.points} pts`;
+}
+
+function rankingMovement(player: RankingEntry): {
+  label: string;
+  tone: "neutral" | "up" | "down";
+  icon: typeof BarChart3;
+} {
+  if (!player.provisionalPosition || player.provisionalPosition === player.position) {
+    return { label: "mantém", tone: "neutral", icon: BarChart3 };
+  }
+  if (player.provisionalPosition < player.position) {
+    return {
+      label: `sobe ${player.position - player.provisionalPosition}`,
+      tone: "up",
+      icon: TrendingUp,
+    };
+  }
+  return {
+    label: `cai ${player.provisionalPosition - player.position}`,
+    tone: "down",
+    icon: TrendingDown,
+  };
 }
 
 function predictionText(prediction?: ScorePrediction | null) {

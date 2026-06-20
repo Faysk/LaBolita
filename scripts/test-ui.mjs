@@ -227,6 +227,8 @@ try {
   await page.goto(`${BASE_URL}/painel`);
   await page.getByRole("heading", { name: "Painel" }).waitFor();
   await page.getByText("Ranking em movimento").waitFor();
+  await page.getByText("Bolões em movimento").waitFor();
+  await page.getByText("mantém").first().waitFor();
   await waitForFlagFallbacks(page);
 
   await page.goto(BASE_URL);
