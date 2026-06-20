@@ -131,8 +131,8 @@ export default function RulesPage() {
             <Sparkles className="size-5" />
           </span>
           <div>
-            <p className="eyebrow">Extras</p>
-            <h2 className="mt-1 text-2xl font-black">Palpites especiais</h2>
+            <p className="eyebrow">Além dos placares</p>
+            <h2 className="mt-1 text-2xl font-black">Palpites finais</h2>
           </div>
         </div>
         <div className="mt-4">
@@ -142,7 +142,7 @@ export default function RulesPage() {
               ranking separado. Eles não substituem seus placares dos jogos.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Os especiais ficam abertos até {SPECIAL_LOCK_DATE_LABEL}. Cada categoria tem sua
+              Os palpites finais ficam abertos até {SPECIAL_LOCK_DATE_LABEL}. Cada categoria tem sua
               própria tela com busca, destaques e dados de elenco para ajudar na
               escolha.
             </p>

@@ -131,11 +131,11 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
           <span className="rounded-xl bg-accent p-2 text-brand-strong"><ShieldCheck className="size-5" /></span>
           <div>
             <p className="text-xs font-black uppercase tracking-wider text-accent">{overview.isMaster ? "Master principal" : "Administrador promovido"}</p>
-            <h2 className="mt-1 text-2xl font-black">Administração global</h2>
+            <h2 className="mt-1 text-2xl font-black">Controle global</h2>
           </div>
         </div>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
-          Ajustes globais são reversíveis e registrados no histórico de auditoria.
+          Ajustes globais são reversíveis e ficam registrados para auditoria.
         </p>
         <TermsEnforcementControl enabled={overview.termsEnforcementEnabled} />
         <AdminAlertComposer />
@@ -158,7 +158,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
             >
               <label className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar no servidor" className="w-full rounded-xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={tab === "pools" ? "Buscar bolão" : "Buscar usuário"} className="w-full rounded-xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
               </label>
               <button type="submit" disabled={isNavigating} className="interactive rounded-xl bg-brand px-4 text-xs font-black text-white shadow-sm disabled:opacity-60">
                 {pendingTab === tab ? "Buscando..." : "Buscar"}
@@ -355,26 +355,26 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
       icon: Users,
       label: "Usuários",
       value: formatNumber(summary.users.total),
-      detail: `${summary.users.active} ativos · ${summary.users.admins} admin`,
+      detail: `${summary.users.active} ativos · ${summary.users.admins} admins`,
       tone: summary.users.disabled > 0 || summary.users.termsPending > 0 ? "warn" : "ok",
     },
     {
       icon: Archive,
       label: "Bolões",
       value: formatNumber(summary.pools.total),
-      detail: `${summary.pools.memberships} vínculos · ${summary.pools.public} públicos`,
+      detail: `${summary.pools.memberships} participações · ${summary.pools.public} públicos`,
       tone: summary.pools.archived > 0 ? "warn" : "ok",
     },
     {
       icon: Gauge,
       label: "Palpites",
       value: formatNumber(summary.predictions.matchPredictions),
-      detail: `${summary.predictions.changedMatchPredictions} alterados · ${summary.predictions.specialPredictions} especiais`,
+      detail: `${summary.predictions.changedMatchPredictions} com alterações · ${summary.predictions.specialPredictions} finais`,
       tone: summary.predictions.specialPredictions > 0 ? "ok" : "warn",
     },
     {
       icon: History,
-      label: "Auditoria 24h",
+      label: "Auditoria hoje",
       value: formatNumber(summary.audit.recentTotal),
       detail: `${summary.audit.resultChanges} placares · ${summary.audit.userActivityEvents} eventos`,
       tone: summary.audit.recentTotal > 0 ? "warn" : "ok",
@@ -393,7 +393,7 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
         <div className="rounded-2xl border bg-surface-muted/55 p-4">
           <div className="flex items-center gap-2">
             <Database className="size-4 text-brand" />
-            <h3 className="text-sm font-black">Conexões</h3>
+            <h3 className="text-sm font-black">Saúde das conexões</h3>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {summary.connections.map((connection) => (
@@ -405,7 +405,7 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
         <div className="rounded-2xl border bg-surface-muted/55 p-4">
           <div className="flex items-center gap-2">
             <Bell className="size-4 text-brand" />
-            <h3 className="text-sm font-black">Próximas ações</h3>
+            <h3 className="text-sm font-black">Atenção agora</h3>
           </div>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
             {summary.nextActions.map((action) => (
@@ -537,12 +537,12 @@ function TermsEnforcementControl({ enabled }: { enabled: boolean }) {
   return (
     <div className="mt-5 grid gap-2 rounded-2xl border border-white/15 bg-white/10 p-3 md:grid-cols-[1fr_auto_auto] md:items-center">
       <div>
-        <p className="text-xs font-black uppercase tracking-wider text-white/60">Aceite no banco</p>
-        <p className="mt-1 text-sm font-bold">{enabled ? "Exigência ativa" : "Aguardando publicação da interface nova"}</p>
+        <p className="text-xs font-black uppercase tracking-wider text-white/60">Aceite dos termos</p>
+        <p className="mt-1 text-sm font-bold">{enabled ? "Exigência ativa" : "Aguardando ativação"}</p>
       </div>
       <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent" />
       <button type="button" disabled={busy || reason.trim().length < 3} onClick={toggle} className="interactive flex items-center justify-center gap-1 rounded-xl bg-accent px-3 py-2 text-xs font-black text-brand-strong disabled:opacity-40">
-        {busy && <LoaderCircle className="size-3 animate-spin" />} {enabled ? "Desativar" : "Ativar após deploy"}
+        {busy && <LoaderCircle className="size-3 animate-spin" />} {enabled ? "Desativar" : "Ativar exigência"}
       </button>
       {error && <p className="text-xs font-bold text-red-200 md:col-span-3">{error}</p>}
     </div>
@@ -598,7 +598,7 @@ function AdminAlertComposer() {
       setLinkHref("");
       setLinkLabel("");
       setReason("");
-      setSuccess("Alerta publicado.");
+      setSuccess("Aviso publicado.");
       navigator.vibrate?.(25);
       router.refresh();
     }
@@ -624,9 +624,9 @@ function AdminAlertComposer() {
         <Bell className="size-4 text-accent" />
         <div>
           <p className="text-xs font-black uppercase tracking-wider text-white/60">
-            Alertas
+            Avisos
           </p>
-          <p className="text-sm font-bold">Publicar aviso no app</p>
+          <p className="text-sm font-bold">Enviar aviso para usuários</p>
         </div>
       </div>
 
@@ -636,7 +636,7 @@ function AdminAlertComposer() {
           onChange={(event) => setTitle(event.target.value)}
           minLength={3}
           maxLength={80}
-          placeholder="Título"
+          placeholder="Título do aviso"
           className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
         />
         <div className="grid grid-cols-2 gap-2">
@@ -669,7 +669,7 @@ function AdminAlertComposer() {
         minLength={3}
         maxLength={360}
         rows={3}
-        placeholder="Mensagem"
+        placeholder="Mensagem do aviso"
         className="resize-none rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
       />
 
@@ -678,7 +678,7 @@ function AdminAlertComposer() {
           value={audience === "specific_user" ? targetUserId : ""}
           disabled={audience !== "specific_user"}
           onChange={(event) => setTargetUserId(event.target.value)}
-          placeholder="ID do usuário"
+          placeholder="ID do usuário específico"
           className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent disabled:opacity-45"
         />
         <input
@@ -690,7 +690,7 @@ function AdminAlertComposer() {
         <input
           value={linkLabel}
           onChange={(event) => setLinkLabel(event.target.value)}
-          placeholder="Botão"
+          placeholder="Texto do botão"
           className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
         />
       </div>
@@ -711,7 +711,7 @@ function AdminAlertComposer() {
           onChange={(event) => setReason(event.target.value)}
           minLength={3}
           maxLength={200}
-          placeholder="Motivo obrigatório"
+          placeholder="Motivo interno obrigatório"
           className="rounded-xl border-white/20 bg-white/10 px-3 py-2 text-sm font-bold text-white outline-none placeholder:text-white/45 focus:border-accent"
         />
         <button
@@ -909,7 +909,7 @@ function MasterUserCard({
         <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${user.displayName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" data-testid="master-user-report-toggle" onClick={() => setShowReport((current) => !current)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted"><Gauge className="size-3" /> {showReport ? "Fechar relatório" : "Relatório"}</button>
+        <button type="button" data-testid="master-user-report-toggle" onClick={() => setShowReport((current) => !current)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted"><Gauge className="size-3" /> {showReport ? "Fechar raio-X" : "Abrir raio-X"}</button>
         <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(user.disabledAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white shadow-sm disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar nome</button>
         {!user.isMasterAdmin && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!user.disabledAt)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-danger-fg hover:border-danger-line hover:bg-danger-bg disabled:opacity-40"><UserRoundCog className="size-3" /> {user.disabledAt ? "Reativar conta" : "Suspender conta"}</button>}
         {!user.isMasterAdmin && <button type="button" disabled={busy || Boolean(user.disabledAt) || reason.trim().length < 3} onClick={updateAdminAccess} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-info-fg hover:border-info-line hover:bg-info-bg disabled:opacity-40"><ShieldPlus className="size-3" /> {user.isAdmin ? "Remover admin" : "Promover admin"}</button>}
@@ -933,10 +933,10 @@ function UserReportPanel({
         <div className="flex items-start gap-2">
           <CircleAlert className="mt-0.5 size-4 text-amber-700" />
           <div>
-            <p className="text-sm font-black">Relatório limitado</p>
+            <p className="text-sm font-black">Raio-X limitado</p>
             <p className="mt-1 text-xs leading-5 text-muted">
-              {user.email} está visível, mas dados de Auth, auditoria completa e
-              histórico global exigem service role server-side.
+              {user.email} está visível, mas alguns dados de login, auditoria e
+              histórico dependem da chave de serviço do ambiente.
             </p>
           </div>
         </div>
@@ -1030,7 +1030,7 @@ function UserReportPanel({
       ? {
           id: "login",
           title: "Sem login registrado",
-          detail: "Auth ainda não retornou último acesso para esta conta.",
+          detail: "O último acesso ainda não apareceu para esta conta.",
           tone: "warn",
         }
       : null,
@@ -1115,7 +1115,7 @@ function UserReportPanel({
         <div className="rounded-2xl border bg-surface-muted/60 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
-              <p className="eyebrow">Relatório completo</p>
+              <p className="eyebrow">Raio-X do usuário</p>
               <h3 className="mt-1 truncate text-xl font-black">{user.displayName}</h3>
               <p className="mt-1 truncate text-xs font-bold text-muted">
                 {report.identity.email}
@@ -1236,7 +1236,7 @@ function UserReportPanel({
             })}
           </ProgressiveList>
         ) : (
-          <EmptyReportLine>Eventos de atividade, auditoria e mudanças passam a aparecer aqui.</EmptyReportLine>
+          <EmptyReportLine>Atividade, auditoria e mudanças aparecem aqui conforme o usuário interage.</EmptyReportLine>
         )}
       </ReportSection>
 
@@ -1646,7 +1646,7 @@ function entityTypeLabel(entityType: string) {
       user: "Usuário",
       pool: "Bolão",
       pool_member: "Participante",
-      special_market: "Especial",
+      special_market: "Palpite final",
       admin_alert: "Alerta",
       terms: "Termos",
       route: "Tela",
@@ -1701,7 +1701,7 @@ function metadataLabel(key: string) {
       method: "entrada",
       next_path: "destino",
       match_number: "jogo",
-      market_title: "especial",
+      market_title: "palpite final",
       old_name: "nome anterior",
       new_name: "novo nome",
       old_display_name: "nome anterior",
@@ -1775,8 +1775,8 @@ function activityEventLabel(eventType: string) {
       terms_accepted: "Termos aceitos",
       match_prediction_created: "Palpite criado",
       match_prediction_updated: "Palpite alterado",
-      special_prediction_created: "Especial criado",
-      special_prediction_updated: "Especial alterado",
+      special_prediction_created: "Palpite final criado",
+      special_prediction_updated: "Palpite final alterado",
       pool_created: "Bolão criado",
       pool_joined: "Entrou no bolão",
       admin_alert_dismissed: "Alerta dispensado",
@@ -1800,7 +1800,7 @@ function auditActionLabel(action: string) {
       restore_pool: "Bolão recuperado",
       remove_pool_member: "Membro removido",
       set_terms_enforcement: "Termos alterados",
-      resolve_special_market: "Especial resolvido",
+      resolve_special_market: "Palpite final resolvido",
       create_admin_alert: "Alerta criado",
     }[action] ?? action
   );

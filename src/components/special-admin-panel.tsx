@@ -33,11 +33,11 @@ export function SpecialAdminPanel({
   if (!overview.available) {
     return (
       <section className="card mt-7 p-5 md:p-6">
-        <p className="eyebrow">Palpites especiais</p>
-        <h2 className="mt-1 text-2xl font-black">Aguardando banco</h2>
+        <p className="eyebrow">Palpites finais</p>
+        <h2 className="mt-1 text-2xl font-black">Especial ainda não disponível</h2>
         <p className="mt-2 text-sm leading-6 text-muted">
           {overview.missingReason ??
-            "Aplique a migration em homolog para administrar os especiais."}
+            "Atualize este ambiente para liberar a administração dos palpites finais."}
         </p>
       </section>
     );
@@ -48,10 +48,10 @@ export function SpecialAdminPanel({
       <div className="flex items-center gap-3 border-b p-5 md:p-6">
         <Trophy className="size-5 text-brand" />
         <div>
-          <p className="eyebrow">Palpites especiais</p>
-          <h2 className="font-black">Resultados e correções</h2>
+          <p className="eyebrow">Palpites finais</p>
+          <h2 className="font-black">Resultado final dos especiais</h2>
           <p className="text-sm text-muted">
-            Confirme prêmios e estatísticas especiais com motivo obrigatório.
+            Confirme prêmios e estatísticas finais com uma fonte ou motivo.
           </p>
         </div>
       </div>
@@ -122,13 +122,13 @@ function SpecialAdminMarket({ market }: { market: SpecialMarketView }) {
     if (error) {
       setSync({
         busy: false,
-        message: friendlyServerError(error, "Não foi possível salvar o resultado especial."),
+        message: friendlyServerError(error, "Não foi possível salvar o resultado final."),
       });
       navigator.vibrate?.([25, 30, 25]);
       return;
     }
 
-    setSync({ busy: false, ok: true, message: "Resultado especial salvo." });
+    setSync({ busy: false, ok: true, message: "Resultado final salvo." });
     navigator.vibrate?.(20);
     router.refresh();
   }
@@ -153,7 +153,7 @@ function SpecialAdminMarket({ market }: { market: SpecialMarketView }) {
         <div className="mt-3 rounded-2xl border bg-surface p-3 text-xs">
           <p className="flex items-center gap-2 font-black text-brand">
             <Sparkles className="size-4" />
-            Sugestão automática
+            Sugestão calculada
           </p>
           <p className="mt-1 text-muted">
             {market.automaticSuggestions
@@ -213,7 +213,7 @@ function SpecialAdminMarket({ market }: { market: SpecialMarketView }) {
 
       {selectedOptions.length > 0 && (
         <p className="mt-3 rounded-xl border bg-surface px-3 py-2 text-xs font-bold text-muted">
-          Resultado selecionado:{" "}
+          Resultado final selecionado:{" "}
           {selectedOptions.map((option) => summarizeSpecialOption(option)).join(", ")}
         </p>
       )}

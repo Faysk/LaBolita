@@ -1,6 +1,6 @@
 export default function SpecialMarketLoading() {
   return (
-    <main className="page-container py-7 md:py-10" aria-label="Carregando palpite especial">
+    <main className="page-container py-7 md:py-10" aria-label="Carregando palpite final">
       <div className="mb-7">
         <div className="skeleton h-4 w-36 rounded-xl" />
         <div className="skeleton mt-3 h-12 w-80 max-w-full rounded-2xl" />

@@ -31,10 +31,10 @@ export function LoginPanel({ nextPath = "/" }: { nextPath?: string }) {
     return (
       <div className="rounded-3xl bg-surface-muted p-5">
         <Settings2 className="size-5 text-brand" />
-        <h2 className="mt-4 font-black">Modo demonstração ativo</h2>
+        <h2 className="mt-4 font-black">Modo demonstração ligado</h2>
         <p className="mt-2 text-sm leading-6 text-muted">
-          Preencha as variáveis Supabase em <code>.env.local</code> para
-          habilitar contas e persistência real.
+          Conecte o banco do ambiente para habilitar contas e salvar dados de
+          verdade.
         </p>
       </div>
     );

@@ -1,6 +1,6 @@
 export default function SpecialPredictionsLoading() {
   return (
-    <main className="page-container py-7 md:py-10" aria-label="Carregando palpites especiais">
+    <main className="page-container py-7 md:py-10" aria-label="Carregando palpites finais">
       <div className="mb-7">
         <div className="skeleton h-4 w-32 rounded-xl" />
         <div className="skeleton mt-3 h-12 w-80 max-w-full rounded-2xl" />

@@ -88,11 +88,11 @@ export default async function AdminPage({
       <div className="mb-8">
         <p className="eyebrow">Operação</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
-          Painel administrativo
+          Sala de controle
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-muted">
-          Resultados finalizados aqui recalculam os rankings e deixam histórico
-          de auditoria.
+          Acompanhe usuários, bolões, placares e auditoria em um só lugar. Tudo
+          que altera ranking fica registrado.
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export default async function AdminPage({
         {[
           [
             Database,
-            "Banco de dados",
+            "Dados",
             databaseConfigured ? "Supabase conectado" : "Modo demonstração",
             databaseConfigured ? "text-brand bg-emerald-50" : "text-amber-700 bg-amber-50",
           ],
@@ -112,7 +112,7 @@ export default async function AdminPage({
           ],
           [
             CheckCircle2,
-            "Partidas carregadas",
+            "Jogos no calendário",
             String(matches.length),
             "text-brand bg-emerald-50",
           ],
@@ -208,13 +208,13 @@ function OperationalReadinessPanel({
     <section className="card mt-7 overflow-hidden">
       <div className="flex flex-col gap-3 border-b bg-surface-muted/70 p-5 md:flex-row md:items-center md:justify-between md:p-6">
         <div>
-          <p className="eyebrow">Prontidão operacional</p>
+          <p className="eyebrow">Atenção agora</p>
           <h2 className="mt-1 text-2xl font-black tracking-tight">
-            {hasAction ? "Acompanhar agora" : "Operação em dia"}
+            {hasAction ? "Tem coisa para olhar" : "Operação em dia"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            Sinais para priorizar confirmação de placares, divergências,
-            participantes do mata-mata e prazo dos especiais.
+            Sinais para priorizar placares, divergências, mata-mata e prazo dos
+            palpites finais antes da rodada apertar.
           </p>
         </div>
         <span
@@ -232,14 +232,14 @@ function OperationalReadinessPanel({
           icon={Activity}
           label="Ao vivo"
           value={String(liveCount)}
-          detail="Jogos em andamento sem resultado oficial"
+          detail="Jogos acontecendo sem resultado oficial"
           tone={liveCount > 0 ? "live" : "ok"}
         />
         <ReadinessItem
           icon={CalendarClock}
-          label="Aguardam confirmação"
+          label="Para confirmar"
           value={String(awaitingConfirmation)}
-          detail="Provedor marcou como finalizado"
+          detail="O provedor já marcou como finalizado"
           tone={awaitingConfirmation > 0 ? "warn" : "ok"}
         />
         <ReadinessItem
@@ -253,12 +253,12 @@ function OperationalReadinessPanel({
           icon={ListChecks}
           label="Mata-mata"
           value={String(pendingKnockoutTeams)}
-          detail="Partidas ainda sem participantes definidos"
+          detail="Jogos ainda sem seleções definidas"
           tone={pendingKnockoutTeams > 0 ? "warn" : "ok"}
         />
         <ReadinessItem
           icon={Sparkles}
-          label="Especiais"
+          label="Palpites finais"
           value={
             specialsProgress
               ? `${specialsProgress.completed}/${specialsProgress.total}`
@@ -267,7 +267,7 @@ function OperationalReadinessPanel({
           detail={
             specialsProgress
               ? `${specialsProgress.openPending.length} pendentes abertos até ${SPECIAL_LOCK_DATE_LABEL}`
-              : specialsOverview.missingReason ?? "Mercados indisponíveis"
+              : specialsOverview.missingReason ?? "Categorias indisponíveis"
           }
           tone={specialsProgress?.openPending.length ? "warn" : "ok"}
         />

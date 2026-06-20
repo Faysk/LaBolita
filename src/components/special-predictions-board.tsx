@@ -41,7 +41,7 @@ export function SpecialPredictionsBoard({
             <h2 className="text-xl font-black">Palpites finais aguardando publicação</h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               {overview.missingReason ??
-                "Assim que o banco receber a nova migration, esta área fica disponível."}
+                "Assim que este ambiente receber a atualização, esta área fica disponível."}
             </p>
           </div>
         </div>
