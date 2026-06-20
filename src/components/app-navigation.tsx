@@ -6,6 +6,7 @@ import {
   CircleHelp,
   LayoutDashboard,
   Home,
+  Radio,
   Sparkles,
   Target,
   Trophy,
@@ -16,13 +17,14 @@ import { usePathname } from "next/navigation";
 
 const navigation = [
   { href: "/", label: "Início", icon: Home },
+  { href: "/ao-vivo", label: "Ao vivo", icon: Radio },
   { href: "/painel", label: "Painel", icon: LayoutDashboard },
   { href: "/palpites", label: "Palpites", icon: Target },
-  { href: "/especiais", label: "Extras", icon: Sparkles },
   { href: "/boloes", label: "Bolões", icon: BarChart3 },
+  { href: "/especiais", label: "Especiais", icon: Sparkles },
   { href: "/jogadores", label: "Jogadores", icon: UsersRound },
-  { href: "/competicao", label: "Copa", icon: Trophy },
   { href: "/jogos", label: "Jogos", icon: CalendarDays, desktopOnly: true },
+  { href: "/competicao", label: "Copa", icon: Trophy, desktopOnly: true },
   { href: "/regras", label: "Regras", icon: CircleHelp, desktopOnly: true },
 ];
 

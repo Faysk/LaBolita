@@ -56,6 +56,13 @@ try {
   await page.getByTestId(/^timeline-match-/).first().waitFor();
   await waitForFlagFallbacks(page);
 
+  await page.goto(`${BASE_URL}/ao-vivo`);
+  await page.getByRole("heading", { name: /Tudo pronto para acompanhar|O jogo está mexendo/ }).waitFor();
+  await page.getByText("Seu palpite", { exact: true }).waitFor();
+  await page.getByText("Distribuição dos palpites").waitFor();
+  await page.getByRole("link", { name: "Abrir bolões" }).waitFor();
+  await waitForFlagFallbacks(page);
+
   await page.goto(`${BASE_URL}/jogos`);
   await page.getByRole("heading", { name: "Jogos da Copa" }).waitFor();
   await page.getByText("Trilha rápida").waitFor();
@@ -234,6 +241,7 @@ try {
   await waitForFlagFallbacks(page);
 
   await page.goto(BASE_URL);
+  await page.getByRole("navigation").getByRole("link", { name: "Ao vivo" }).waitFor();
   await page.getByRole("navigation").getByRole("link", { name: "Bolões" }).waitFor();
   await page.getByRole("button", { name: "Abrir menu da conta" }).click();
   await page.getByText("Faysk · demonstração").waitFor();
@@ -260,6 +268,7 @@ try {
   desktopPage.on("pageerror", (error) => desktopErrors.push(error.message));
   for (const path of [
     "/",
+    "/ao-vivo",
     "/jogos",
     "/jogadores",
     "/painel",
