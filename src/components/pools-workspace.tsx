@@ -7,6 +7,8 @@ import {
   BarChart3,
   CalendarClock,
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   Globe2,
   LoaderCircle,
@@ -31,6 +33,7 @@ import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
+import { calculateScore } from "@/lib/scoring";
 import { COUNTRIES } from "@/lib/countries";
 import type { PoolsOverview } from "@/lib/data/pools";
 import { isLiveMatch } from "@/lib/match-display";
@@ -1435,41 +1438,90 @@ function FinishedPickRow({
 }) {
   const result = match.result ?? match.liveResult;
   const updatedAt = formatShortDateTime(entry.updatedAt);
+  const [expanded, setExpanded] = useState(false);
+  const score = finishedPickScore(entry, match, result);
+  const Chevron = expanded ? ChevronUp : ChevronDown;
 
   return (
-    <div className="grid gap-3 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
-      <div className="min-w-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
-          {match.stageLabel}
-        </p>
-        <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-          <MiniMatchTeam team={match.homeTeam} />
-          <span className="rounded-xl bg-surface-muted px-2 py-1 text-center text-xs font-black">
-            {result ? `${result.homeScore} x ${result.awayScore}` : "bloq."}
-          </span>
-          <MiniMatchTeam team={match.awayTeam} align="right" />
-        </div>
-      </div>
-      <div className="rounded-xl bg-surface-muted px-3 py-2">
-        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
-          Palpite
-        </p>
-        <p className="mt-0.5 text-sm font-black">{predictionLabel(entry.prediction)}</p>
-        {updatedAt ? <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p> : null}
-      </div>
-      <div className="rounded-xl bg-surface-muted px-3 py-2 text-left md:text-right">
-        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
-          Pontos
-        </p>
-        <p className="mt-0.5 text-sm font-black text-brand">
-          {entry.score ? `${entry.score.totalPoints} pts` : "—"}
-        </p>
-        {entry.score ? (
-          <p className="text-[10px] font-bold text-muted">
-            {scoreCategoryLabel(entry.score.category)}
+    <div data-testid="finished-pick-row">
+      <button
+        type="button"
+        data-testid="finished-pick-toggle"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+        className="interactive grid w-full gap-3 p-3 text-left md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center"
+      >
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+            {match.stageLabel}
           </p>
-        ) : null}
-      </div>
+          <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+            <MiniMatchTeam team={match.homeTeam} />
+            <span className="rounded-xl bg-surface-muted px-2 py-1 text-center text-xs font-black">
+              {result ? `${result.homeScore} x ${result.awayScore}` : "bloq."}
+            </span>
+            <MiniMatchTeam team={match.awayTeam} align="right" />
+          </div>
+        </div>
+        <div className="rounded-xl bg-surface-muted px-3 py-2">
+          <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+            Palpite
+          </p>
+          <p className="mt-0.5 text-sm font-black">{predictionLabel(entry.prediction)}</p>
+          {updatedAt ? <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p> : null}
+        </div>
+        <div className="rounded-xl bg-surface-muted px-3 py-2 text-left md:text-right">
+          <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+            Pontos
+          </p>
+          <p className="mt-0.5 text-sm font-black text-brand">
+            {score ? `${score.totalPoints} pts` : "—"}
+          </p>
+          {score ? (
+            <p className="text-[10px] font-bold text-muted">
+              {scoreCategoryLabel(score.category)}
+            </p>
+          ) : null}
+        </div>
+        <Chevron className="size-4 text-muted md:justify-self-end" />
+      </button>
+      {expanded ? (
+        <div
+          data-testid="finished-pick-details"
+          className="grid gap-2 border-t bg-surface-muted/55 p-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <PickDetail label="Resultado" value={result ? `${result.homeScore} x ${result.awayScore}` : "aguardando"} />
+          <PickDetail label="Categoria" value={score ? scoreCategoryLabel(score.category) : "sem cálculo"} />
+          <PickDetail label="Pontos do placar" value={score ? `${score.matchPoints} pts` : "—"} />
+          <PickDetail
+            label={match.stage === "group" ? "Atualização" : "Avanço"}
+            value={
+              match.stage === "group"
+                ? updatedAt ?? "sem data"
+                : score
+                  ? `${score.advancementPoints} pts`
+                  : "—"
+            }
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PickDetail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border bg-surface px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-black">{value}</p>
     </div>
   );
 }
@@ -1614,6 +1666,16 @@ function findPlayerComparisonEntry(
       (entry) => entry.name === player.name && entry.initials === player.initials,
     ) ?? null
   );
+}
+
+function finishedPickScore(
+  entry: PredictionComparisonEntry,
+  match: DemoMatch,
+  result?: MatchResult,
+) {
+  if (entry.score) return entry.score;
+  if (!entry.prediction || !result) return null;
+  return calculateScore(entry.prediction, result, match.stage);
 }
 
 function scoreCategoryLabel(category: ScoreBreakdown["category"]) {

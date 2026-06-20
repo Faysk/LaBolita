@@ -5,6 +5,8 @@ import {
   BarChart3,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   CircleDashed,
   Layers3,
   ListChecks,
@@ -444,33 +446,94 @@ function ComparisonRow({
   match: DemoMatch;
 }) {
   const updatedAt = formatShortDateTime(entry.updatedAt);
-  const points = entryPoints(entry, match);
+  const [expanded, setExpanded] = useState(false);
+  const score = entryScore(entry, match);
+  const result = match.result ?? match.liveResult;
+  const points = score?.totalPoints ?? entryPoints(entry, match);
+  const Chevron = expanded ? ChevronUp : ChevronDown;
 
   return (
-    <div className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 ${entry.isCurrentUser ? "bg-accent/20" : ""}`}>
-      <div className="flex min-w-0 items-center gap-3">
-        <UserAvatar name={entry.name} initials={entry.initials} avatarUrl={entry.avatarUrl} />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black">
-            {entry.name}
-            {entry.isCurrentUser && (
-              <span className="ml-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">
-                Você
-              </span>
-            )}
-          </p>
-          <p className="text-xs text-muted">{predictionLabel(entry.prediction)}</p>
-          {updatedAt ? (
-            <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p>
-          ) : null}
+    <div className={entry.isCurrentUser ? "bg-accent/20" : ""}>
+      <button
+        type="button"
+        data-testid={entry.isCurrentUser ? "comparison-current-user" : undefined}
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+        className="interactive grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <UserAvatar name={entry.name} initials={entry.initials} avatarUrl={entry.avatarUrl} />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-black">
+              {entry.name}
+              {entry.isCurrentUser && (
+                <span className="ml-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">
+                  Você
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-muted">{predictionLabel(entry.prediction)}</p>
+            {updatedAt ? (
+              <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p>
+            ) : null}
+          </div>
         </div>
-      </div>
-      <div className="text-right">
-        <p className="text-sm font-black text-brand">
-          {points === null ? "—" : `${points} pts`}
-        </p>
-        <p className="text-[10px] font-bold text-muted">#{entry.position}</p>
-      </div>
+        <div className="flex items-center justify-end gap-2 text-right">
+          <div>
+            <p className="text-sm font-black text-brand">
+              {points === null ? "—" : `${points} pts`}
+            </p>
+            <p className="text-[10px] font-bold text-muted">#{entry.position}</p>
+          </div>
+          <Chevron className="size-4 text-muted" />
+        </div>
+      </button>
+      {expanded ? (
+        <div
+          data-testid="prediction-comparison-details"
+          className="grid gap-2 border-t bg-surface-muted/65 p-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <DetailMetric
+            label="Resultado"
+            value={result ? `${result.homeScore} x ${result.awayScore}` : "aguardando"}
+          />
+          <DetailMetric
+            label="Categoria"
+            value={score ? scoreCategoryLabel(score.category) : "sem cálculo"}
+          />
+          <DetailMetric
+            label="Pontos do placar"
+            value={score ? `${score.matchPoints} pts` : "—"}
+          />
+          <DetailMetric
+            label={match.stage === "group" ? "Ranking" : "Avanço"}
+            value={
+              match.stage === "group"
+                ? `${entry.points} pts gerais`
+                : score
+                  ? `${score.advancementPoints} pts`
+                  : "—"
+            }
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DetailMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border bg-surface px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-black">{value}</p>
     </div>
   );
 }
@@ -712,11 +775,14 @@ function compareEntriesForPanel(
 }
 
 function entryPoints(entry: PredictionComparisonEntry, match: DemoMatch) {
+  return entryScore(entry, match)?.totalPoints ?? null;
+}
+
+function entryScore(entry: PredictionComparisonEntry, match: DemoMatch) {
+  if (entry.score) return entry.score;
   const result = match.result ?? match.liveResult;
-  if (entry.prediction && result) {
-    return calculateScore(entry.prediction, result, match.stage).totalPoints;
-  }
-  return entry.score?.totalPoints ?? null;
+  if (!entry.prediction || !result) return null;
+  return calculateScore(entry.prediction, result, match.stage);
 }
 
 function comparisonAveragePoints(comparison: MatchPoolComparison, match: DemoMatch) {

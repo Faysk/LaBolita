@@ -182,6 +182,12 @@ try {
   await page.getByRole("heading", { name: "Comparar palpites do bolão" }).waitFor();
   await page.getByText("Mapa dos palpites").first().waitFor();
   await page.getByText("Iguais ao seu").first().waitFor();
+  await page.getByTestId("comparison-current-user").first().click();
+  await page
+    .getByTestId("prediction-comparison-details")
+    .first()
+    .getByText("Pontos do placar")
+    .waitFor();
   await page
     .getByTestId("match-match-1")
     .getByText("Seu palpite rendeu 10 pontos")
@@ -224,6 +230,12 @@ try {
   await page.getByTestId("ranking-player-report").waitFor({ state: "hidden" });
   await page.getByTestId("ranking-current-user").click();
   await page.getByTestId("ranking-player-finished-picks").getByText("2 x 1").first().waitFor();
+  await page.getByTestId("finished-pick-toggle").first().click();
+  await page
+    .getByTestId("finished-pick-details")
+    .first()
+    .getByText("Pontos do placar")
+    .waitFor();
   await page.getByTestId("pool-friends").getByRole("button", { name: "Ver ranking" }).click();
   await page.getByTestId("pools-command-center").getByText("Resenha da Firma").waitFor();
   await page.getByTestId("pool-ranking").getByText("Resenha da Firma").waitFor();
