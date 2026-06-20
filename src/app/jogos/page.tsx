@@ -111,7 +111,7 @@ export default async function GamesPage() {
               showPrediction
               href="/palpites#lista-de-jogos"
               hrefMatchParam="jogo"
-              actionLabel="Abrir palpite e comparação"
+              actionMode="auto"
             />
           ) : null}
           <ScheduleRail
@@ -123,7 +123,7 @@ export default async function GamesPage() {
             moreLabel="Ver mais próximos jogos"
             href="/palpites#lista-de-jogos"
             hrefMatchParam="jogo"
-            actionLabel="Abrir este palpite"
+            actionMode="auto"
           />
           {recentMatches.length > 0 ? (
             <ScheduleRail
@@ -135,7 +135,7 @@ export default async function GamesPage() {
               moreLabel="Ver mais últimos resultados"
               href="/palpites#lista-de-jogos"
               hrefMatchParam="jogo"
-              actionLabel="Comparar este jogo"
+              actionMode="auto"
             />
           ) : null}
         </div>
@@ -162,7 +162,7 @@ export default async function GamesPage() {
               moreLabel="Ver mais jogos deste dia"
               href="/palpites#lista-de-jogos"
               hrefMatchParam="jogo"
-              actionLabel="Abrir este palpite"
+              actionMode="auto"
             />
           </section>
         ))}
@@ -182,6 +182,7 @@ function ScheduleRail({
   href,
   hrefMatchParam,
   actionLabel,
+  actionMode,
 }: {
   eyebrow: string;
   title: string;
@@ -193,6 +194,7 @@ function ScheduleRail({
   href?: string;
   hrefMatchParam?: string;
   actionLabel?: string;
+  actionMode?: "auto";
 }) {
   return (
     <section className="min-w-0">
@@ -218,6 +220,7 @@ function ScheduleRail({
         href={href}
         hrefMatchParam={hrefMatchParam}
         actionLabel={actionLabel}
+        actionMode={actionMode}
       />
     </section>
   );

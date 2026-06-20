@@ -1,5 +1,15 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CheckCircle2, Clock3, MapPin, Radio, Target } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  LockKeyhole,
+  MapPin,
+  Radio,
+  Target,
+} from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -17,6 +27,7 @@ type MatchTimelineProps = {
   step?: number;
   moreLabel?: string;
   actionLabel?: string;
+  actionMode?: "auto";
 };
 
 export function MatchTimeline({
@@ -29,6 +40,7 @@ export function MatchTimeline({
   step,
   moreLabel = "Ver mais jogos",
   actionLabel = "Ver agenda",
+  actionMode,
 }: MatchTimelineProps) {
   if (matches.length === 0) {
     return (
@@ -47,6 +59,7 @@ export function MatchTimeline({
         compact
         showPrediction={showPrediction}
         actionLabel={actionLabel}
+        actionMode={actionMode}
       />
     ));
 
@@ -80,6 +93,7 @@ export function MatchTimeline({
       href={buildMatchHref(href, match, hrefMatchParam)}
       showPrediction={showPrediction}
       actionLabel={actionLabel}
+      actionMode={actionMode}
     />
   ));
 
@@ -124,15 +138,18 @@ function TimelineCard({
   compact = false,
   showPrediction = false,
   actionLabel = "Ver agenda",
+  actionMode,
 }: {
   match: DemoMatch;
   href?: string;
   compact?: boolean;
   showPrediction?: boolean;
   actionLabel?: string;
+  actionMode?: "auto";
 }) {
   const status = timelineStatus(match);
   const score = match.result ?? match.liveResult;
+  const action = timelineAction(match, status, actionLabel, actionMode);
   const content = (
     <article
       data-testid={`timeline-match-${match.id}`}
@@ -194,11 +211,15 @@ function TimelineCard({
         </div>
       ) : null}
 
-      {href && (
-        <div className="mt-4 inline-flex items-center gap-1 text-xs font-black text-brand">
-          {actionLabel} <ArrowRight className="size-3.5" />
+      {href && action ? (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-brand/15 bg-white px-3 py-2 text-xs font-black text-brand">
+          <span className="inline-flex min-w-0 items-center gap-1">
+            <action.icon className="size-3.5 shrink-0" />
+            <span className="truncate">{action.label}</span>
+          </span>
+          <ArrowRight className="size-3.5 shrink-0" />
         </div>
-      )}
+      ) : null}
     </article>
   );
 
@@ -253,10 +274,44 @@ function timelineStatus(match: DemoMatch) {
       className: "status-warning",
     } as const;
   }
+  if (match.locked) {
+    return {
+      kind: "locked",
+      label: "Bloqueado",
+      icon: LockKeyhole,
+      className: "status-neutral",
+    } as const;
+  }
   return {
     kind: "scheduled",
     label: "Próximo",
     icon: CalendarDays,
     className: "status-info",
   } as const;
+}
+
+function timelineAction(
+  match: DemoMatch,
+  status: ReturnType<typeof timelineStatus>,
+  actionLabel?: string,
+  actionMode?: "auto",
+) {
+  if (actionMode !== "auto") {
+    if (!actionLabel) return null;
+    return { label: actionLabel, icon: ArrowRight } as const;
+  }
+
+  if (status.kind === "live") {
+    return { label: "Ao vivo e palpites", icon: Radio } as const;
+  }
+  if (status.kind === "finished") {
+    return { label: "Comparar palpites", icon: BarChart3 } as const;
+  }
+  if (status.kind === "pending" || status.kind === "locked") {
+    return { label: "Ver palpites", icon: BarChart3 } as const;
+  }
+  if (match.prediction) {
+    return { label: "Ver ou alterar", icon: Target } as const;
+  }
+  return { label: "Fazer palpite", icon: Target } as const;
 }
