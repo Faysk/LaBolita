@@ -28,6 +28,8 @@ import { useMemo, useState, useTransition } from "react";
 import type {
   AdminSummary,
   AdminUserReport,
+  AuditPeriod,
+  AuditSource,
   MasterOverview,
   MasterPool,
   MasterUser,
@@ -38,10 +40,30 @@ import { COUNTRIES } from "@/lib/countries";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
 
+type AuditFilterNavigation = Pick<MasterOverview["auditFilters"], "source" | "period" | "query">;
+
+const AUDIT_SOURCE_OPTIONS: { value: AuditSource; label: string }[] = [
+  { value: "all", label: "Todas" },
+  { value: "admin", label: "Admin" },
+  { value: "activity", label: "Usuários" },
+  { value: "predictions", label: "Palpites" },
+  { value: "specials", label: "Especiais" },
+];
+
+const AUDIT_PERIOD_OPTIONS: { value: AuditPeriod; label: string }[] = [
+  { value: "24h", label: "24h" },
+  { value: "7d", label: "7 dias" },
+  { value: "30d", label: "30 dias" },
+  { value: "all", label: "Tudo" },
+];
+
 export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
   const router = useRouter();
   const tab = overview.activeTab;
   const [search, setSearch] = useState(overview.search);
+  const [auditSource, setAuditSource] = useState<AuditSource>(overview.auditFilters.source);
+  const [auditPeriod, setAuditPeriod] = useState<AuditPeriod>(overview.auditFilters.period);
+  const [auditQuery, setAuditQuery] = useState(overview.auditFilters.query);
   const [pendingTab, setPendingTab] = useState<typeof tab | null>(null);
   const [isPending, startTransition] = useTransition();
   const isNavigating = isPending || pendingTab !== null;
@@ -50,18 +72,36 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
 
   if (!overview.isGlobalAdmin) return null;
 
-  function navigate(nextTab: typeof tab, nextPage = 1, nextSearch = "") {
+  function navigate(
+    nextTab: typeof tab,
+    nextPage = 1,
+    nextSearch = "",
+    nextAudit: AuditFilterNavigation = overview.auditFilters,
+  ) {
     const normalizedSearch = nextSearch.trim();
+    const normalizedAuditQuery = nextAudit.query.trim();
+    const sameAuditFilters =
+      nextTab !== "audit" ||
+      (nextAudit.source === overview.auditFilters.source &&
+        nextAudit.period === overview.auditFilters.period &&
+        normalizedAuditQuery === overview.auditFilters.query.trim());
     if (
       nextTab === tab &&
       nextPage === overview.page &&
-      normalizedSearch === overview.search.trim()
+      normalizedSearch === overview.search.trim() &&
+      sameAuditFilters
     ) {
       return;
     }
     const params = new URLSearchParams();
     params.set("master_tab", nextTab);
-    if (normalizedSearch) params.set("master_search", normalizedSearch);
+    if (nextTab === "audit") {
+      if (nextAudit.source !== "all") params.set("master_audit_source", nextAudit.source);
+      if (nextAudit.period !== "7d") params.set("master_audit_period", nextAudit.period);
+      if (normalizedAuditQuery) params.set("master_audit_query", normalizedAuditQuery);
+    } else if (normalizedSearch) {
+      params.set("master_search", normalizedSearch);
+    }
     if (nextPage > 1) params.set("master_page", String(nextPage));
     setPendingTab(nextTab);
     startTransition(() => {
@@ -111,6 +151,31 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
             </form>
           )}
         </div>
+        {tab === "audit" && (
+          <AuditFilterBar
+            source={auditSource}
+            period={auditPeriod}
+            query={auditQuery}
+            filters={overview.auditFilters}
+            disabled={isNavigating}
+            onSourceChange={setAuditSource}
+            onPeriodChange={setAuditPeriod}
+            onQueryChange={setAuditQuery}
+            onSubmit={() =>
+              navigate("audit", 1, "", {
+                source: auditSource,
+                period: auditPeriod,
+                query: auditQuery,
+              })
+            }
+            onReset={() => {
+              setAuditSource("all");
+              setAuditPeriod("7d");
+              setAuditQuery("");
+              navigate("audit", 1, "", { source: "all", period: "7d", query: "" });
+            }}
+          />
+        )}
 
         <div className="relative" aria-busy={isNavigating}>
           {isNavigating && (
@@ -124,7 +189,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
           <div className={isNavigating ? "pointer-events-none opacity-45 transition-opacity" : "transition-opacity"}>
             {tab === "pools" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div>}
             {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.users.map((user) => <MasterUserCard key={user.userId} user={user} report={overview.userReports[user.userId]} />)}</div>}
-            {tab === "audit" && <AuditList entries={overview.audit} />}
+            {tab === "audit" && <AuditList entries={overview.audit} filters={overview.auditFilters} />}
             {((tab === "pools" && overview.pools.length === 0) ||
               (tab === "users" && overview.users.length === 0)) && (
               <p className="mt-5 rounded-2xl border bg-surface-muted p-5 text-sm text-muted">
@@ -156,6 +221,116 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
         </div>
       </div>
     </section>
+  );
+}
+
+function AuditFilterBar({
+  source,
+  period,
+  query,
+  filters,
+  disabled,
+  onSourceChange,
+  onPeriodChange,
+  onQueryChange,
+  onSubmit,
+  onReset,
+}: {
+  source: AuditSource;
+  period: AuditPeriod;
+  query: string;
+  filters: MasterOverview["auditFilters"];
+  disabled: boolean;
+  onSourceChange: (source: AuditSource) => void;
+  onPeriodChange: (period: AuditPeriod) => void;
+  onQueryChange: (query: string) => void;
+  onSubmit: () => void;
+  onReset: () => void;
+}) {
+  const total = filters.sourceSummary.reduce((sum, item) => sum + item.count, 0);
+
+  return (
+    <div className="mt-4 rounded-2xl border bg-surface p-4">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit();
+        }}
+        className="grid gap-3 lg:grid-cols-[10rem_10rem_minmax(14rem,1fr)_auto_auto] lg:items-end"
+      >
+        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.08em] text-muted">
+          Origem
+          <select
+            value={source}
+            disabled={disabled}
+            onChange={(event) => onSourceChange(event.target.value as AuditSource)}
+            className="rounded-xl border bg-surface px-3 py-3 text-sm font-black normal-case tracking-normal text-foreground outline-none focus:border-brand disabled:opacity-60"
+          >
+            {AUDIT_SOURCE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.08em] text-muted">
+          Período
+          <select
+            value={period}
+            disabled={disabled}
+            onChange={(event) => onPeriodChange(event.target.value as AuditPeriod)}
+            className="rounded-xl border bg-surface px-3 py-3 text-sm font-black normal-case tracking-normal text-foreground outline-none focus:border-brand disabled:opacity-60"
+          >
+            {AUDIT_PERIOD_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-xs font-black uppercase tracking-[0.08em] text-muted">
+          Busca
+          <span className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+            <input
+              value={query}
+              disabled={disabled}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="Ação, usuário, jogo, bolão..."
+              className="w-full rounded-xl border bg-surface py-3 pl-10 pr-3 text-sm font-bold normal-case tracking-normal outline-none placeholder:text-muted focus:border-brand disabled:opacity-60"
+            />
+          </span>
+        </label>
+        <button
+          type="submit"
+          disabled={disabled}
+          className="interactive rounded-xl bg-brand px-4 py-3 text-xs font-black text-white shadow-sm disabled:opacity-60"
+        >
+          Buscar
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onReset}
+          className="interactive rounded-xl border bg-surface px-4 py-3 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted disabled:opacity-60"
+        >
+          Limpar
+        </button>
+      </form>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <span className="rounded-full border bg-surface-muted px-3 py-1 text-[11px] font-black text-muted">
+          {formatNumber(total)} eventos filtrados
+        </span>
+        {filters.sourceSummary.map((item) => (
+          <span
+            key={item.source}
+            className={`rounded-full border px-3 py-1 text-[11px] font-black ${auditSourceTone(item.source)}`}
+          >
+            {item.label}: {formatNumber(item.count)}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1128,26 +1303,87 @@ function AccessMoment({ label, value }: { label: string; value?: string | null }
   );
 }
 
-function AuditList({ entries }: { entries: MasterOverview["audit"] }) {
+function AuditList({
+  entries,
+  filters,
+}: {
+  entries: MasterOverview["audit"];
+  filters: MasterOverview["auditFilters"];
+}) {
   const formatted = useMemo(
     () =>
       entries.map((entry) => ({
         ...entry,
         date: new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(entry.createdAt)),
+        summary: metadataSummary(entry.metadata),
+        details: metadataDetails(entry.metadata),
       })),
     [entries],
   );
+  const hasActiveFilters = filters.source !== "all" || filters.period !== "7d" || Boolean(filters.query);
 
   return (
-    <div className="mt-5 divide-y rounded-2xl border">
-      {formatted.map((entry) => (
-        <div key={entry.id} className="grid gap-1 px-4 py-3 md:grid-cols-[10rem_10rem_1fr] md:items-center">
-          <span className="text-xs font-bold text-muted">{entry.date}</span>
-          <span className="text-sm font-black text-brand">{entry.action}</span>
-          <span className="truncate text-xs text-muted">{entry.entityType} · {entry.entityId}</span>
-        </div>
-      ))}
-      {entries.length === 0 && <p className="p-5 text-sm text-muted">Nenhuma ação administrativa registrada.</p>}
+    <div className="mt-5 overflow-hidden rounded-2xl border bg-surface">
+      {formatted.map((entry) => {
+        const actor = entry.actorId
+          ? `Admin ${shortId(entry.actorId)}`
+          : entry.userId
+            ? `Usuário ${shortId(entry.userId)}`
+            : "Sistema";
+        return (
+          <details key={entry.id} className="group border-b last:border-b-0">
+            <summary className="grid cursor-pointer list-none gap-3 px-4 py-4 transition-colors hover:bg-surface-muted/65 md:grid-cols-[8rem_minmax(0,1fr)_12rem] md:items-center [&::-webkit-details-marker]:hidden">
+              <div className="flex items-center gap-2 text-xs font-bold text-muted md:block">
+                <ChevronRight className="size-4 shrink-0 text-brand transition-transform group-open:rotate-90 md:hidden" />
+                <span>{entry.date}</span>
+              </div>
+              <div className="min-w-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${auditSourceTone(entry.source)}`}>
+                    {auditSourceLabel(entry.source)}
+                  </span>
+                  <span className="min-w-0 truncate text-sm font-black text-brand">{entry.title || auditActionLabel(entry.action)}</span>
+                </div>
+                <p className="mt-1 min-w-0 truncate text-xs text-muted">
+                  {entityTypeLabel(entry.entityType)} · {shortId(entry.entityId)}
+                  {entry.summary ? ` · ${entry.summary}` : ""}
+                </p>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-xs font-bold text-muted md:justify-end">
+                <span className="truncate">{actor}</span>
+                <ChevronRight className="hidden size-4 shrink-0 text-brand transition-transform group-open:rotate-90 md:block" />
+              </div>
+            </summary>
+            <div className="border-t bg-surface-muted/45 px-4 py-4">
+              <div className="grid gap-2 md:grid-cols-4">
+                <AuditDetail label="Origem" value={auditSourceLabel(entry.source)} />
+                <AuditDetail label="Ator" value={actor} />
+                <AuditDetail label="Entidade" value={`${entityTypeLabel(entry.entityType)} · ${shortId(entry.entityId)}`} />
+                <AuditDetail label="Registro" value={`#${entry.numericId}`} />
+              </div>
+              <pre className="mt-3 max-h-72 overflow-auto rounded-xl border bg-surface p-3 text-[11px] leading-5 text-muted">
+                {entry.details}
+              </pre>
+            </div>
+          </details>
+        );
+      })}
+      {entries.length === 0 && (
+        <p className="p-5 text-sm text-muted">
+          {hasActiveFilters
+            ? "Nenhum evento encontrado com esses filtros."
+            : "Nenhuma ação administrativa registrada."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AuditDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border bg-surface px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.1em] text-muted">{label}</p>
+      <p className="mt-1 truncate text-xs font-black">{value}</p>
     </div>
   );
 }
@@ -1167,6 +1403,45 @@ function formatDateTime(value?: string | null) {
 function shortId(value: string) {
   if (value.length <= 12) return value;
   return `${value.slice(0, 8)}...${value.slice(-4)}`;
+}
+
+function auditSourceLabel(source: AuditSource) {
+  return (
+    {
+      all: "Todas",
+      admin: "Admin",
+      activity: "Usuários",
+      predictions: "Palpites",
+      specials: "Especiais",
+    }[source] ?? source
+  );
+}
+
+function auditSourceTone(source: AuditSource) {
+  return (
+    {
+      all: "border-slate-200 bg-slate-50 text-slate-700",
+      admin: "border-brand/25 bg-brand/10 text-brand",
+      activity: "border-sky-200 bg-sky-50 text-sky-700",
+      predictions: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      specials: "border-amber-200 bg-amber-50 text-amber-700",
+    }[source] ?? "border-slate-200 bg-slate-50 text-slate-700"
+  );
+}
+
+function entityTypeLabel(entityType: string) {
+  return (
+    {
+      match: "Jogo",
+      user: "Usuário",
+      pool: "Bolão",
+      pool_member: "Participante",
+      special_market: "Especial",
+      admin_alert: "Alerta",
+      terms: "Termos",
+      route: "Tela",
+    }[entityType] ?? entityType
+  );
 }
 
 function metadataSummary(metadata: Record<string, unknown>) {
@@ -1195,6 +1470,11 @@ function metadataSummary(metadata: Record<string, unknown>) {
     .filter((part): part is string => Boolean(part))
     .slice(0, 3)
     .join(" · ");
+}
+
+function metadataDetails(metadata: Record<string, unknown>) {
+  if (Object.keys(metadata).length === 0) return "Sem detalhes adicionais.";
+  return JSON.stringify(metadata, null, 2);
 }
 
 function metadataPart(key: string, value: unknown) {

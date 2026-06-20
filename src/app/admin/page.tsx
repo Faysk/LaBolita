@@ -33,7 +33,14 @@ export const metadata: Metadata = {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ master_tab?: string; master_search?: string; master_page?: string }>;
+  searchParams: Promise<{
+    master_tab?: string;
+    master_search?: string;
+    master_page?: string;
+    master_audit_source?: string;
+    master_audit_period?: string;
+    master_audit_query?: string;
+  }>;
 }) {
   await requireAdmin();
   const params = await searchParams;
@@ -49,6 +56,9 @@ export default async function AdminPage({
       activeTab: masterTab,
       search: params.master_search ?? "",
       page: Number(params.master_page ?? 1),
+      auditSource: params.master_audit_source,
+      auditPeriod: params.master_audit_period,
+      auditQuery: params.master_audit_query ?? "",
     }),
   ]);
   const specialsOverview = await getSpecialMarketsOverview({
@@ -131,7 +141,7 @@ export default async function AdminPage({
       />
 
       <MasterAdminConsole
-        key={`${masterOverview.activeTab}-${masterOverview.page}-${masterOverview.search}`}
+        key={`${masterOverview.activeTab}-${masterOverview.page}-${masterOverview.search}-${masterOverview.auditFilters.source}-${masterOverview.auditFilters.period}-${masterOverview.auditFilters.query}`}
         overview={masterOverview}
       />
 

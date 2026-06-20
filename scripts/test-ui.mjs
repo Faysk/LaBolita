@@ -178,8 +178,24 @@ try {
     "admin group headers must not render as white bars in dark mode",
   );
   await page.getByRole("button", { name: "Usar tema claro" }).click();
+  await page.goto(`${BASE_URL}/admin?master_tab=audit`);
+  await page.getByLabel("Origem").selectOption("predictions");
+  await page.getByLabel("Período").selectOption("30d");
+  await page.getByPlaceholder("Ação, usuário, jogo, bolão...").fill("palpite");
+  await page.getByRole("button", { name: "Buscar" }).click();
+  await page.waitForURL(/master_audit_source=predictions/);
+  assert.match(page.url(), /master_audit_period=30d/);
+  assert.match(page.url(), /master_audit_query=palpite/);
+  await page.getByText("Nenhum evento encontrado com esses filtros.").waitFor();
+  await page.getByRole("button", { name: "Limpar" }).click();
+  await page.waitForURL(
+    (url) => url.searchParams.get("master_tab") === "audit" && !url.searchParams.has("master_audit_query"),
+  );
+  assert.equal(page.url().includes("master_audit_query"), false);
+  await page.goto(`${BASE_URL}/admin`);
+  await page.getByRole("button", { name: /^Todos ·/ }).click();
   const adminOpeningMatch = page.getByTestId("admin-match-match-1");
-  await adminOpeningMatch.getByRole("button", { name: "Informar resultado" }).click();
+  await adminOpeningMatch.getByRole("button", { name: /Informar resultado|Corrigir resultado/ }).click();
   await adminOpeningMatch.getByRole("spinbutton", { name: "México" }).fill("2");
   await adminOpeningMatch.getByRole("spinbutton", { name: "África do Sul" }).fill("1");
   await adminOpeningMatch.getByLabel("Motivo ou fonte").fill("Conferido na FIFA");

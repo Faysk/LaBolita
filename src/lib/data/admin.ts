@@ -32,13 +32,35 @@ export type MasterUser = {
   createdAt: string;
 };
 
+export type AuditSource = "all" | "admin" | "activity" | "predictions" | "specials";
+export type AuditPeriod = "24h" | "7d" | "30d" | "all";
+
+export type AuditSourceSummary = {
+  source: Exclude<AuditSource, "all">;
+  label: string;
+  count: number;
+};
+
 export type AuditEntry = {
-  id: number;
+  id: string;
+  numericId: number;
+  source: Exclude<AuditSource, "all">;
   action: string;
+  title: string;
+  actorId: string | null;
+  userId: string | null;
   entityType: string;
   entityId: string;
   metadata: Record<string, unknown>;
   createdAt: string;
+};
+
+export type AuditFilters = {
+  source: AuditSource;
+  period: AuditPeriod;
+  query: string;
+  periodStart: string | null;
+  sourceSummary: AuditSourceSummary[];
 };
 
 export type AdminConnectionStatus = {
@@ -179,6 +201,7 @@ export type MasterOverview = {
   pools: MasterPool[];
   users: MasterUser[];
   audit: AuditEntry[];
+  auditFilters: AuditFilters;
   termsEnforcementEnabled: boolean;
   summary: AdminSummary;
   userReports: Record<string, AdminUserReport>;
@@ -337,6 +360,15 @@ type AuditRow = {
   created_at: string;
 };
 
+const AUDIT_SOURCES = new Set<AuditSource>(["all", "admin", "activity", "predictions", "specials"]);
+const AUDIT_PERIODS = new Set<AuditPeriod>(["24h", "7d", "30d", "all"]);
+const AUDIT_SOURCE_LABELS: Record<Exclude<AuditSource, "all">, string> = {
+  admin: "Admin",
+  activity: "Usuários",
+  predictions: "Palpites",
+  specials: "Especiais",
+};
+
 const EMPTY_SUMMARY: AdminSummary = {
   generatedAt: new Date(0).toISOString(),
   users: {
@@ -413,12 +445,22 @@ export async function getMasterOverview({
   activeTab = "pools",
   search = "",
   page = 1,
+  auditSource = "all",
+  auditPeriod = "7d",
+  auditQuery = "",
 }: {
   activeTab?: MasterTab;
   search?: string;
   page?: number;
+  auditSource?: string;
+  auditPeriod?: string;
+  auditQuery?: string;
 } = {}): Promise<MasterOverview> {
   const cleanSearch = search.trim().slice(0, 80);
+  const cleanAuditSource = normalizeAuditSource(auditSource);
+  const cleanAuditPeriod = normalizeAuditPeriod(auditPeriod);
+  const cleanAuditQuery = auditQuery.trim().slice(0, 80);
+  const emptyFilters = emptyAuditFilters(cleanAuditSource, cleanAuditPeriod, cleanAuditQuery);
   const safePage = Math.max(1, Math.trunc(page) || 1);
   const pageSize = activeTab === "audit" ? 50 : 24;
   const offset = (safePage - 1) * pageSize;
@@ -435,6 +477,7 @@ export async function getMasterOverview({
       pools: [],
       users: [],
       audit: [],
+      auditFilters: emptyFilters,
       termsEnforcementEnabled: false,
       summary: emptyAdminSummary(false),
       userReports: {},
@@ -454,6 +497,7 @@ export async function getMasterOverview({
       pools: [],
       users: [],
       audit: [],
+      auditFilters: emptyFilters,
       termsEnforcementEnabled: false,
       summary: emptyAdminSummary(true),
       userReports: {},
@@ -478,6 +522,7 @@ export async function getMasterOverview({
       pools: [],
       users: [],
       audit: [],
+      auditFilters: emptyFilters,
       termsEnforcementEnabled: false,
       summary: emptyAdminSummary(true),
       userReports: {},
@@ -501,12 +546,19 @@ export async function getMasterOverview({
         })
       : Promise.resolve({ data: [], error: null }),
     activeTab === "audit"
-      ? supabase
-        .from("admin_audit_logs")
-        .select("id, action, entity_type, entity_id, metadata, created_at")
-        .order("created_at", { ascending: false })
-        .range(offset, offset + pageSize)
-      : Promise.resolve({ data: [], error: null }),
+      ? getProjectAuditEntries({
+          client: serviceClient ?? supabase,
+          source: cleanAuditSource,
+          period: cleanAuditPeriod,
+          query: cleanAuditQuery,
+          limit: pageSize + 1,
+          offset,
+        })
+      : Promise.resolve({
+          data: [],
+          error: null,
+          summary: emptyAuditSourceSummary(),
+        }),
     supabase.rpc("get_master_settings"),
     getAdminSummary({
       supabase,
@@ -556,11 +608,16 @@ export async function getMasterOverview({
   }));
   const audit = rawAudit.slice(0, pageSize).map((entry) => ({
     id: entry.id,
+    numericId: entry.numericId,
+    source: entry.source,
     action: entry.action,
-    entityType: entry.entity_type,
-    entityId: entry.entity_id,
-    metadata: (entry.metadata ?? {}) as Record<string, unknown>,
-    createdAt: entry.created_at,
+    title: entry.title,
+    actorId: entry.actorId,
+    userId: entry.userId,
+    entityType: entry.entityType,
+    entityId: entry.entityId,
+    metadata: entry.metadata ?? {},
+    createdAt: entry.createdAt,
   }));
   const userReports =
     activeTab === "users" && users.length > 0
@@ -578,6 +635,13 @@ export async function getMasterOverview({
     pools,
     users,
     audit,
+    auditFilters: {
+      source: cleanAuditSource,
+      period: cleanAuditPeriod,
+      query: cleanAuditQuery,
+      periodStart: auditPeriodStart(cleanAuditPeriod),
+      sourceSummary: auditResult.summary,
+    },
     termsEnforcementEnabled: Boolean(settingsResult.data?.[0]?.terms_enforcement_enabled),
     summary,
     userReports,
@@ -600,6 +664,307 @@ function emptyAdminSummary(databaseConfigured: boolean): AdminSummary {
         : connection,
     ),
   };
+}
+
+function normalizeAuditSource(source?: string): AuditSource {
+  return AUDIT_SOURCES.has(source as AuditSource) ? (source as AuditSource) : "all";
+}
+
+function normalizeAuditPeriod(period?: string): AuditPeriod {
+  return AUDIT_PERIODS.has(period as AuditPeriod) ? (period as AuditPeriod) : "7d";
+}
+
+function auditPeriodStart(period: AuditPeriod) {
+  const now = Date.now();
+  const hours =
+    period === "24h" ? 24 : period === "7d" ? 7 * 24 : period === "30d" ? 30 * 24 : null;
+  return hours ? new Date(now - hours * 60 * 60 * 1000).toISOString() : null;
+}
+
+function emptyAuditSourceSummary(): AuditSourceSummary[] {
+  return (["admin", "activity", "predictions", "specials"] as const).map((source) => ({
+    source,
+    label: AUDIT_SOURCE_LABELS[source],
+    count: 0,
+  }));
+}
+
+function emptyAuditFilters(source: AuditSource, period: AuditPeriod, query: string): AuditFilters {
+  return {
+    source,
+    period,
+    query,
+    periodStart: auditPeriodStart(period),
+    sourceSummary: emptyAuditSourceSummary(),
+  };
+}
+
+async function getProjectAuditEntries({
+  client,
+  source,
+  period,
+  query,
+  limit,
+  offset,
+}: {
+  client: NonNullable<DatabaseClient> | ServiceClient;
+  source: AuditSource;
+  period: AuditPeriod;
+  query: string;
+  limit: number;
+  offset: number;
+}): Promise<{ data: AuditEntry[]; error: null; summary: AuditSourceSummary[] }> {
+  const periodStart = auditPeriodStart(period);
+  const fetchLimit = query ? 500 : Math.min(Math.max(offset + limit, limit), 500);
+
+  const [adminRows, activityRows, predictionRows, specialRows] = await Promise.all([
+    safeRows<AuditRow>(
+      "project_audit.admin",
+      periodStart
+        ? client
+            .from("admin_audit_logs")
+            .select("id, actor_id, action, entity_type, entity_id, metadata, created_at")
+            .gte("created_at", periodStart)
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit)
+        : client
+            .from("admin_audit_logs")
+            .select("id, actor_id, action, entity_type, entity_id, metadata, created_at")
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit),
+    ),
+    safeRows<UserActivityRow>(
+      "project_audit.activity",
+      periodStart
+        ? client
+            .from("user_activity_events")
+            .select("id, user_id, event_type, entity_type, entity_id, metadata, created_at")
+            .gte("created_at", periodStart)
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit)
+        : client
+            .from("user_activity_events")
+            .select("id, user_id, event_type, entity_type, entity_id, metadata, created_at")
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit),
+    ),
+    safeRows<PredictionChangeRow>(
+      "project_audit.predictions",
+      periodStart
+        ? client
+            .from("prediction_change_events")
+            .select("id, user_id, match_id, action, previous_prediction, new_prediction, created_at")
+            .gte("created_at", periodStart)
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit)
+        : client
+            .from("prediction_change_events")
+            .select("id, user_id, match_id, action, previous_prediction, new_prediction, created_at")
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit),
+    ),
+    safeRows<SpecialPredictionChangeRow>(
+      "project_audit.specials",
+      periodStart
+        ? client
+            .from("special_prediction_change_events")
+            .select("id, user_id, market_id, action, previous_options, new_options, created_at")
+            .gte("created_at", periodStart)
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit)
+        : client
+            .from("special_prediction_change_events")
+            .select("id, user_id, market_id, action, previous_options, new_options, created_at")
+            .order("created_at", { ascending: false })
+            .limit(fetchLimit),
+    ),
+  ]);
+
+  const entries = [
+    ...adminRows.map(adminAuditEntry),
+    ...activityRows.map(activityAuditEntry),
+    ...predictionRows.map(predictionAuditEntry),
+    ...specialRows.map(specialAuditEntry),
+  ]
+    .filter((entry) => auditEntryMatchesQuery(entry, query))
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  const counts = new Map<Exclude<AuditSource, "all">, number>();
+  for (const entry of entries) {
+    counts.set(entry.source, (counts.get(entry.source) ?? 0) + 1);
+  }
+  const visibleEntries =
+    source === "all" ? entries : entries.filter((entry) => entry.source === source);
+
+  return {
+    data: visibleEntries.slice(offset, offset + limit),
+    error: null,
+    summary: emptyAuditSourceSummary().map((item) => ({
+      ...item,
+      count: counts.get(item.source) ?? 0,
+    })),
+  };
+}
+
+function adminAuditEntry(row: AuditRow): AuditEntry {
+  return {
+    id: `admin-${row.id}`,
+    numericId: row.id,
+    source: "admin",
+    action: row.action,
+    title: auditEventTitle(row.action),
+    actorId: row.actor_id,
+    userId: null,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    metadata: row.metadata ?? {},
+    createdAt: row.created_at,
+  };
+}
+
+function activityAuditEntry(row: UserActivityRow): AuditEntry {
+  return {
+    id: `activity-${row.id}`,
+    numericId: row.id,
+    source: "activity",
+    action: row.event_type,
+    title: auditEventTitle(row.event_type),
+    actorId: null,
+    userId: row.user_id,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    metadata: row.metadata ?? {},
+    createdAt: row.created_at,
+  };
+}
+
+function predictionAuditEntry(row: PredictionChangeRow): AuditEntry {
+  const previous = predictionPayloadSummary(row.previous_prediction);
+  const next = predictionPayloadSummary(row.new_prediction);
+  return {
+    id: `prediction-${row.id}`,
+    numericId: row.id,
+    source: "predictions",
+    action: `match_prediction_${row.action}`,
+    title: row.action === "created" ? "Palpite de jogo criado" : "Palpite de jogo alterado",
+    actorId: null,
+    userId: row.user_id,
+    entityType: "match",
+    entityId: row.match_id,
+    metadata: {
+      user_id: row.user_id,
+      match_id: row.match_id,
+      previous,
+      next,
+      raw_previous: row.previous_prediction,
+      raw_next: row.new_prediction,
+    },
+    createdAt: row.created_at,
+  };
+}
+
+function specialAuditEntry(row: SpecialPredictionChangeRow): AuditEntry {
+  const previous = optionsPayloadSummary(arrayFromJson(row.previous_options));
+  const next = optionsPayloadSummary(arrayFromJson(row.new_options));
+  return {
+    id: `special-${row.id}`,
+    numericId: row.id,
+    source: "specials",
+    action: `special_prediction_${row.action}`,
+    title: row.action === "created" ? "Palpite especial criado" : "Palpite especial alterado",
+    actorId: null,
+    userId: row.user_id,
+    entityType: "special_market",
+    entityId: row.market_id,
+    metadata: {
+      user_id: row.user_id,
+      market_id: row.market_id,
+      previous,
+      next,
+      raw_previous: arrayFromJson(row.previous_options),
+      raw_next: arrayFromJson(row.new_options),
+    },
+    createdAt: row.created_at,
+  };
+}
+
+function auditEntryMatchesQuery(entry: AuditEntry, query: string) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+  const haystack = [
+    entry.action,
+    entry.title,
+    entry.source,
+    entry.actorId,
+    entry.userId,
+    entry.entityType,
+    entry.entityId,
+    JSON.stringify(entry.metadata),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(normalized);
+}
+
+function auditEventTitle(action: string) {
+  return (
+    {
+      finalize_match: "Resultado finalizado",
+      update_match_result: "Resultado corrigido",
+      assign_match_teams: "Mata-mata definido",
+      update_user: "Usuário alterado",
+      disable_user: "Conta suspensa",
+      restore_user: "Conta reativada",
+      promote_admin: "Admin promovido",
+      remove_admin: "Admin removido",
+      update_pool: "Bolão alterado",
+      archive_pool: "Bolão arquivado",
+      restore_pool: "Bolão recuperado",
+      remove_pool_member: "Membro removido",
+      set_terms_enforcement: "Termos alterados",
+      resolve_special_market: "Especial resolvido",
+      create_admin_alert: "Alerta criado",
+      login_completed: "Login concluído",
+      terms_accepted: "Termos aceitos",
+      match_prediction_created: "Palpite criado",
+      match_prediction_updated: "Palpite alterado",
+      special_prediction_created: "Especial criado",
+      special_prediction_updated: "Especial alterado",
+      pool_created: "Bolão criado",
+      pool_joined: "Entrou no bolão",
+      admin_alert_dismissed: "Alerta dispensado",
+    }[action] ?? humanizeAuditKey(action)
+  );
+}
+
+function predictionPayloadSummary(value: Record<string, unknown> | null) {
+  if (!value) return "primeiro envio";
+  const home = value.home_score ?? value.homeScore;
+  const away = value.away_score ?? value.awayScore;
+  if (typeof home === "number" && typeof away === "number") {
+    return `${home} x ${away}`;
+  }
+  return "palpite registrado";
+}
+
+function optionsPayloadSummary(options: unknown[]) {
+  if (options.length === 0) return "primeiro envio";
+  const labels = options
+    .map((option) => {
+      if (!option || typeof option !== "object") return null;
+      const label = (option as { label?: unknown }).label;
+      return typeof label === "string" ? label : null;
+    })
+    .filter((label): label is string => Boolean(label));
+  return labels.length > 0 ? labels.join(", ") : `${options.length} opção(ões)`;
+}
+
+function humanizeAuditKey(value: string) {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 async function getAdminSummary({
@@ -728,6 +1093,7 @@ async function getAdminSummary({
 
   const activeUsers = Math.max(totalUsers - disabledUsers, 0);
   const activePools = Math.max(totalPools - archivedPools, 0);
+  const recentAuditTotal = recentAudit + userActivityEvents + predictionChanges;
   const serviceRoleConfigured = Boolean(serviceClient);
   const resultsFeedConfigured = Boolean(process.env.RESULTS_FEED_URL);
   const cronConfigured = Boolean(process.env.CRON_SECRET);
@@ -763,7 +1129,7 @@ async function getAdminSummary({
       specialPredictions,
     },
     audit: {
-      recentTotal: recentAudit,
+      recentTotal: recentAuditTotal,
       resultChanges: resultAudit,
       userActions: userAudit,
       poolActions: poolAudit,
@@ -1226,8 +1592,13 @@ function uniqueAuditEntries(entries: AuditRow[]) {
   const byId = new Map<number, AuditEntry>();
   for (const entry of entries) {
     byId.set(entry.id, {
-      id: entry.id,
+      id: `admin-${entry.id}`,
+      numericId: entry.id,
+      source: "admin",
       action: entry.action,
+      title: auditEventTitle(entry.action),
+      actorId: entry.actor_id,
+      userId: null,
       entityType: entry.entity_type,
       entityId: entry.entity_id,
       metadata: entry.metadata ?? {},
