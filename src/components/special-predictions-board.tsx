@@ -38,7 +38,7 @@ export function SpecialPredictionsBoard({
             <LockKeyhole className="size-5" />
           </span>
           <div>
-            <h2 className="text-xl font-black">Palpites especiais aguardando publicação</h2>
+            <h2 className="text-xl font-black">Palpites finais aguardando publicação</h2>
             <p className="mt-2 text-sm leading-6 text-muted">
               {overview.missingReason ??
                 "Assim que o banco receber a nova migration, esta área fica disponível."}
@@ -97,7 +97,7 @@ export function SpecialPredictionsBoard({
                 />
               </div>
               <p className="mt-2 text-xs font-bold text-white/62">
-                {progress.completed} de {progress.total} especiais salvos
+                {progress.completed} de {progress.total} finais salvos
               </p>
             </div>
           </div>
@@ -130,14 +130,14 @@ export function SpecialPredictionsBoard({
             <div className="mt-4 rounded-[1.5rem] border bg-success-bg p-4 text-success-fg">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="size-5 shrink-0" />
-                <p className="text-sm font-black">Todos os especiais abertos estão preenchidos.</p>
+                <p className="text-sm font-black">Todos os palpites finais abertos estão preenchidos.</p>
               </div>
             </div>
           )}
           <p className="mt-3 flex-1 text-sm leading-6 text-muted">
             {nextDisplay
               ? nextDisplay.teaser
-              : "Você já registrou todos os especiais abertos. Ainda dá para revisar enquanto o prazo estiver aberto."}
+              : "Você já registrou todos os palpites finais abertos. Ainda dá para revisar enquanto o prazo estiver aberto."}
           </p>
           <p className="mt-4 rounded-2xl border bg-surface-muted p-3 text-xs font-bold leading-5 text-muted">
             {SPECIAL_LOCK_RATIONALE}
@@ -665,7 +665,7 @@ function SpecialProgressRail({ markets }: { markets: SpecialMarketView[] }) {
     <section className="overflow-hidden rounded-[1.5rem] border bg-surface p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="eyebrow">Mapa dos especiais</p>
+          <p className="eyebrow">Mapa dos palpites finais</p>
           <h2 className="mt-1 text-xl font-black tracking-tight">Do primeiro ao último palpite</h2>
         </div>
         <p className="text-xs font-black text-muted">Prazo: {SPECIAL_LOCK_DATE_LABEL}</p>

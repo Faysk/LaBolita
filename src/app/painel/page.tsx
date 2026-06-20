@@ -9,7 +9,7 @@ import { getSpecialMarketsOverview } from "@/lib/data/specials";
 import { isLiveMatch } from "@/lib/match-display";
 
 export const metadata: Metadata = {
-  title: "Painel",
+  title: "Meu painel",
   robots: { index: false, follow: false },
 };
 

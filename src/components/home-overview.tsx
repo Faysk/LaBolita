@@ -79,21 +79,21 @@ export function HomeOverview({
       <section className="mt-5 grid grid-cols-2 gap-3 md:mt-7 md:grid-cols-4">
         <StatCard
           icon={Trophy}
-          label="Sua posição geral"
+          label="Minha posição geral"
           value={
             canShowPersonalStats && currentPlayer && rankingStarted
               ? rankingLabel(currentPlayer, visibleGlobalRanking)
               : "Entrar"
           }
-          detail={canShowPersonalStats ? "Ranking público geral" : "Login necessário"}
+          detail={canShowPersonalStats ? "Ranking geral dos bolões" : "Login necessário"}
           href={canShowPersonalStats ? undefined : "/entrar?next=%2F"}
           accent
         />
         <StatCard
           icon={CheckCircle2}
-          label={canShowPersonalStats ? "Palpites realizados" : "Palpites pendentes"}
+          label={canShowPersonalStats ? "Meus palpites" : "Palpites pendentes"}
           value={canShowPersonalStats ? `${savedPredictions}/${matches.length}` : "—"}
-          detail={canShowPersonalStats ? `${pendingPredictions} pendentes abertos` : "Entre para calcular"}
+          detail={canShowPersonalStats ? `${pendingPredictions} abertos sem palpite` : "Entre para calcular"}
           href={canShowPersonalStats ? undefined : "/entrar?next=%2Fpalpites"}
         />
         <StatCard
@@ -111,9 +111,9 @@ export function HomeOverview({
         />
         <StatCard
           icon={Users}
-          label="Seus bolões"
+          label="Meus bolões"
           value={canShowPersonalStats ? String(pools.length) : "Entrar"}
-          detail={canShowPersonalStats ? `${opponents} adversários` : "Login necessário"}
+          detail={canShowPersonalStats ? `${opponents} rivais na resenha` : "Login necessário"}
           href={canShowPersonalStats ? undefined : "/entrar?next=%2Fboloes"}
         />
       </section>
@@ -128,7 +128,7 @@ export function HomeOverview({
           </h2>
           <p className="mt-2 text-sm leading-6 text-white/65">
             {canShowPersonalStats
-              ? "Sua situação no grupo, sem misturar com o ranking geral."
+              ? "Seu recorte do grupo, separado do ranking geral."
               : "Top 3 por soma de pontos dos participantes."}
           </p>
           {canShowPersonalStats ? (
@@ -186,14 +186,14 @@ export function HomeOverview({
           )}
           {!canShowPersonalStats && publicPoolHighlights.length === 0 && (
             <p className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-white/65">
-              Entre ou descubra um bolão público para acompanhar a disputa.
+              Entre ou explore um bolão público para acompanhar a disputa.
             </p>
           )}
           <Link
             href="/boloes"
             className="mt-5 flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold"
           >
-            Abrir ranking <ArrowRight className="size-4" />
+            Abrir bolão <ArrowRight className="size-4" />
           </Link>
         </div>
 
@@ -201,7 +201,7 @@ export function HomeOverview({
           <div className="flex items-center justify-between">
             <div>
               <p className="eyebrow">Como está a disputa</p>
-              <h2 className="mt-1 text-xl font-black tracking-tight">Top 3 geral</h2>
+              <h2 className="mt-1 text-xl font-black tracking-tight">Top geral</h2>
             </div>
             <Trophy className="size-6 text-brand" />
           </div>
@@ -234,7 +234,7 @@ export function HomeOverview({
           </ProgressiveList>
           {visibleGlobalRanking.length === 0 && (
             <p className="mt-5 rounded-2xl bg-surface-muted p-4 text-sm text-muted">
-              Os líderes dos bolões públicos aparecerão aqui.
+              Quando a disputa começar, os líderes aparecem aqui.
             </p>
           )}
         </div>

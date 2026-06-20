@@ -44,19 +44,19 @@ export default async function HomePage() {
               ) : (
                 <CalendarDays className="size-3.5 text-accent" />
               )}
-              {hasLiveMatch ? "Jogo ao vivo" : "Agenda da Copa"}
+              {hasLiveMatch ? "Ao vivo agora" : "Agenda da Copa"}
             </div>
             <h1 className="max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.05em] md:text-6xl">
-              {hasLiveMatch ? "Tem jogo rolando agora." : "Acompanhe a Copa sem se perder."}
+              {hasLiveMatch ? "Tem jogo valendo bolão agora." : "A Copa fica fácil de acompanhar."}
             </h1>
             <p className="mt-5 max-w-lg text-sm leading-6 text-white/70 md:text-base">
-              Veja placares, horários e próximos jogos. Quando quiser competir,
-              seus palpites e bolões continuam a um toque.
+              Veja jogos, placares e horários sem caçar informação. Quando quiser
+              competir, seus palpites e bolões ficam a um toque.
             </p>
             <div className="mt-6 hidden grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              <HomeAction href="/jogos" icon={CalendarDays}>Todos os jogos</HomeAction>
+              <HomeAction href="/jogos" icon={CalendarDays}>Agenda completa</HomeAction>
               <HomeAction href="/palpites" icon={Target}>Meus palpites</HomeAction>
-              <HomeAction href="/boloes" icon={Trophy}>Bolões</HomeAction>
+              <HomeAction href="/boloes" icon={Trophy}>Meus bolões</HomeAction>
               <HomeAction href="/jogadores" icon={UsersRound}>Jogadores</HomeAction>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default async function HomePage() {
         <section className="mt-7 md:mt-10">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <p className="eyebrow">A bola está rolando</p>
+              <p className="eyebrow">Valendo agora</p>
               <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">
                 Agora ao vivo
               </h2>
@@ -78,7 +78,7 @@ export default async function HomePage() {
               href="/jogos"
               className="hidden items-center gap-1 text-sm font-bold text-brand md:flex"
             >
-              Ver agenda <ArrowRight className="size-4" />
+              Abrir agenda <ArrowRight className="size-4" />
             </Link>
           </div>
           <MatchTimeline
@@ -94,7 +94,7 @@ export default async function HomePage() {
       <section className={hasLiveMatch ? "mt-7" : "mt-7 md:mt-10"}>
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">Próximos da fila</p>
+            <p className="eyebrow">Na fila</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">
               Próximos jogos
             </h2>
@@ -103,7 +103,7 @@ export default async function HomePage() {
             href="/jogos"
             className="hidden items-center gap-1 text-sm font-bold text-brand md:flex"
           >
-            Ver agenda <ArrowRight className="size-4" />
+            Abrir agenda <ArrowRight className="size-4" />
           </Link>
         </div>
         <MatchTimeline

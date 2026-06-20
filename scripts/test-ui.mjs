@@ -50,7 +50,7 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(BASE_URL);
-  await page.getByRole("heading", { name: /Acompanhe a Copa sem se perder|Tem jogo rolando agora/ }).waitFor();
+  await page.getByRole("heading", { name: /A Copa fica fácil de acompanhar|Tem jogo valendo bolão agora/ }).waitFor();
   await page.getByText("Modo demonstração: agenda parcial").waitFor();
   await page.getByRole("heading", { name: /Próximos jogos|Agora ao vivo/ }).waitFor();
   await page.getByRole("button", { name: /Ver mais .*jogos/ }).first().waitFor();
@@ -70,7 +70,7 @@ try {
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/painel`);
-  await page.getByRole("heading", { name: "Painel" }).waitFor();
+  await page.getByRole("heading", { name: "Meu painel" }).waitFor();
   if (await page.getByTestId("dashboard-live-impact-toggle").count()) {
     await page.getByTestId("dashboard-live-impact-toggle").first().click();
     await page
@@ -84,12 +84,12 @@ try {
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/jogos`);
-  await page.getByRole("heading", { name: "Jogos da Copa" }).waitFor();
+  await page.getByRole("heading", { name: "Agenda de jogos" }).waitFor();
   await page.getByText("Trilha rápida").waitFor();
   await page.getByRole("heading", { name: "Próximos jogos" }).waitFor();
   await page.getByText("Meu palpite").first().waitFor();
   const quickSchedule = page.locator("section").filter({
-    has: page.getByRole("heading", { name: "Agora, próximos e últimos" }),
+    has: page.getByRole("heading", { name: "Agora, próximos e resultados" }),
   });
   const quickScheduleHref = await quickSchedule.getByTestId(/^timeline-match-/).first().evaluate((element) =>
     element.closest("a")?.getAttribute("href") ?? "",
@@ -130,7 +130,7 @@ try {
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/palpites`);
-  await page.getByRole("heading", { name: "Seus palpites" }).waitFor();
+  await page.getByRole("heading", { name: "Meus palpites" }).waitFor();
   await waitForFlagFallbacks(page);
   await page.getByRole("button", { name: "Mata-mata" }).click();
   await page.getByTestId("match-match-9").waitFor();
@@ -254,7 +254,7 @@ try {
   await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
   await page.getByTestId("pools-command-center").getByText("Mapa dos bolões").waitFor();
   await page.getByTestId("pools-command-center").getByRole("link", { name: "Ranking" }).waitFor();
-  await page.getByText("Seus rankings").waitFor();
+  await page.getByText("Meus rankings").waitFor();
   await page.getByRole("button", { name: "Usar tema escuro" }).click();
   assert.equal(
     await page.evaluate(() => document.documentElement.dataset.theme),
@@ -343,7 +343,7 @@ try {
   await page.getByTestId("ranking-current-user").getByText("126 pts").waitFor();
 
   await page.goto(`${BASE_URL}/painel`);
-  await page.getByRole("heading", { name: "Painel" }).waitFor();
+  await page.getByRole("heading", { name: "Meu painel" }).waitFor();
   await page.getByText("Ranking em movimento").waitFor();
   await page.getByText("Bolões em movimento").waitFor();
   await page.getByText("mantém").first().waitFor();

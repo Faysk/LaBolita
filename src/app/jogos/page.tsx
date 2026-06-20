@@ -17,8 +17,8 @@ import { isLiveMatch } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Jogos da Copa",
-  description: "Agenda compacta dos jogos, placares ao vivo e partidas encerradas.",
+  title: "Agenda de jogos",
+  description: "Agenda compacta com jogos ao vivo, próximos jogos e resultados.",
 };
 
 export default async function GamesPage() {
@@ -39,18 +39,18 @@ export default async function GamesPage() {
         <div>
           <p className="eyebrow">Linha do tempo</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
-            Jogos da Copa
+            Agenda de jogos
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
-            Veja o que já passou, o que está ao vivo e os próximos horários em
-            uma agenda compacta.
+            Ao vivo, próximos e encerrados no mesmo lugar, com seu palpite
+            aparecendo junto quando existir.
           </p>
         </div>
         <Link
           href="/palpites"
           className="interactive inline-flex items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-black text-brand"
         >
-          Meus palpites <ArrowRight className="size-4" />
+          Abrir meus palpites <ArrowRight className="size-4" />
         </Link>
       </div>
 
@@ -59,21 +59,21 @@ export default async function GamesPage() {
           icon={Radio}
           label="Ao vivo"
           value={liveMatches.length}
-          detail={liveMatches.length > 0 ? "acompanhar agora" : "sem jogo neste momento"}
+          detail={liveMatches.length > 0 ? "partiu acompanhar" : "nenhum jogo agora"}
           tone={liveMatches.length > 0 ? "live" : "neutral"}
         />
         <ScheduleMetric
           icon={CalendarDays}
           label="Próximos"
           value={nextMatches.length}
-          detail="na fila da agenda"
+          detail="prontos para palpitar"
           tone="info"
         />
         <ScheduleMetric
           icon={Clock3}
           label="A confirmar"
           value={matches.filter((match) => match.providerStatus === "finished" && !match.result).length}
-          detail="resultado pendente"
+          detail="aguardando oficial"
           tone={awaitingOfficial ? "warning" : "neutral"}
         />
         <ScheduleMetric
@@ -90,7 +90,7 @@ export default async function GamesPage() {
           <div>
             <p className="eyebrow">Trilha rápida</p>
             <h2 className="mt-1 text-xl font-black tracking-tight">
-              Agora, próximos e últimos
+              Agora, próximos e resultados
             </h2>
           </div>
           <ListChecks className="size-5 text-brand" />

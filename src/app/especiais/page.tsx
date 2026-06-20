@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
 
 export const metadata: Metadata = {
-  title: "Palpites especiais",
+  title: "Palpites finais",
   robots: { index: false, follow: false },
 };
 
@@ -20,10 +20,10 @@ export default async function SpecialPredictionsPage() {
         <div>
           <p className="eyebrow">Além do placar</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
-            Palpites especiais
+            Palpites finais
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
-            Registre os palpites finais da Copa: artilheiro, assistências,
+            Aqui entram as apostas de temporada: artilheiro, assistências,
             prêmios individuais, seleções destaque e caminho até a final. Cada
             especial abre um baralho de cartas para buscar, comparar e salvar.
           </p>

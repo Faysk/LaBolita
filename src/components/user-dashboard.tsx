@@ -151,10 +151,10 @@ export function UserDashboard({
         <div>
           <p className="eyebrow">Central do jogador</p>
           <h1 className="mt-1 text-3xl font-black md:text-5xl">
-            Painel
+            Meu painel
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
-            Seu placar, suas pendências e o impacto dos jogos nos bolões.
+            Seu placar, o que falta fazer e o impacto dos jogos nos seus bolões.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -168,7 +168,7 @@ export function UserDashboard({
       <section className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         <DashboardMetric
           icon={CheckCircle2}
-          label="Palpites salvos"
+          label="Meus palpites"
           value={`${savedPredictions}/${matches.length}`}
           detail={`${pendingMatches.length} abertos pendentes`}
           tone={pendingMatches.length > 0 ? "warning" : "success"}

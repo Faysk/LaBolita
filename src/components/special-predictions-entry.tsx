@@ -74,7 +74,7 @@ export function SpecialPredictionsEntry({
               </span>
               <span>
                 <span className="block text-xl font-black">
-                  Palpites especiais
+                  Palpites finais
                 </span>
                 <span className="mt-1 block text-sm leading-6 text-white/80">
                   Artilheiro, assistências, Bola de Ouro, seleções e mata-mata.
@@ -87,7 +87,7 @@ export function SpecialPredictionsEntry({
               className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-[#063b22] shadow-lg shadow-accent/20"
             >
               <LinkPendingLabel pendingLabel="Abrindo especiais...">
-                {next ? "Completar pendente" : "Revisar especiais"} <ArrowRight className="size-4" />
+                {next ? "Completar agora" : "Revisar finais"} <ArrowRight className="size-4" />
               </LinkPendingLabel>
             </Link>
           </div>
@@ -113,7 +113,7 @@ export function SpecialPredictionsEntry({
             <ProgressiveList
               initialCount={5}
               step={5}
-              moreLabel="Ver mais especiais"
+              moreLabel="Ver mais palpites finais"
               className="grid gap-2 sm:grid-cols-2"
               buttonClassName="interactive mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-xs font-black text-white hover:border-accent/70"
             >

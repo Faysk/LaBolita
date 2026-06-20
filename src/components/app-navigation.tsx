@@ -51,13 +51,13 @@ const primaryNavigation: NavigationItem[] = [
   {
     href: "/palpites",
     label: "Palpites",
-    description: "Seus placares jogo a jogo.",
+    description: "Meus placares jogo a jogo.",
     icon: Target,
   },
   {
     href: "/boloes",
     label: "Bolões",
-    description: "Rankings, grupos e comparações.",
+    description: "Meus grupos, rankings e comparações.",
     icon: BarChart3,
   },
   gamesItem,
@@ -67,7 +67,7 @@ const supportNavigation: NavigationItem[] = [
   {
     href: "/painel",
     label: "Meu painel",
-    mobileLabel: "Painel",
+    mobileLabel: "Meu painel",
     description: "Tudo que falta, pontuação e alertas.",
     icon: LayoutDashboard,
   },

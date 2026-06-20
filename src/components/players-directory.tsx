@@ -71,8 +71,8 @@ export async function PlayersDirectory({
             Jogadores da Copa
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
-            Convocados, posições, clubes, números e dados usados nos palpites
-            especiais. As figurinhas aparecem quando já foram publicadas no app.
+            Elencos, camisas, clubes e figurinhas para consultar antes de
+            palpitar. As figurinhas aparecem quando já foram publicadas no app.
           </p>
           <p className="mt-2 text-xs font-bold leading-5 text-muted">
             {sourceVersionLabel()}

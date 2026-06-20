@@ -287,7 +287,7 @@ export function PoolsWorkspace({
             Bolões
           </h1>
           <p className="mt-3 text-sm text-muted">
-            Acompanhe rankings públicos ou entre na disputa com sua turma.
+            Entre com a turma, compare palpites e acompanhe quem está subindo no ranking.
           </p>
         </div>
         <div className="flex gap-2">
@@ -349,7 +349,7 @@ export function PoolsWorkspace({
       )}
 
       {isAuthenticated && (
-        <PoolSection title="Seus bolões" subtitle="Grupos em que você participa ou administra.">
+        <PoolSection title="Meus bolões" subtitle="Seus grupos, rankings e códigos de convite.">
           {activePools.map((pool) => (
             <PoolCard
               key={pool.id}
@@ -362,7 +362,7 @@ export function PoolsWorkspace({
             />
           ))}
           {activePools.length === 0 && (
-            <EmptyCard text="Você ainda não participa de nenhum bolão. Crie um grupo, use um convite ou descubra um bolão público." />
+            <EmptyCard text="Você ainda não entrou em nenhum bolão. Crie um, use um convite ou explore os públicos." />
           )}
         </PoolSection>
       )}
@@ -393,7 +393,7 @@ export function PoolsWorkspace({
           <div>
             <p className="eyebrow">Aberto para a torcida</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight">Bolões públicos</h2>
-            <p className="mt-2 text-sm text-muted">Resultados paginados para manter tudo leve e organizado.</p>
+            <p className="mt-2 text-sm text-muted">Lista leve para descobrir disputa nova sem bagunçar a tela.</p>
           </div>
           <form action="/boloes" className="flex gap-2">
             <label className="relative min-w-0 flex-1 md:w-72">
@@ -647,7 +647,7 @@ function PoolQuickSwitch({
       <div className="mb-3 flex items-center justify-between gap-3 px-1">
         <div>
           <p className="eyebrow">Alternar bolão</p>
-          <h2 className="mt-1 text-xl font-black tracking-tight">Seus rankings</h2>
+          <h2 className="mt-1 text-xl font-black tracking-tight">Meus rankings</h2>
         </div>
         <BarChart3 className="size-5 text-brand" />
       </div>

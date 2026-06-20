@@ -9,7 +9,7 @@ import { getPredictionComparisonOverview } from "@/lib/data/prediction-compariso
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
 
 export const metadata: Metadata = {
-  title: "Palpites",
+  title: "Meus palpites",
   robots: { index: false, follow: false },
 };
 
@@ -35,11 +35,11 @@ export default async function PredictionsPage({ searchParams }: PredictionsPageP
       <div className="mb-7">
         <p className="eyebrow">A bola está com você</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
-          Seus palpites
+          Meus palpites
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-muted md:text-base">
-          O mesmo palpite vale em todos os seus bolões. Você pode alterar até o
-          horário de bloqueio de cada partida.
+          O mesmo placar vale em todos os seus bolões. Dá para mudar até o
+          bloqueio de cada jogo. Depois disso, é torcida e calculadora.
         </p>
       </div>
       <SpecialPredictionsEntry overview={specialsOverview} />

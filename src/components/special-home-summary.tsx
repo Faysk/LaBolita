@@ -25,10 +25,10 @@ export function SpecialHomeSummary({
               <Sparkles className="size-5" />
             </span>
             <div>
-              <p className="eyebrow">Extras da Copa</p>
-              <h2 className="mt-1 text-xl font-black">Palpites especiais</h2>
+              <p className="eyebrow">Palpites finais</p>
+              <h2 className="mt-1 text-xl font-black">Especiais da Copa</h2>
               <p className="mt-1 text-sm leading-6 text-muted">
-                Entre para escolher artilheiro, campeão, Bola de Ouro e seleções destaque.
+                Entre para cravar artilheiro, campeão, Bola de Ouro e seleções destaque.
               </p>
             </div>
           </div>
@@ -38,7 +38,7 @@ export function SpecialHomeSummary({
             className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
           >
             <LinkPendingLabel pendingLabel="Abrindo login...">
-              Entrar e palpitar <ArrowRight className="size-4" />
+              Entrar nos especiais <ArrowRight className="size-4" />
             </LinkPendingLabel>
           </Link>
         </div>
@@ -60,21 +60,21 @@ export function SpecialHomeSummary({
             <Sparkles className="size-5" />
           </span>
           <div>
-            <p className="eyebrow">Palpites especiais</p>
+            <p className="eyebrow">Palpites finais</p>
             <h2 className="mt-1 text-xl font-black">
-              {progress.completed}/{progress.total} especiais preenchidos
+              {progress.completed}/{progress.total} finais preenchidos
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted">
               Fecha em {SPECIAL_LOCK_DATE_LABEL}.{" "}
               {next
-                ? `Ainda ${openPendingCount === 1 ? "falta" : "faltam"} ${openPendingCount} ${openPendingCount === 1 ? "pendente aberto" : "pendentes abertos"}. Próximo: ${specialMarketDisplay(next.key).shortTitle}.`
+                ? `Ainda ${openPendingCount === 1 ? "falta" : "faltam"} ${openPendingCount} ${openPendingCount === 1 ? "pendente aberto" : "pendentes abertos"}. Próximo da fila: ${specialMarketDisplay(next.key).shortTitle}.`
                 : "Tudo preenchido, mas ainda dá para revisar."}
             </p>
             <p className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-black ${
               next ? "status-warning" : "status-success"
             }`}>
               <CalendarClock className="size-3.5" />
-              {next ? "Ação recomendada antes do prazo" : "Especiais em dia"}
+              {next ? "Vale resolver antes do prazo" : "Tudo em dia"}
             </p>
           </div>
         </div>
@@ -84,7 +84,7 @@ export function SpecialHomeSummary({
           className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
         >
           <LinkPendingLabel pendingLabel="Abrindo especiais...">
-            {next ? "Completar pendente" : "Revisar especiais"}
+            {next ? "Completar agora" : "Revisar finais"}
             <ArrowRight className="size-4" />
           </LinkPendingLabel>
         </Link>
