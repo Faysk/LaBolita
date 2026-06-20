@@ -3,20 +3,36 @@
 import {
   Archive,
   ArchiveRestore,
+  Activity,
+  Bell,
   Check,
   ChevronLeft,
   ChevronRight,
+  CircleAlert,
+  Clock3,
+  Database,
+  Gauge,
   History,
+  KeyRound,
   LoaderCircle,
+  Mail,
   Search,
+  ShieldAlert,
   ShieldCheck,
   ShieldPlus,
+  Sparkles,
   UserRoundCog,
   Users,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import type { MasterOverview, MasterPool, MasterUser } from "@/lib/data/admin";
+import type {
+  AdminSummary,
+  AdminUserReport,
+  MasterOverview,
+  MasterPool,
+  MasterUser,
+} from "@/lib/data/admin";
 import { CountryFlag } from "@/components/country-flag";
 import { COUNTRIES } from "@/lib/countries";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -68,6 +84,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
         </p>
         <TermsEnforcementControl enabled={overview.termsEnforcementEnabled} />
       </div>
+      <AdminCommandCenter summary={overview.summary} />
       <div className="bg-surface/35 p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-2 overflow-x-auto">
@@ -105,7 +122,7 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
           )}
           <div className={isNavigating ? "pointer-events-none opacity-45 transition-opacity" : "transition-opacity"}>
             {tab === "pools" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.pools.map((pool) => <MasterPoolCard key={pool.poolId} pool={pool} />)}</div>}
-            {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.users.map((user) => <MasterUserCard key={user.userId} user={user} />)}</div>}
+            {tab === "users" && <div className="mt-5 grid gap-4 lg:grid-cols-2">{overview.users.map((user) => <MasterUserCard key={user.userId} user={user} report={overview.userReports[user.userId]} />)}</div>}
             {tab === "audit" && <AuditList entries={overview.audit} />}
             {((tab === "pools" && overview.pools.length === 0) ||
               (tab === "users" && overview.users.length === 0)) && (
@@ -138,6 +155,162 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
         </div>
       </div>
     </section>
+  );
+}
+
+function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
+  const metrics = [
+    {
+      icon: Users,
+      label: "Usuários",
+      value: formatNumber(summary.users.total),
+      detail: `${summary.users.active} ativos · ${summary.users.admins} admin`,
+      tone: summary.users.disabled > 0 || summary.users.termsPending > 0 ? "warn" : "ok",
+    },
+    {
+      icon: Archive,
+      label: "Bolões",
+      value: formatNumber(summary.pools.total),
+      detail: `${summary.pools.memberships} vínculos · ${summary.pools.public} públicos`,
+      tone: summary.pools.archived > 0 ? "warn" : "ok",
+    },
+    {
+      icon: Gauge,
+      label: "Palpites",
+      value: formatNumber(summary.predictions.matchPredictions),
+      detail: `${summary.predictions.changedMatchPredictions} alterados · ${summary.predictions.specialPredictions} especiais`,
+      tone: summary.predictions.specialPredictions > 0 ? "ok" : "warn",
+    },
+    {
+      icon: History,
+      label: "Auditoria 24h",
+      value: formatNumber(summary.audit.recentTotal),
+      detail: `${summary.audit.resultChanges} placares · ${summary.audit.userActions} usuários`,
+      tone: summary.audit.recentTotal > 0 ? "warn" : "ok",
+    },
+  ] as const;
+
+  return (
+    <div className="border-b bg-surface p-5 md:p-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <MetricTile key={metric.label} {...metric} />
+        ))}
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1.15fr]">
+        <div className="rounded-2xl border bg-surface-muted/55 p-4">
+          <div className="flex items-center gap-2">
+            <Database className="size-4 text-brand" />
+            <h3 className="text-sm font-black">Conexões</h3>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {summary.connections.map((connection) => (
+              <ConnectionPill key={connection.key} connection={connection} />
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-surface-muted/55 p-4">
+          <div className="flex items-center gap-2">
+            <Bell className="size-4 text-brand" />
+            <h3 className="text-sm font-black">Próximas ações</h3>
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {summary.nextActions.map((action) => (
+              <div
+                key={`${action.label}-${action.detail}`}
+                className={`rounded-xl border px-3 py-2 ${
+                  action.tone === "danger"
+                    ? "status-danger"
+                    : action.tone === "warn"
+                      ? "status-warning"
+                      : "status-success"
+                }`}
+              >
+                <p className="text-xs font-black">{action.label}</p>
+                <p className="mt-1 text-[11px] leading-4">{action.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {summary.audit.topActions.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {summary.audit.topActions.map((action) => (
+            <span
+              key={action.action}
+              className="rounded-full border bg-surface px-3 py-1.5 text-xs font-bold text-muted"
+            >
+              {auditActionLabel(action.action)} · {action.count}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "ok" | "warn";
+}) {
+  return (
+    <div className="rounded-2xl border bg-surface-muted/70 p-4">
+      <span
+        className={`inline-flex rounded-xl p-2 ${
+          tone === "warn" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-brand"
+        }`}
+      >
+        <Icon className="size-4" />
+      </span>
+      <p className="mt-3 text-xs font-bold text-muted">{label}</p>
+      <p className="mt-1 text-2xl font-black">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function ConnectionPill({
+  connection,
+}: {
+  connection: AdminSummary["connections"][number];
+}) {
+  const Icon =
+    connection.key === "service_role"
+      ? KeyRound
+      : connection.key === "auth"
+        ? ShieldCheck
+        : connection.key === "database"
+          ? Database
+          : connection.key === "results_feed"
+            ? Activity
+            : Clock3;
+  const tone =
+    connection.status === "danger"
+      ? "status-danger"
+      : connection.status === "warn"
+        ? "status-warning"
+        : "status-success";
+
+  return (
+    <span
+      title={connection.detail}
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${tone}`}
+    >
+      <Icon className="size-3.5" />
+      {connection.label}
+    </span>
   );
 }
 
@@ -286,12 +459,19 @@ function MasterPoolCard({ pool }: { pool: MasterPool }) {
   );
 }
 
-function MasterUserCard({ user }: { user: MasterUser }) {
+function MasterUserCard({
+  user,
+  report,
+}: {
+  user: MasterUser;
+  report?: AdminUserReport;
+}) {
   const router = useRouter();
   const [name, setName] = useState(user.displayName);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   async function update(disabled: boolean) {
     const supabase = createBrowserSupabaseClient();
@@ -338,18 +518,197 @@ function MasterUserCard({ user }: { user: MasterUser }) {
         <div className="min-w-0"><p className="truncate font-black">{user.displayName}</p><p className="mt-1 truncate text-xs text-muted">{user.email} · {user.poolsOwned} bolões</p></div>
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${user.isMasterAdmin ? "bg-accent text-brand-strong" : user.disabledAt ? "bg-red-100 text-red-800" : user.isAdmin ? "bg-blue-100 text-blue-800" : "bg-emerald-100 text-brand"}`}>{user.isMasterAdmin ? "Master principal" : user.disabledAt ? "Suspenso" : user.isAdmin ? "Admin" : "Ativo"}</span>
       </div>
-      <p className="mt-2 text-xs text-muted">{user.termsAcceptedAt ? "Termos aceitos" : "Termos pendentes"}</p>
+      <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-muted">
+        <span>{user.termsAcceptedAt ? "Termos aceitos" : "Termos pendentes"}</span>
+        {report?.identity.lastSignInAt && <span>Último login {formatDateTime(report.identity.lastSignInAt)}</span>}
+        {report && <span>{report.stats.matchPredictions} palpites · {report.stats.poolMemberships} bolões</span>}
+      </div>
       <div className="mt-4 grid gap-2">
         <input value={name} minLength={2} maxLength={60} onChange={(event) => setName(event.target.value)} aria-label={`Nome de ${user.displayName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none focus:border-brand" />
         <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${user.displayName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" onClick={() => setShowReport((current) => !current)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted"><Gauge className="size-3" /> {showReport ? "Fechar relatório" : "Relatório"}</button>
         <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(user.disabledAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white shadow-sm disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar nome</button>
         {!user.isMasterAdmin && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!user.disabledAt)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-danger-fg hover:border-danger-line hover:bg-danger-bg disabled:opacity-40"><UserRoundCog className="size-3" /> {user.disabledAt ? "Reativar conta" : "Suspender conta"}</button>}
         {!user.isMasterAdmin && <button type="button" disabled={busy || Boolean(user.disabledAt) || reason.trim().length < 3} onClick={updateAdminAccess} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-info-fg hover:border-info-line hover:bg-info-bg disabled:opacity-40"><ShieldPlus className="size-3" /> {user.isAdmin ? "Remover admin" : "Promover admin"}</button>}
       </div>
+      {showReport && <UserReportPanel report={report} fallbackEmail={user.email} />}
       {error && <p aria-live="polite" className="mt-2 rounded-xl bg-danger-bg px-3 py-2 text-xs font-bold text-danger-fg">{error}</p>}
     </article>
+  );
+}
+
+function UserReportPanel({
+  report,
+  fallbackEmail,
+}: {
+  report?: AdminUserReport;
+  fallbackEmail: string;
+}) {
+  if (!report) {
+    return (
+      <div className="mt-4 rounded-2xl border bg-surface px-4 py-3">
+        <div className="flex items-start gap-2">
+          <CircleAlert className="mt-0.5 size-4 text-amber-700" />
+          <div>
+            <p className="text-sm font-black">Relatório limitado</p>
+            <p className="mt-1 text-xs leading-5 text-muted">
+              {fallbackEmail} está visível, mas dados de Auth, auditoria completa e
+              histórico global exigem service role server-side.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const stats = [
+    ["Palpites", report.stats.matchPredictions, `${report.stats.changedPredictions} alterações`],
+    ["Pontos", report.stats.totalPoints, `${report.stats.exactScores} exatos`],
+    ["Especiais", report.stats.specialPicks, `${report.specialMarkets.length} mercados`],
+    ["Auditoria", report.stats.adminActionsAsActor + report.stats.adminActionsAsTarget, `${report.stats.resultChanges} placares`],
+  ] as const;
+
+  return (
+    <div className="mt-4 space-y-3 rounded-2xl border bg-surface p-4">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl border bg-surface-muted/60 p-3">
+          <div className="flex items-center gap-2">
+            <Mail className="size-4 text-brand" />
+            <p className="text-xs font-black uppercase text-muted">Identidade</p>
+          </div>
+          <p className="mt-2 truncate text-sm font-black">{report.identity.email}</p>
+          <p className="mt-1 text-xs leading-5 text-muted">
+            Criado {formatDateTime(report.identity.createdAt)} · Login {formatDateTime(report.identity.lastSignInAt)}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {(report.identity.providers.length > 0 ? report.identity.providers : ["sem provedor"]).map((provider) => (
+              <span key={provider} className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
+                {provider}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          {stats.map(([label, value, detail]) => (
+            <div key={label} className="rounded-xl border bg-surface-muted/60 p-3">
+              <p className="text-[11px] font-bold text-muted">{label}</p>
+              <p className="mt-1 text-xl font-black">{formatNumber(value)}</p>
+              <p className="mt-0.5 text-[11px] text-muted">{detail}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <ReportSection icon={Archive} title="Bolões">
+        {report.pools.length > 0 ? (
+          <div className="grid gap-2 md:grid-cols-2">
+            {report.pools.map((pool) => (
+              <div key={`${pool.poolId}-${pool.role}`} className="rounded-xl border bg-surface-muted/45 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="min-w-0 truncate text-xs font-black">{pool.poolName}</p>
+                  <span className="text-[10px] font-black text-muted">{roleLabel(pool.role)}</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted">
+                  {pool.isPublic ? "Público" : "Privado"} · entrou {formatDateTime(pool.joinedAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyReportLine>Sem vínculo de bolão registrado.</EmptyReportLine>
+        )}
+      </ReportSection>
+
+      <ReportSection icon={Gauge} title="Palpites recentes">
+        {report.recentPredictions.length > 0 ? (
+          <div className="divide-y rounded-xl border">
+            {report.recentPredictions.map((prediction) => (
+              <div key={`${prediction.matchId}-${prediction.updatedAt}`} className="grid gap-2 px-3 py-2 md:grid-cols-[1fr_auto] md:items-center">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-black">{prediction.matchLabel}</p>
+                  <p className="mt-0.5 text-[11px] text-muted">
+                    {prediction.stageLabel} · {scoreText(prediction.prediction)}
+                    {prediction.result ? ` · resultado ${scoreText(prediction.result)}` : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5 md:justify-end">
+                  {prediction.changed && <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-black text-amber-700">alterado</span>}
+                  {prediction.points !== null && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-black text-brand">{prediction.points} pts</span>}
+                  {prediction.category && <span className="rounded-full border px-2 py-1 text-[10px] font-black text-muted">{scoreCategoryLabel(prediction.category)}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyReportLine>Nenhum palpite de jogo encontrado.</EmptyReportLine>
+        )}
+      </ReportSection>
+
+      <div className="grid gap-3 xl:grid-cols-2">
+        <ReportSection icon={Sparkles} title="Especiais">
+          {report.specialMarkets.length > 0 ? (
+            <div className="space-y-2">
+              {report.specialMarkets.map((market) => (
+                <div key={`${market.marketKey}-${market.updatedAt}`} className="rounded-xl border bg-surface-muted/45 px-3 py-2">
+                  <p className="text-xs font-black">{market.marketTitle}</p>
+                  <p className="mt-1 text-[11px] leading-4 text-muted">{market.picks.join(", ")}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyReportLine>Sem especiais preenchidos.</EmptyReportLine>
+          )}
+        </ReportSection>
+
+        <ReportSection icon={ShieldAlert} title="Auditoria">
+          {report.auditTrail.length > 0 ? (
+            <div className="divide-y rounded-xl border">
+              {report.auditTrail.map((entry) => (
+                <div key={entry.id} className="px-3 py-2">
+                  <p className="text-xs font-black">{auditActionLabel(entry.action)}</p>
+                  <p className="mt-0.5 truncate text-[11px] text-muted">
+                    {entry.entityType} · {formatDateTime(entry.createdAt)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyReportLine>Sem ações administrativas vinculadas.</EmptyReportLine>
+          )}
+        </ReportSection>
+      </div>
+    </div>
+  );
+}
+
+function ReportSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Gauge;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <div className="mb-2 flex items-center gap-2">
+        <Icon className="size-4 text-brand" />
+        <h3 className="text-sm font-black">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function EmptyReportLine({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-xl border bg-surface-muted/45 px-3 py-2 text-xs text-muted">
+      {children}
+    </p>
   );
 }
 
@@ -374,5 +733,64 @@ function AuditList({ entries }: { entries: MasterOverview["audit"] }) {
       ))}
       {entries.length === 0 && <p className="p-5 text-sm text-muted">Nenhuma ação administrativa registrada.</p>}
     </div>
+  );
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("pt-BR").format(value);
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "sem registro";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function scoreText(prediction: { homeScore: number; awayScore: number }) {
+  return `${prediction.homeScore} x ${prediction.awayScore}`;
+}
+
+function roleLabel(role: string) {
+  return (
+    {
+      owner: "dono",
+      admin: "admin",
+      member: "membro",
+    }[role] ?? role
+  );
+}
+
+function scoreCategoryLabel(category: string) {
+  return (
+    {
+      exact: "exato",
+      refined: "refinado",
+      result: "resultado",
+      "one-score": "um placar",
+      miss: "erro",
+    }[category] ?? category
+  );
+}
+
+function auditActionLabel(action: string) {
+  return (
+    {
+      finalize_match: "Resultado finalizado",
+      update_match_result: "Resultado corrigido",
+      assign_match_teams: "Mata-mata definido",
+      update_user: "Usuário alterado",
+      disable_user: "Conta suspensa",
+      restore_user: "Conta reativada",
+      promote_admin: "Admin promovido",
+      remove_admin: "Admin removido",
+      update_pool: "Bolão alterado",
+      archive_pool: "Bolão arquivado",
+      restore_pool: "Bolão recuperado",
+      remove_pool_member: "Membro removido",
+      set_terms_enforcement: "Termos alterados",
+      resolve_special_market: "Especial resolvido",
+    }[action] ?? action
   );
 }

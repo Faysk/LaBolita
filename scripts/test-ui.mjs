@@ -1,22 +1,25 @@
 import assert from "node:assert/strict";
 import { access, rm } from "node:fs/promises";
 import { spawn, spawnSync } from "node:child_process";
+import path from "node:path";
 import { chromium } from "playwright-core";
 
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const DEMO_BUILD_DIR = `.next-demo-ui-${process.pid}-${Date.now()}`;
+const DEMO_BUILD_DIR = ".next-demo-ui";
 const executablePath = await findBrowser();
+const nextBin = await findNextBin();
 
 let serverOutput = "";
 let server;
 let browser;
 
 try {
+  await cleanupDemoBuild();
   buildDemo();
   server = spawn(
     process.execPath,
-    ["node_modules/next/dist/bin/next", "start", "-p", String(PORT)],
+    [nextBin, "start", "-p", String(PORT)],
     {
       cwd: process.cwd(),
       env: {
@@ -354,7 +357,7 @@ function buildDemo() {
 }
 
 async function cleanupDemoBuild() {
-  if (!DEMO_BUILD_DIR.startsWith(".next-demo-ui-")) return;
+  if (DEMO_BUILD_DIR !== ".next-demo-ui" && !DEMO_BUILD_DIR.startsWith(".next-demo-ui-")) return;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       await rm(DEMO_BUILD_DIR, { recursive: true, force: true });
@@ -391,6 +394,24 @@ async function findBrowser() {
   throw new Error(
     "Chrome/Chromium não encontrado. Defina PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.",
   );
+}
+
+async function findNextBin() {
+  const candidates = [
+    path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next"),
+    path.join(process.cwd(), "..", "node_modules", "next", "dist", "bin", "next"),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Tenta o próximo diretório de dependências.
+    }
+  }
+
+  return candidates[0];
 }
 
 async function waitForFlagFallbacks(page) {
