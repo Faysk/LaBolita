@@ -438,21 +438,60 @@ function LivePanel({
 
 function LiveMatchImpact({ item }: { item: LiveMatchView }) {
   const score = item.match.liveResult;
+  const [expanded, setExpanded] = useState(false);
+  const Chevron = expanded ? ChevronUp : ChevronDown;
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border bg-surface-muted p-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-black">
-          {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
-        </p>
-        <p className="mt-1 text-xs font-bold text-muted">
-          Palpite {predictionText(item.prediction)} · parcial{" "}
-          {score ? `${score.homeScore} x ${score.awayScore}` : "ao vivo"}
-        </p>
-      </div>
-      <span className="rounded-xl bg-surface px-3 py-2 text-sm font-black text-brand">
-        {item.score?.totalPoints ?? 0} pts
-      </span>
+    <div className="overflow-hidden rounded-2xl border bg-surface-muted">
+      <button
+        type="button"
+        data-testid="dashboard-live-impact-toggle"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+        className="interactive grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 text-left"
+      >
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black">
+            {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
+          </p>
+          <p className="mt-1 text-xs font-bold text-muted">
+            Palpite {predictionText(item.prediction)} · parcial{" "}
+            {score ? `${score.homeScore} x ${score.awayScore}` : "ao vivo"}
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-xl bg-surface px-3 py-2 text-sm font-black text-brand">
+          {item.score?.totalPoints ?? 0} pts
+          <Chevron className="size-3.5 text-muted" />
+        </span>
+      </button>
+      {expanded ? (
+        <div
+          data-testid="dashboard-live-impact-details"
+          className="grid gap-2 border-t bg-surface/75 p-3 sm:grid-cols-2"
+        >
+          <MiniDashboardStat
+            label="Categoria"
+            value={item.score ? scoreCategoryLabel(item.score.category) : "sem cálculo"}
+          />
+          <MiniDashboardStat
+            label="Pontos do placar"
+            value={item.score ? `${item.score.matchPoints} pts` : "—"}
+          />
+          <MiniDashboardStat
+            label={item.match.stage === "group" ? "Multiplicador" : "Avanço"}
+            value={
+              item.match.stage === "group"
+                ? item.score
+                  ? `${item.score.multiplier}x`
+                  : "—"
+                : item.score
+                  ? `${item.score.advancementPoints} pts`
+                  : "—"
+            }
+          />
+          <MiniDashboardStat label="Atualização" value={providerUpdateText(item.match)} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1262,6 +1301,24 @@ function rankingMovement(player: RankingEntry): {
     tone: "down",
     icon: TrendingDown,
   };
+}
+
+function scoreCategoryLabel(category: ScoreBreakdown["category"]) {
+  if (category === "exact") return "cravado";
+  if (category === "refined") return "refinado";
+  if (category === "result") return "resultado";
+  if (category === "one-score") return "um placar";
+  return "sem acerto";
+}
+
+function providerUpdateText(match: DemoMatch) {
+  if (!match.providerUpdatedAt) return "agora";
+  const date = new Date(match.providerUpdatedAt);
+  if (Number.isNaN(date.getTime())) return "sincronizado";
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function predictionText(prediction?: ScorePrediction | null) {

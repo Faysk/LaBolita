@@ -63,7 +63,24 @@ try {
   await page.getByText("Seu palpite", { exact: true }).waitFor();
   await page.getByText("Distribuição dos palpites").waitFor();
   await page.getByText("Cravadas").first().waitFor();
+  if (await page.getByText("Pontos do placar").count()) {
+    await page.getByText("Pontos do placar").first().waitFor();
+  }
   await page.getByRole("link", { name: "Abrir bolões" }).waitFor();
+  await waitForFlagFallbacks(page);
+
+  await page.goto(`${BASE_URL}/painel`);
+  await page.getByRole("heading", { name: "Painel" }).waitFor();
+  if (await page.getByTestId("dashboard-live-impact-toggle").count()) {
+    await page.getByTestId("dashboard-live-impact-toggle").first().click();
+    await page
+      .getByTestId("dashboard-live-impact-details")
+      .first()
+      .getByText("Pontos do placar")
+      .waitFor();
+  } else {
+    await page.getByText(/Próxima ação|Tudo encaminhado/).waitFor();
+  }
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/jogos`);

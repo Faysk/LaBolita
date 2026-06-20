@@ -859,6 +859,7 @@ function PredictionDetail({
   const result = visibleScore(match);
   const points = livePointsForEntry(entry, match);
   const category = liveCategoryForEntry(entry, match);
+  const entryScore = liveScoreForEntry(entry, match);
   const updatedAt = formatShortDateTime(entry.updatedAt);
 
   return (
@@ -871,6 +872,22 @@ function PredictionDetail({
         />
         <RankingDetailStat label="Pontos" value={points === null ? "—" : `${points} pts`} />
         <RankingDetailStat label="Ranking" value={`#${entry.position}`} />
+        <RankingDetailStat
+          label="Pontos do placar"
+          value={entryScore ? `${entryScore.matchPoints} pts` : "—"}
+        />
+        <RankingDetailStat
+          label={match.stage === "group" ? "Multiplicador" : "Avanço"}
+          value={
+            match.stage === "group"
+              ? entryScore
+                ? `${entryScore.multiplier}x`
+                : "—"
+              : entryScore
+                ? `${entryScore.advancementPoints} pts`
+                : "—"
+          }
+        />
       </div>
       <p className="mt-3 text-xs font-bold text-muted">
         {category ? scoreCategoryLabel(category) : "Sem resultado para calcular"}{updatedAt ? ` · alterado ${updatedAt}` : ""}
@@ -1038,19 +1055,18 @@ function liveAverage(comparison: MatchPoolComparison, match: DemoMatch) {
 }
 
 function livePointsForEntry(entry: PredictionComparisonEntry, match: DemoMatch) {
-  const result = visibleScore(match);
-  if (entry.prediction && result) {
-    return calculateScore(entry.prediction, result, match.stage).totalPoints;
-  }
-  return entry.score?.totalPoints ?? null;
+  return liveScoreForEntry(entry, match)?.totalPoints ?? null;
 }
 
 function liveCategoryForEntry(entry: PredictionComparisonEntry, match: DemoMatch) {
+  return liveScoreForEntry(entry, match)?.category ?? null;
+}
+
+function liveScoreForEntry(entry: PredictionComparisonEntry, match: DemoMatch) {
+  if (entry.score) return entry.score;
   const result = visibleScore(match);
-  if (entry.prediction && result) {
-    return calculateScore(entry.prediction, result, match.stage).category;
-  }
-  return entry.score?.category ?? null;
+  if (!entry.prediction || !result) return null;
+  return calculateScore(entry.prediction, result, match.stage);
 }
 
 function comparePredictionEntries(
