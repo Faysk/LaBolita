@@ -216,6 +216,11 @@ try {
   await page.goto(`${BASE_URL}/boloes`);
   await page.getByTestId("ranking-current-user").getByText("126 pts").waitFor();
 
+  await page.goto(`${BASE_URL}/painel`);
+  await page.getByRole("heading", { name: "Painel" }).waitFor();
+  await page.getByText("Ranking em movimento").waitFor();
+  await waitForFlagFallbacks(page);
+
   await page.goto(BASE_URL);
   await page.getByRole("navigation").getByRole("link", { name: "Bolões" }).waitFor();
   await page.getByRole("button", { name: "Abrir menu da conta" }).click();
@@ -245,6 +250,7 @@ try {
     "/",
     "/jogos",
     "/jogadores",
+    "/painel",
     "/palpites",
     "/especiais",
     "/boloes",

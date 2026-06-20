@@ -63,10 +63,12 @@ export async function getPoolsOverview({
   publicPage = 1,
   publicSearch = "",
   includePublic = false,
+  includeAllRankings = false,
 }: {
   publicPage?: number;
   publicSearch?: string;
   includePublic?: boolean;
+  includeAllRankings?: boolean;
 } = {}): Promise<PoolsOverview> {
   const supabase = await createServerSupabaseClient();
   if (!supabase) return demoOverview();
@@ -133,8 +135,24 @@ export async function getPoolsOverview({
         }) satisfies PoolSummary,
     );
   const rankingsByPool: Record<string, RankingEntry[]> = {};
-  const primaryPrivatePool = pools.find((pool) => !pool.isArchived);
-  if (primaryPrivatePool) {
+  const activePrivatePools = pools.filter((pool) => !pool.isArchived);
+  const primaryPrivatePool = activePrivatePools[0];
+  if (includeAllRankings && activePrivatePools.length > 0) {
+    const rankings = await Promise.all(
+      activePrivatePools.map(async (pool) => {
+        const { data, error } = await supabase.rpc("get_pool_ranking", {
+          p_pool_id: pool.id,
+        });
+        if (error) {
+          throw new Error("Não foi possível carregar o ranking do bolão.", {
+            cause: error,
+          });
+        }
+        return [pool.id, mapRanking((data ?? []) as RankingRow[], user?.id)] as const;
+      }),
+    );
+    Object.assign(rankingsByPool, Object.fromEntries(rankings));
+  } else if (primaryPrivatePool) {
     const { data, error } = await supabase.rpc("get_pool_ranking", {
       p_pool_id: primaryPrivatePool.id,
     });

@@ -446,11 +446,13 @@ textarea:focus {
   text-underline-offset: 0.2em;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   body {
     padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
   }
+}
 
+@media (max-width: 767px) {
   .page-container {
     width: min(100% - 1.25rem, 72rem);
   }

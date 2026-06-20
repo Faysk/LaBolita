@@ -4,6 +4,7 @@ import {
   BarChart3,
   CalendarDays,
   CircleHelp,
+  LayoutDashboard,
   Home,
   Sparkles,
   Target,
@@ -15,6 +16,7 @@ import { usePathname } from "next/navigation";
 
 const navigation = [
   { href: "/", label: "Início", icon: Home },
+  { href: "/painel", label: "Painel", icon: LayoutDashboard },
   { href: "/palpites", label: "Palpites", icon: Target },
   { href: "/especiais", label: "Extras", icon: Sparkles },
   { href: "/boloes", label: "Bolões", icon: BarChart3 },
@@ -28,7 +30,7 @@ export function DesktopNavigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="desktop-nav hidden items-center gap-1 md:flex">
+    <nav className="desktop-nav hidden items-center gap-1 lg:flex">
       {navigation.map((item) => {
         const active = isActivePath(pathname, item.href);
         return (
@@ -55,7 +57,7 @@ export function MobileNavigation() {
   const mobileItems = navigation.filter((item) => !item.desktopOnly);
 
   return (
-    <nav className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-6 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl md:hidden">
+    <nav className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-7 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl lg:hidden">
       {mobileItems.map((item) => {
         const active = isActivePath(pathname, item.href);
         return (
