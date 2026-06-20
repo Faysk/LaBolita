@@ -15,7 +15,6 @@ import {
   History,
   KeyRound,
   LoaderCircle,
-  Mail,
   Search,
   ShieldAlert,
   ShieldCheck,
@@ -715,7 +714,7 @@ function MasterUserCard({
         {!user.isMasterAdmin && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!user.disabledAt)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-danger-fg hover:border-danger-line hover:bg-danger-bg disabled:opacity-40"><UserRoundCog className="size-3" /> {user.disabledAt ? "Reativar conta" : "Suspender conta"}</button>}
         {!user.isMasterAdmin && <button type="button" disabled={busy || Boolean(user.disabledAt) || reason.trim().length < 3} onClick={updateAdminAccess} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-info-fg hover:border-info-line hover:bg-info-bg disabled:opacity-40"><ShieldPlus className="size-3" /> {user.isAdmin ? "Remover admin" : "Promover admin"}</button>}
       </div>
-      {showReport && <UserReportPanel report={report} fallbackEmail={user.email} />}
+      {showReport && <UserReportPanel report={report} user={user} />}
       {error && <p aria-live="polite" className="mt-2 rounded-xl bg-danger-bg px-3 py-2 text-xs font-bold text-danger-fg">{error}</p>}
     </article>
   );
@@ -723,10 +722,10 @@ function MasterUserCard({
 
 function UserReportPanel({
   report,
-  fallbackEmail,
+  user,
 }: {
   report?: AdminUserReport;
-  fallbackEmail: string;
+  user: MasterUser;
 }) {
   if (!report) {
     return (
@@ -736,7 +735,7 @@ function UserReportPanel({
           <div>
             <p className="text-sm font-black">Relatório limitado</p>
             <p className="mt-1 text-xs leading-5 text-muted">
-              {fallbackEmail} está visível, mas dados de Auth, auditoria completa e
+              {user.email} está visível, mas dados de Auth, auditoria completa e
               histórico global exigem service role server-side.
             </p>
           </div>
@@ -745,6 +744,40 @@ function UserReportPanel({
     );
   }
 
+  const accountSignals = [
+    {
+      label: "Conta",
+      value: user.disabledAt ? "Suspensa" : "Ativa",
+      detail: user.disabledAt
+        ? `Suspensa em ${formatDateTime(user.disabledAt)}`
+        : "Acesso liberado",
+      tone: user.disabledAt ? "danger" : "ok",
+    },
+    {
+      label: "Termos",
+      value: user.termsAcceptedAt ? "Aceitos" : "Pendente",
+      detail: user.termsAcceptedAt
+        ? formatDateTime(user.termsAcceptedAt)
+        : "Precisa aceitar para jogar",
+      tone: user.termsAcceptedAt ? "ok" : "warn",
+    },
+    {
+      label: "Acesso",
+      value: user.isMasterAdmin ? "Master" : user.isAdmin ? "Admin" : "Jogador",
+      detail: user.isMasterAdmin
+        ? "Administrador principal"
+        : user.isAdmin
+          ? "Pode operar o painel"
+          : "Sem permissão administrativa",
+      tone: user.isMasterAdmin || user.isAdmin ? "warn" : "neutral",
+    },
+    {
+      label: "Login",
+      value: report.identity.lastSignInAt ? "Registrado" : "Sem registro",
+      detail: formatDateTime(report.identity.lastSignInAt),
+      tone: report.identity.lastSignInAt ? "ok" : "warn",
+    },
+  ] as const;
   const stats = [
     ["Palpites", report.stats.matchPredictions, `${report.stats.changedPredictions} alterações`],
     ["Pontos", report.stats.totalPoints, `${report.stats.exactScores} exatos`],
@@ -754,25 +787,45 @@ function UserReportPanel({
 
   return (
     <div className="mt-4 space-y-3 rounded-2xl border bg-surface p-4">
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-xl border bg-surface-muted/60 p-3">
-          <div className="flex items-center gap-2">
-            <Mail className="size-4 text-brand" />
-            <p className="text-xs font-black uppercase text-muted">Identidade</p>
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)]">
+        <div className="rounded-2xl border bg-surface-muted/60 p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <p className="eyebrow">Relatório completo</p>
+              <h3 className="mt-1 truncate text-xl font-black">{user.displayName}</h3>
+              <p className="mt-1 truncate text-xs font-bold text-muted">
+                {report.identity.email}
+              </p>
+            </div>
+            <span className="rounded-full border bg-surface px-2.5 py-1 text-[10px] font-black text-muted">
+              ID {shortId(report.userId)}
+            </span>
           </div>
-          <p className="mt-2 truncate text-sm font-black">{report.identity.email}</p>
-          <p className="mt-1 text-xs leading-5 text-muted">
-            Criado {formatDateTime(report.identity.createdAt)} · Login {formatDateTime(report.identity.lastSignInAt)}
+          <p className="mt-3 break-all rounded-xl border bg-surface px-3 py-2 text-[11px] font-bold text-muted">
+            {report.userId}
           </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {(report.identity.providers.length > 0 ? report.identity.providers : ["sem provedor"]).map((provider) => (
               <span key={provider} className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
                 {provider}
               </span>
             ))}
           </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <AccessMoment label="Criado" value={report.identity.createdAt} />
+            <AccessMoment label="Confirmado" value={report.identity.confirmedAt} />
+            <AccessMoment label="Último login" value={report.identity.lastSignInAt} />
+          </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-2">
+          {accountSignals.map((signal) => (
+            <AccountSignal key={signal.label} {...signal} />
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-[1fr_minmax(18rem,0.8fr)]">
         <div className="grid grid-cols-2 gap-2">
           {stats.map(([label, value, detail]) => (
             <div key={label} className="rounded-xl border bg-surface-muted/60 p-3">
@@ -781,6 +834,18 @@ function UserReportPanel({
               <p className="mt-0.5 text-[11px] text-muted">{detail}</p>
             </div>
           ))}
+        </div>
+        <div className="rounded-xl border bg-surface-muted/60 p-3">
+          <div className="flex items-center gap-2">
+            <Activity className="size-4 text-brand" />
+            <p className="text-xs font-black uppercase text-muted">Resumo operacional</p>
+          </div>
+          <div className="mt-3 grid gap-2 text-xs font-bold text-muted">
+            <p>{formatNumber(report.stats.scoredPredictions)} palpites já pontuaram.</p>
+            <p>{formatNumber(report.stats.correctResults)} acertos de resultado no histórico.</p>
+            <p>{formatNumber(report.stats.adminActionsAsActor)} ações como operador.</p>
+            <p>{formatNumber(report.stats.adminActionsAsTarget)} ações administrativas sobre esta conta.</p>
+          </div>
         </div>
       </div>
 
@@ -795,6 +860,10 @@ function UserReportPanel({
                 </div>
                 <p className="mt-1 text-[11px] text-muted">
                   {pool.isPublic ? "Público" : "Privado"} · entrou {formatDateTime(pool.joinedAt)}
+                </p>
+                <p className="mt-1 text-[10px] font-bold text-muted">
+                  Elegível desde {formatDateTime(pool.eligibleFrom)}
+                  {pool.archivedAt ? ` · arquivado ${formatDateTime(pool.archivedAt)}` : ""}
                 </p>
               </div>
             ))}
@@ -814,6 +883,9 @@ function UserReportPanel({
                   <p className="mt-0.5 text-[11px] text-muted">
                     {prediction.stageLabel} · {scoreText(prediction.prediction)}
                     {prediction.result ? ` · resultado ${scoreText(prediction.result)}` : ""}
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-bold text-muted">
+                    Enviado {formatDateTime(prediction.submittedAt)} · atualizado {formatDateTime(prediction.updatedAt)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5 md:justify-end">
@@ -837,6 +909,9 @@ function UserReportPanel({
                 <div key={`${market.marketKey}-${market.updatedAt}`} className="rounded-xl border bg-surface-muted/45 px-3 py-2">
                   <p className="text-xs font-black">{market.marketTitle}</p>
                   <p className="mt-1 text-[11px] leading-4 text-muted">{market.picks.join(", ")}</p>
+                  <p className="mt-1 text-[10px] font-bold text-muted">
+                    Atualizado {formatDateTime(market.updatedAt)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -848,14 +923,22 @@ function UserReportPanel({
         <ReportSection icon={ShieldAlert} title="Auditoria">
           {report.auditTrail.length > 0 ? (
             <div className="divide-y rounded-xl border">
-              {report.auditTrail.map((entry) => (
-                <div key={entry.id} className="px-3 py-2">
-                  <p className="text-xs font-black">{auditActionLabel(entry.action)}</p>
-                  <p className="mt-0.5 truncate text-[11px] text-muted">
-                    {entry.entityType} · {formatDateTime(entry.createdAt)}
-                  </p>
-                </div>
-              ))}
+              {report.auditTrail.map((entry) => {
+                const summary = metadataSummary(entry.metadata);
+                return (
+                  <div key={entry.id} className="px-3 py-2">
+                    <p className="text-xs font-black">{auditActionLabel(entry.action)}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted">
+                      {entry.entityType} · {formatDateTime(entry.createdAt)}
+                    </p>
+                    {summary ? (
+                      <p className="mt-0.5 line-clamp-2 text-[10px] font-bold text-muted">
+                        {summary}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <EmptyReportLine>Sem ações administrativas vinculadas.</EmptyReportLine>
@@ -894,6 +977,44 @@ function EmptyReportLine({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AccountSignal({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "ok" | "warn" | "danger" | "neutral";
+}) {
+  const toneClass =
+    tone === "danger"
+      ? "status-danger"
+      : tone === "warn"
+        ? "status-warning"
+        : tone === "ok"
+          ? "status-success"
+          : "bg-surface-muted";
+
+  return (
+    <div className={`rounded-xl border p-3 ${toneClass}`}>
+      <p className="text-[10px] font-black uppercase tracking-[0.1em] text-muted">{label}</p>
+      <p className="mt-1 text-sm font-black">{value}</p>
+      <p className="mt-1 text-[11px] leading-4 text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function AccessMoment({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="rounded-xl border bg-surface px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.1em] text-muted">{label}</p>
+      <p className="mt-1 text-xs font-black">{formatDateTime(value)}</p>
+    </div>
+  );
+}
+
 function AuditList({ entries }: { entries: MasterOverview["audit"] }) {
   const formatted = useMemo(
     () =>
@@ -928,6 +1049,63 @@ function formatDateTime(value?: string | null) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function shortId(value: string) {
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 8)}...${value.slice(-4)}`;
+}
+
+function metadataSummary(metadata: Record<string, unknown>) {
+  const preferredKeys = [
+    "reason",
+    "source",
+    "old_name",
+    "new_name",
+    "old_display_name",
+    "new_display_name",
+    "pool_name",
+    "target_user_id",
+    "match_id",
+    "previous",
+    "next",
+  ];
+  const parts = preferredKeys
+    .map((key) => metadataPart(key, metadata[key]))
+    .filter((part): part is string => Boolean(part))
+    .slice(0, 3);
+
+  if (parts.length > 0) return parts.join(" · ");
+
+  return Object.entries(metadata)
+    .map(([key, value]) => metadataPart(key, value))
+    .filter((part): part is string => Boolean(part))
+    .slice(0, 3)
+    .join(" · ");
+}
+
+function metadataPart(key: string, value: unknown) {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value === "object") return null;
+  return `${metadataLabel(key)}: ${String(value)}`;
+}
+
+function metadataLabel(key: string) {
+  return (
+    {
+      reason: "motivo",
+      source: "fonte",
+      old_name: "nome anterior",
+      new_name: "novo nome",
+      old_display_name: "nome anterior",
+      new_display_name: "novo nome",
+      pool_name: "bolão",
+      target_user_id: "usuário",
+      match_id: "jogo",
+      previous: "anterior",
+      next: "novo",
+    }[key] ?? key
+  );
 }
 
 function scoreText(prediction: { homeScore: number; awayScore: number }) {

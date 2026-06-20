@@ -845,7 +845,7 @@ async function getAdminUserReports({
       const userSpecials = specialsByUser.get(user.userId) ?? [];
       const asActor = actorAuditByUser.get(user.userId) ?? [];
       const asTarget = targetAuditByUser.get(user.userId) ?? [];
-      const auditTrail = uniqueAuditEntries([...asActor, ...asTarget]).slice(0, 8);
+      const auditTrail = uniqueAuditEntries([...asActor, ...asTarget]).slice(0, 12);
       const report: AdminUserReport = {
         userId: user.userId,
         identity: {
@@ -886,7 +886,7 @@ async function getAdminUserReports({
             eligibleFrom: membership.eligible_from,
           };
         }),
-        recentPredictions: userPredictions.slice(0, 6).map((prediction) => {
+        recentPredictions: userPredictions.slice(0, 8).map((prediction) => {
           const match = matchesById.get(prediction.match_id);
           const score = scoresByUserAndMatch.get(`${prediction.user_id}:${prediction.match_id}`);
           return {
@@ -914,7 +914,7 @@ async function getAdminUserReports({
             category: score?.category ?? null,
           };
         }),
-        specialMarkets: userSpecials.slice(0, 6),
+        specialMarkets: userSpecials.slice(0, 8),
         auditTrail,
       };
       return [user.userId, report];
