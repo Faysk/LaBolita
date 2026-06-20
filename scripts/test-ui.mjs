@@ -111,6 +111,11 @@ try {
   await page.goto(`${BASE_URL}/jogadores`);
   await page.getByRole("heading", { name: "Jogadores da Copa" }).waitFor();
   await page.getByText("Figurinhas em destaque").waitFor();
+  await page.getByLabel("Ordenar").selectOption("goals");
+  await page.getByText(/Mostrando .* Mais gols/).waitFor();
+  await page.getByText("Dados do jogador").first().click();
+  await page.getByText("Especiais relacionados").first().waitFor();
+  await page.getByRole("link", { name: "Artilheiro" }).first().waitFor();
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/palpites`);
