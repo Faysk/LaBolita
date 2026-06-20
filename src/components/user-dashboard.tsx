@@ -21,6 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
+import { EmptyState } from "@/components/empty-state";
 import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -891,9 +892,12 @@ function ActionQueue({
           </Link>
         ) : null}
         {pendingMatches.length === 0 && !specialProgress.next && (
-          <p className="rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
-            Sem pendência aberta agora.
-          </p>
+          <EmptyState
+            icon={ListChecks}
+            title="Nada pendente agora"
+            description="Quando abrir um novo jogo ou palpite final, ele aparece aqui como próximo passo."
+            className="bg-surface-muted shadow-none"
+          />
         )}
       </div>
     </section>
@@ -947,29 +951,66 @@ function FinishedPulse({
         className="mt-4 grid gap-2"
       >
         {scoredMatches.map((item) => (
-          <div key={item.match.id} className="rounded-2xl bg-surface-muted p-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="min-w-0 truncate text-sm font-black">
-                {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
-              </p>
-              <span className="text-sm font-black text-brand">
-                {item.score?.totalPoints} pts
-              </span>
-            </div>
-            <p className="mt-1 text-xs font-bold text-muted">
-              Palpite {predictionText(item.prediction)} · resultado {item.result?.homeScore} x {item.result?.awayScore}
-            </p>
-          </div>
+          <ScoredMatchPulseRow key={item.match.id} item={item} />
         ))}
       </ProgressiveList>
       <div className={scoredMatches.length > 0 ? "mt-2" : "mt-4"}>
         {scoredMatches.length === 0 && (
-          <p className="rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
-            Os pontos aparecem depois dos primeiros resultados confirmados.
-          </p>
+          <EmptyState
+            icon={CircleDot}
+            title="Pontuação em aquecimento"
+            description="Os pontos aparecem depois dos primeiros resultados confirmados."
+            className="bg-surface-muted shadow-none"
+          />
         )}
       </div>
     </section>
+  );
+}
+
+function ScoredMatchPulseRow({
+  item,
+}: {
+  item: {
+    match: DemoMatch;
+    result: MatchResult | undefined;
+    prediction: ScorePrediction | undefined;
+    score: ScoreBreakdown | null;
+  };
+}) {
+  return (
+    <details className="group overflow-hidden rounded-2xl bg-surface-muted">
+      <summary className="interactive grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-black">
+            {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
+          </span>
+          <span className="mt-1 block truncate text-xs font-bold text-muted">
+            Palpite {predictionText(item.prediction)} · resultado {item.result?.homeScore} x {item.result?.awayScore}
+          </span>
+        </span>
+        <span className="inline-flex items-center gap-2 text-sm font-black text-brand">
+          {item.score?.totalPoints} pts
+          <ChevronDown className="size-4 text-muted transition group-open:rotate-180" />
+        </span>
+      </summary>
+      <div className="grid gap-2 border-t bg-surface/75 p-3 sm:grid-cols-3">
+        <MiniDashboardStat label="Categoria" value={item.score ? scoreCategoryLabel(item.score.category) : "sem cálculo"} />
+        <MiniDashboardStat label="Pontos do placar" value={item.score ? `${item.score.matchPoints} pts` : "—"} />
+        <MiniDashboardStat
+          label={item.match.stage === "group" ? "Multiplicador" : "Avanço"}
+          value={
+            item.match.stage === "group"
+              ? item.score
+                ? `${item.score.multiplier}x`
+                : "—"
+              : item.score
+                ? `${item.score.advancementPoints} pts`
+                : "—"
+          }
+        />
+      </div>
+    </details>
   );
 }
 

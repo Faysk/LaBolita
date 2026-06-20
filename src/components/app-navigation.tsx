@@ -160,8 +160,9 @@ export function DesktopNavigation() {
           <div
             id="desktop-more-navigation"
             role="menu"
-            className="absolute right-0 top-12 z-50 grid w-72 gap-1 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/15"
+            className="absolute right-0 top-12 z-50 grid w-80 gap-1 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/15"
           >
+            <MenuHeader title="Mais caminhos" description="Consulta, dados e regras." />
             {supportNavigation.map((item) => (
               <MoreNavigationLink
                 key={item.href}
@@ -212,8 +213,9 @@ export function MobileNavigation() {
         <div
           id="mobile-more-navigation"
           role="menu"
-          className="fixed inset-x-2.5 bottom-[5.45rem] z-50 grid gap-1 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/20 backdrop-blur-xl"
+          className="fixed inset-x-2.5 bottom-[5.45rem] z-50 grid max-h-[calc(100dvh-7rem)] gap-1 overflow-y-auto rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/20 backdrop-blur-xl"
         >
+          <MenuHeader title="Mais caminhos" description="Jogos, dados, especiais e regras." />
           {mobileMenuNavigation.map((item) => (
             <MoreNavigationLink
               key={item.href}
@@ -304,6 +306,23 @@ function MobileNavigationLink({
   );
 }
 
+function MenuHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div role="presentation" className="px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+        {title}
+      </p>
+      <p className="mt-0.5 text-xs font-bold text-muted">{description}</p>
+    </div>
+  );
+}
+
 function MoreNavigationLink({
   item,
   active,
@@ -337,7 +356,7 @@ function MoreNavigationLink({
           {item.label}
         </span>
         <span
-          className={`mt-0.5 block truncate text-xs font-bold ${
+          className={`mt-0.5 block line-clamp-2 text-xs font-bold ${
             active ? "text-white/65" : "text-muted"
           }`}
         >

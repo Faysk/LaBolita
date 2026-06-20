@@ -29,6 +29,11 @@ export function ProgressiveList({
   const hasMore = visibleCount < items.length;
   const hiddenCount = Math.max(0, items.length - visibleCount);
   const visibleItems = items.slice(0, visibleCount);
+  const label = summaryLabel
+    ? summaryLabel(hiddenCount, items.length)
+    : hiddenCount > 0
+      ? `${moreLabel} (${hiddenCount})`
+      : moreLabel;
 
   return (
     <>
@@ -36,6 +41,7 @@ export function ProgressiveList({
       {items.length > safeInitialCount ? (
         <button
           type="button"
+          aria-expanded={!hasMore}
           onClick={() =>
             setVisibleCount((current) =>
               current >= items.length
@@ -50,7 +56,7 @@ export function ProgressiveList({
         >
           {hasMore ? (
             <>
-              {summaryLabel ? summaryLabel(hiddenCount, items.length) : moreLabel}
+              {label}
               <ChevronDown className="size-4" />
             </>
           ) : (

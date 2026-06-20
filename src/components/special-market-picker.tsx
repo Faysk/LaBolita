@@ -20,6 +20,7 @@ import {
   SpecialOptionAvatar,
   SpecialOptionSticker,
 } from "@/components/special-sticker";
+import { EmptyState } from "@/components/empty-state";
 import { LinkPendingLabel } from "@/components/link-pending-feedback";
 import {
   highlightSpecialOptions,
@@ -470,9 +471,12 @@ export function SpecialMarketPicker({
               </div>
             </div>
           ) : (
-            <div className="mt-4 rounded-[1.5rem] border bg-surface-muted p-5 text-sm font-bold text-muted">
-              Nenhuma carta disponível para este especial.
-            </div>
+            <EmptyState
+              icon={Sparkles}
+              title="Nenhuma carta disponível"
+              description="Ainda não há opções publicadas para este palpite final neste ambiente."
+              className="mt-4"
+            />
           )}
 
           {deckRailOptions.length > 1 ? (
@@ -642,9 +646,20 @@ export function SpecialMarketPicker({
           ))}
         </div>
         {filteredOptions.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed bg-surface-muted p-5 text-sm font-bold text-muted">
-            Nenhuma figurinha encontrada nessa combinação.
-          </div>
+          <EmptyState
+            icon={Search}
+            title="Nenhuma figurinha encontrada"
+            description="Limpe a busca ou escolha outro filtro para voltar ao baralho completo."
+            className="mt-4"
+          >
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="interactive inline-flex min-h-11 items-center justify-center rounded-2xl bg-brand px-5 text-sm font-black text-white"
+            >
+              Limpar busca
+            </button>
+          </EmptyState>
         ) : null}
         {visibleOptions.length < filteredOptions.length && (
           <div className="mt-5 flex justify-center">

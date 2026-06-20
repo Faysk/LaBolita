@@ -14,6 +14,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { MatchCard, predictionMatchCardId } from "@/components/match-card";
+import { EmptyState } from "@/components/empty-state";
 import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -230,9 +231,12 @@ export function PredictionBoard({
           </section>
         ))}
         {visibleMatches.length === 0 && (
-          <p className="card p-6 text-sm text-muted">
-            Nenhuma partida encontrada neste filtro.
-          </p>
+          <EmptyState
+            icon={CircleDashed}
+            title="Nenhuma partida neste filtro"
+            description="Troque o filtro ou volte para Todos para ver a agenda completa de palpites."
+            className="card"
+          />
         )}
       </div>
     </>
@@ -354,11 +358,15 @@ export function FinishedMatchesReview({
               />
             ))
           ) : (
-            <div className="rounded-[1.25rem] border bg-surface-muted p-5 text-sm leading-6 text-muted">
-              {comparisonSource === "supabase"
-                ? "Nenhum palpite de bolão está liberado para este jogo ainda."
-                : "Finalize um resultado no modo demo para comparar este jogo com o ranking."}
-            </div>
+            <EmptyState
+              icon={Layers3}
+              title="Comparação ainda sem dados"
+              description={
+                comparisonSource === "supabase"
+                  ? "Os palpites deste jogo aparecem aqui quando estiverem liberados para o seu bolão."
+                  : "Finalize um resultado no modo demo para comparar este jogo com o ranking."
+              }
+            />
           )}
         </div>
       </div>

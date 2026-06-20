@@ -18,6 +18,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-state";
 import { TeamFlag } from "@/components/team-flag";
 import { specialMarketPath } from "@/lib/special-market-display";
 import type { DemoTeam } from "@/lib/types";
@@ -339,11 +340,12 @@ export function PlayersCatalog({
           </div>
 
           {filteredPlayers.length === 0 ? (
-            <div className="mt-4 rounded-[1.5rem] border bg-surface p-8 text-center shadow-sm">
-              <p className="text-lg font-black">Nenhum jogador encontrado</p>
-              <p className="mt-2 text-sm font-bold text-muted">
-                Ajuste os filtros para voltar ao catálogo completo.
-              </p>
+            <EmptyState
+              icon={Search}
+              title="Nenhum jogador encontrado"
+              description="Ajuste os filtros ou limpe a busca para voltar ao catálogo completo."
+              className="mt-4"
+            >
               <button
                 type="button"
                 onClick={clearFilters}
@@ -351,7 +353,7 @@ export function PlayersCatalog({
               >
                 Limpar filtros
               </button>
-            </div>
+            </EmptyState>
           ) : viewMode === "cards" ? (
             <div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               {visiblePlayers.map((player, index) => (

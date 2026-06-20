@@ -28,6 +28,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
+import { EmptyState } from "@/components/empty-state";
 import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -362,7 +363,11 @@ export function PoolsWorkspace({
             />
           ))}
           {activePools.length === 0 && (
-            <EmptyCard text="Você ainda não entrou em nenhum bolão. Crie um, use um convite ou explore os públicos." />
+            <EmptyCard
+              title="Nenhum bolão seu ainda"
+              text="Crie um, use um convite ou explore os públicos para começar a disputa."
+              icon={Users}
+            />
           )}
         </PoolSection>
       )}
@@ -423,7 +428,15 @@ export function PoolsWorkspace({
             />
           ))}
           {publicPools.length === 0 && (
-            <EmptyCard text={publicSearch ? "Nenhum bolão público encontrado nesta busca." : "Ainda não há bolões públicos disponíveis."} />
+            <EmptyCard
+              title={publicSearch ? "Nada nessa busca" : "Nada aberto agora"}
+              text={
+                publicSearch
+                  ? "Tente outro nome de bolão ou organizador."
+                  : "Quando alguém publicar um bolão aberto, ele aparece aqui."
+              }
+              icon={publicSearch ? Search : Globe2}
+            />
           )}
         </div>
         {selectedPool && selectedIsPublicPool && (
@@ -846,8 +859,23 @@ function PublicPoolCard({
   );
 }
 
-function EmptyCard({ text }: { text: string }) {
-  return <p className="card p-6 text-sm text-muted md:col-span-2 lg:col-span-3">{text}</p>;
+function EmptyCard({
+  title,
+  text,
+  icon,
+}: {
+  title: string;
+  text: string;
+  icon: typeof Users;
+}) {
+  return (
+    <EmptyState
+      icon={icon}
+      title={title}
+      description={text}
+      className="md:col-span-2 lg:col-span-3"
+    />
+  );
 }
 
 function PaginationLink({ page, disabled, search, children }: { page: number; disabled: boolean; search: string; children: React.ReactNode }) {

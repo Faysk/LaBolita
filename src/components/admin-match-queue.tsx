@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { EmptyState } from "@/components/empty-state";
 import { TeamFlag } from "@/components/team-flag";
 import { storeLocalResult, useLocalResults } from "@/lib/local-state";
 import type { DemoMatch, DemoTeam } from "@/lib/types";
@@ -229,9 +230,12 @@ export function AdminMatchQueue({
         ))}
       </div>
       {visible.length === 0 && (
-        <p className="p-6 text-center text-sm text-muted">
-          Nenhuma partida encontrada neste filtro.
-        </p>
+        <EmptyState
+          icon={Search}
+          title="Nenhum jogo neste filtro"
+          description="Troque o filtro, limpe a busca ou abra Todos para revisar a fila completa."
+          className="m-5"
+        />
       )}
     </div>
   );
