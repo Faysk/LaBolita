@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { PoolFlag } from "@/components/pool-flag";
+import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { UserAvatar } from "@/components/user-avatar";
 import { isLiveMatch } from "@/lib/match-display";
@@ -209,8 +210,13 @@ export function LiveCenter({
       </section>
 
       {focusMatches.length > 1 ? (
-        <section className="mt-5 min-w-0 max-w-full overflow-x-auto pb-2">
-          <div className="flex min-w-max gap-2">
+        <section className="mt-5 min-w-0 max-w-full pb-2">
+          <ProgressiveList
+            initialCount={6}
+            step={6}
+            moreLabel="Ver mais jogos"
+            className="flex gap-2 overflow-x-auto pb-1"
+          >
             {focusMatches.map((match) => (
               <button
                 key={match.id}
@@ -237,7 +243,7 @@ export function LiveCenter({
                 </span>
               </button>
             ))}
-          </div>
+          </ProgressiveList>
         </section>
       ) : null}
 
@@ -379,7 +385,7 @@ export function LiveCenter({
                   </>
                 ) : (
                   <>
-                    Carregar mais participantes <ChevronDown className="size-4" />
+                    Ver mais participantes <ChevronDown className="size-4" />
                   </>
                 )}
               </button>
@@ -456,7 +462,13 @@ export function LiveCenter({
               </div>
 
               {selectedComparison.topScorelines.length > 0 ? (
-                <div className="mt-5 flex flex-wrap gap-2">
+                <ProgressiveList
+                  initialCount={3}
+                  step={6}
+                  moreLabel="Ver mais placares"
+                  className="mt-5 flex flex-wrap gap-2"
+                  buttonClassName="interactive mt-3 inline-flex items-center gap-2 rounded-full border bg-surface-muted px-3 py-1.5 text-[10px] font-black text-brand hover:border-brand/60"
+                >
                   {selectedComparison.topScorelines.map((scoreline) => (
                     <span
                       key={scoreline.label}
@@ -467,7 +479,7 @@ export function LiveCenter({
                       {scoreline.label} · {scoreline.count}
                     </span>
                   ))}
-                </div>
+                </ProgressiveList>
               ) : null}
             </>
           ) : (
@@ -521,7 +533,7 @@ export function LiveCenter({
                     </>
                   ) : (
                     <>
-                      Carregar mais palpites <ChevronDown className="size-4" />
+                      Ver mais palpites <ChevronDown className="size-4" />
                     </>
                   )}
                 </button>
@@ -868,17 +880,16 @@ function selectFocusMatches(matches: DemoMatch[]) {
   const awaiting = matches
     .filter((match) => match.providerStatus === "finished" && !match.result)
     .sort((left, right) => scheduledTime(right) - scheduledTime(left));
-  if (awaiting.length > 0) return awaiting.slice(0, 3);
+  if (awaiting.length > 0) return awaiting;
 
   const upcoming = matches
     .filter((match) => !match.locked && !match.result && match.providerStatus !== "finished")
     .sort((left, right) => scheduledTime(left) - scheduledTime(right));
-  if (upcoming.length > 0) return upcoming.slice(0, 3);
+  if (upcoming.length > 0) return upcoming;
 
   return matches
     .filter((match) => Boolean(match.result) || match.locked)
-    .sort((left, right) => scheduledTime(right) - scheduledTime(left))
-    .slice(0, 3);
+    .sort((left, right) => scheduledTime(right) - scheduledTime(left));
 }
 
 function selectPoolOptions(

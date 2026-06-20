@@ -6,6 +6,7 @@ import {
   type PlayerCatalogItem,
   type PlayerCatalogTeam,
 } from "@/components/players-catalog";
+import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { uniqueTeams } from "@/lib/competition";
 import { getMatches } from "@/lib/data/matches";
@@ -50,19 +51,16 @@ export async function PlayersDirectory({
   }, new Map<string, number>());
   const catalogTeams = buildCatalogTeams(teams, groupsByTeamCode, stickerCountByTeam);
   const topScorers = [...players]
-    .sort((left, right) => right.goals - left.goals || right.caps - left.caps)
-    .slice(0, 8);
+    .sort((left, right) => right.goals - left.goals || right.caps - left.caps);
   const mostCapped = [...players]
-    .sort((left, right) => right.caps - left.caps || right.goals - left.goals)
-    .slice(0, 8);
+    .sort((left, right) => right.caps - left.caps || right.goals - left.goals);
   const stickerCount = Object.keys(PLAYER_STICKER_ASSETS).length;
   const averageAge = Math.round(
     players.reduce((total, player) => total + playerAge(player), 0) / players.length,
   );
   const featuredStickers = players
     .filter((player) => playerStickerAsset(stickerKey(player)))
-    .sort((left, right) => right.goals - left.goals || right.caps - left.caps)
-    .slice(0, 10);
+    .sort((left, right) => right.goals - left.goals || right.caps - left.caps);
 
   return (
     <main className="page-container py-7 md:py-10">
@@ -115,8 +113,13 @@ export async function PlayersDirectory({
               {stickerCount} no app
             </span>
           </div>
-          <div className="-mx-5 overflow-x-auto px-5 pb-2">
-            <div className="grid auto-cols-[8.5rem] grid-flow-col gap-3">
+          <div className="-mx-5 px-5 pb-2">
+            <ProgressiveList
+              initialCount={10}
+              step={10}
+              moreLabel="Ver mais figurinhas"
+              className="grid auto-cols-[8.5rem] grid-flow-col gap-3 overflow-x-auto pb-2"
+            >
               {featuredStickers.map((player) => (
                 <PlayerStickerCard
                   key={stickerKey(player)}
@@ -124,7 +127,7 @@ export async function PlayersDirectory({
                   team={teamForPlayer(player, teamsByCode)}
                 />
               ))}
-            </div>
+            </ProgressiveList>
           </div>
         </section>
       )}
@@ -191,7 +194,12 @@ function Leaderboard({
         <h2 className="mt-1 text-xl font-black tracking-tight">{title}</h2>
         <p className="mt-1 text-sm leading-6 text-muted">{subtitle}</p>
       </div>
-      <div className="mt-5 grid gap-2">
+      <ProgressiveList
+        initialCount={8}
+        step={8}
+        moreLabel="Ver mais jogadores"
+        className="mt-5 grid gap-2"
+      >
         {players.map((player, index) => (
           <div key={`${player.team.code}-${player.number}`} className="min-w-0 rounded-2xl bg-surface-muted p-3">
             <div className="flex items-center gap-3">
@@ -209,7 +217,7 @@ function Leaderboard({
             </div>
           </div>
         ))}
-      </div>
+      </ProgressiveList>
     </section>
   );
 }

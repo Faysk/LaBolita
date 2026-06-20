@@ -170,8 +170,7 @@ export function summarizePoolComparison({
           Number(right.isCurrentUserPrediction) -
             Number(left.isCurrentUserPrediction) ||
           left.label.localeCompare(right.label, "pt-BR"),
-      )
-      .slice(0, 3),
+      ),
   };
 }
 

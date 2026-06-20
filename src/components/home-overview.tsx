@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Crown, Trophy, Users } from "lucide-react";
 import { CountryFlag } from "@/components/country-flag";
+import { ProgressiveList } from "@/components/progressive-list";
 import { StatCard } from "@/components/stat-card";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import type { PublicPoolHighlight } from "@/lib/data/pools";
@@ -157,7 +158,12 @@ export function HomeOverview({
               </div>
             </div>
           ) : (
-            <div className="mt-6 grid gap-2">
+            <ProgressiveList
+              initialCount={3}
+              step={3}
+              moreLabel="Ver mais bolões"
+              className="mt-6 grid gap-2"
+            >
               {publicPoolHighlights.map((pool, index) => (
                 <div key={pool.id} className="rounded-2xl border border-white/15 bg-white/10 p-3">
                   <div className="flex items-center gap-3">
@@ -176,12 +182,12 @@ export function HomeOverview({
                   )}
                 </div>
               ))}
-              {publicPoolHighlights.length === 0 && (
-                <p className="rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-white/65">
-                  Entre ou descubra um bolão público para acompanhar a disputa.
-                </p>
-              )}
-            </div>
+            </ProgressiveList>
+          )}
+          {!canShowPersonalStats && publicPoolHighlights.length === 0 && (
+            <p className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-white/65">
+              Entre ou descubra um bolão público para acompanhar a disputa.
+            </p>
           )}
           <Link
             href="/boloes"
@@ -199,8 +205,13 @@ export function HomeOverview({
             </div>
             <Trophy className="size-6 text-brand" />
           </div>
-          <div className="mt-5 space-y-3">
-            {visibleGlobalRanking.slice(0, 3).map((player) => (
+          <ProgressiveList
+            initialCount={3}
+            step={3}
+            moreLabel="Ver mais colocados"
+            className="mt-5 space-y-3"
+          >
+            {visibleGlobalRanking.map((player) => (
               <div
                 key={player.name}
                 data-testid={player.isCurrentUser ? "home-ranking-current-user" : undefined}
@@ -220,12 +231,12 @@ export function HomeOverview({
                 <span className="text-sm font-black text-brand">{player.points} pts</span>
               </div>
             ))}
-            {visibleGlobalRanking.length === 0 && (
-              <p className="rounded-2xl bg-surface-muted p-4 text-sm text-muted">
-                Os líderes dos bolões públicos aparecerão aqui.
-              </p>
-            )}
-          </div>
+          </ProgressiveList>
+          {visibleGlobalRanking.length === 0 && (
+            <p className="mt-5 rounded-2xl bg-surface-muted p-4 text-sm text-muted">
+              Os líderes dos bolões públicos aparecerão aqui.
+            </p>
+          )}
         </div>
       </section>
     </>

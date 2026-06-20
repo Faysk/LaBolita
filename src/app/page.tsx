@@ -23,7 +23,7 @@ export default async function HomePage() {
     getViewerState(),
   ]);
   const liveMatches = matches.filter(isLiveMatch);
-  const nextMatches = selectUpcomingMatches(matches, 3);
+  const nextMatches = selectUpcomingMatches(matches);
   const hasLiveMatch = liveMatches.length > 0;
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
@@ -81,7 +81,13 @@ export default async function HomePage() {
               Ver agenda <ArrowRight className="size-4" />
             </Link>
           </div>
-          <MatchTimeline matches={liveMatches} variant="rail" href="/jogos" />
+          <MatchTimeline
+            matches={liveMatches}
+            variant="rail"
+            href="/jogos"
+            initialCount={3}
+            moreLabel="Ver mais jogos ao vivo"
+          />
         </section>
       ) : null}
 
@@ -90,7 +96,7 @@ export default async function HomePage() {
           <div>
             <p className="eyebrow">Próximos da fila</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">
-              Próximos 3 jogos
+              Próximos jogos
             </h2>
           </div>
           <Link
@@ -100,7 +106,13 @@ export default async function HomePage() {
             Ver agenda <ArrowRight className="size-4" />
           </Link>
         </div>
-        <MatchTimeline matches={nextMatches} variant="rail" href="/jogos" />
+        <MatchTimeline
+          matches={nextMatches}
+          variant="rail"
+          href="/jogos"
+          initialCount={3}
+          moreLabel="Ver mais próximos jogos"
+        />
       </section>
 
       <SpecialHomeSummary
@@ -112,7 +124,7 @@ export default async function HomePage() {
   );
 }
 
-function selectUpcomingMatches(matches: DemoMatch[], limit: number) {
+function selectUpcomingMatches(matches: DemoMatch[]) {
   return matches
     .filter(
       (match) =>
@@ -121,8 +133,7 @@ function selectUpcomingMatches(matches: DemoMatch[], limit: number) {
         !match.result &&
         match.providerStatus !== "finished",
     )
-    .sort((left, right) => scheduledTime(left) - scheduledTime(right))
-    .slice(0, limit);
+    .sort((left, right) => scheduledTime(left) - scheduledTime(right));
 }
 
 function scheduledTime(match: DemoMatch) {

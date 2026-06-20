@@ -25,8 +25,8 @@ export default async function GamesPage() {
   const matches = await getMatches();
   const comparisonOverview = await getPredictionComparisonOverview(matches);
   const liveMatches = matches.filter(isLiveMatch);
-  const nextMatches = selectUpcomingMatches(matches, 6);
-  const recentMatches = selectRecentMatches(matches, 6);
+  const nextMatches = selectUpcomingMatches(matches);
+  const recentMatches = selectRecentMatches(matches);
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
   );
@@ -108,8 +108,10 @@ export default async function GamesPage() {
           <ScheduleRail
             eyebrow="Próximos da fila"
             title="Próximos jogos"
-            matches={nextMatches.slice(0, 6)}
+            matches={nextMatches}
             showPrediction
+            initialCount={6}
+            moreLabel="Ver mais próximos jogos"
           />
           {recentMatches.length > 0 ? (
             <ScheduleRail
@@ -117,6 +119,8 @@ export default async function GamesPage() {
               title="Últimos resultados"
               matches={recentMatches}
               showPrediction
+              initialCount={6}
+              moreLabel="Ver mais últimos resultados"
             />
           ) : null}
         </div>
@@ -136,7 +140,12 @@ export default async function GamesPage() {
                 {date}
               </h3>
             </div>
-            <MatchTimeline matches={groupMatches} showPrediction />
+            <MatchTimeline
+              matches={groupMatches}
+              showPrediction
+              initialCount={8}
+              moreLabel="Ver mais jogos deste dia"
+            />
           </section>
         ))}
       </section>
@@ -150,12 +159,16 @@ function ScheduleRail({
   matches,
   live = false,
   showPrediction = false,
+  initialCount,
+  moreLabel,
 }: {
   eyebrow: string;
   title: string;
   matches: DemoMatch[];
   live?: boolean;
   showPrediction?: boolean;
+  initialCount?: number;
+  moreLabel?: string;
 }) {
   return (
     <section className="min-w-0">
@@ -172,7 +185,13 @@ function ScheduleRail({
           <CalendarDays className="size-4 text-brand" />
         )}
       </div>
-      <MatchTimeline matches={matches} variant="rail" showPrediction={showPrediction} />
+      <MatchTimeline
+        matches={matches}
+        variant="rail"
+        showPrediction={showPrediction}
+        initialCount={initialCount}
+        moreLabel={moreLabel}
+      />
     </section>
   );
 }
@@ -232,7 +251,7 @@ function groupMatchesByDate(matches: DemoMatch[]) {
   return [...groups.entries()];
 }
 
-function selectUpcomingMatches(matches: DemoMatch[], limit: number) {
+function selectUpcomingMatches(matches: DemoMatch[]) {
   return matches
     .filter(
       (match) =>
@@ -241,15 +260,13 @@ function selectUpcomingMatches(matches: DemoMatch[], limit: number) {
         !match.result &&
         match.providerStatus !== "finished",
     )
-    .sort((left, right) => scheduledTime(left) - scheduledTime(right))
-    .slice(0, limit);
+    .sort((left, right) => scheduledTime(left) - scheduledTime(right));
 }
 
-function selectRecentMatches(matches: DemoMatch[], limit: number) {
+function selectRecentMatches(matches: DemoMatch[]) {
   return matches
     .filter((match) => Boolean(match.result) || match.providerStatus === "finished")
-    .sort((left, right) => scheduledTime(right) - scheduledTime(left))
-    .slice(0, limit);
+    .sort((left, right) => scheduledTime(right) - scheduledTime(left));
 }
 
 function scheduledTime(match: DemoMatch) {

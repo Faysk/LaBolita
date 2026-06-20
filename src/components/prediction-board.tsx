@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { MatchCard } from "@/components/match-card";
 import { PoolFlag } from "@/components/pool-flag";
+import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { UserAvatar } from "@/components/user-avatar";
 import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
@@ -235,7 +236,12 @@ export function FinishedMatchesReview({
             <ReviewPill icon={Target} label="Visíveis" value={totals.predictionCount} />
           </div>
         </div>
-        <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+        <ProgressiveList
+          initialCount={10}
+          step={10}
+          moreLabel="Ver mais jogos"
+          className="mt-4 flex gap-3 overflow-x-auto pb-1"
+        >
           {matches.map((match) => (
             <FinishedMatchButton
               key={match.id}
@@ -245,7 +251,7 @@ export function FinishedMatchesReview({
               onClick={() => onSelectMatch(match.id)}
             />
           ))}
-        </div>
+        </ProgressiveList>
       </div>
 
       <div className="grid gap-4 p-4 md:p-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
@@ -348,8 +354,7 @@ function PoolComparisonPanel({
   match: DemoMatch;
 }) {
   const entries = [...comparison.entries]
-    .sort((left, right) => compareEntriesForPanel(left, right, match))
-    .slice(0, 8);
+    .sort((left, right) => compareEntriesForPanel(left, right, match));
   const averagePoints = comparisonAveragePoints(comparison, match);
 
   return (
@@ -375,11 +380,16 @@ function PoolComparisonPanel({
         </div>
       </div>
       <OutcomeDistribution comparison={comparison} match={match} />
-      <div className="mt-4 divide-y rounded-2xl border bg-surface">
+      <ProgressiveList
+        initialCount={8}
+        step={8}
+        moreLabel="Ver mais palpites"
+        className="mt-4 divide-y rounded-2xl border bg-surface"
+      >
         {entries.map((entry) => (
           <ComparisonRow key={`${comparison.poolId}-${entry.userId ?? entry.name}`} entry={entry} match={match} />
         ))}
-      </div>
+      </ProgressiveList>
       {comparison.hiddenCount > 0 ? (
         <p className="mt-3 text-xs font-bold text-muted">
           {comparison.hiddenCount} participante{comparison.hiddenCount === 1 ? "" : "s"} sem palpite visível para este jogo.
@@ -487,7 +497,13 @@ function OutcomeDistribution({
         })}
       </div>
       {comparison.topScorelines.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <ProgressiveList
+          initialCount={3}
+          step={6}
+          moreLabel="Ver mais placares"
+          className="mt-3 flex flex-wrap gap-2"
+          buttonClassName="interactive mt-3 inline-flex items-center gap-2 rounded-full border bg-surface-muted px-3 py-1.5 text-[10px] font-black text-brand hover:border-brand/60"
+        >
           {comparison.topScorelines.map((scoreline) => (
             <span
               key={scoreline.label}
@@ -500,7 +516,7 @@ function OutcomeDistribution({
               {scoreline.label} · {scoreline.count}
             </span>
           ))}
-        </div>
+        </ProgressiveList>
       ) : null}
     </div>
   );

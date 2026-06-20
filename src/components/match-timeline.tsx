@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, CheckCircle2, Clock3, MapPin, Radio, Target } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
+import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { isLiveMatch } from "@/lib/match-display";
 import { predictionLabel } from "@/lib/prediction-comparisons";
@@ -11,6 +12,9 @@ type MatchTimelineProps = {
   variant?: "rail" | "list";
   href?: string;
   showPrediction?: boolean;
+  initialCount?: number;
+  step?: number;
+  moreLabel?: string;
 };
 
 export function MatchTimeline({
@@ -18,6 +22,9 @@ export function MatchTimeline({
   variant = "list",
   href,
   showPrediction = false,
+  initialCount,
+  step,
+  moreLabel = "Ver mais jogos",
 }: MatchTimelineProps) {
   if (matches.length === 0) {
     return (
@@ -28,22 +35,53 @@ export function MatchTimeline({
   }
 
   if (variant === "rail") {
+    const cards = matches.map((match) => (
+      <TimelineCard key={match.id} match={match} href={href} compact showPrediction={showPrediction} />
+    ));
+
+    if (initialCount) {
+      return (
+        <ProgressiveList
+          initialCount={initialCount}
+          step={step ?? initialCount}
+          moreLabel={moreLabel}
+          className="grid min-w-0 max-w-full snap-x auto-cols-[minmax(17rem,85vw)] grid-flow-col gap-3 overflow-x-auto pb-2 sm:auto-cols-[18rem] lg:auto-cols-[20rem]"
+          buttonClassName="interactive mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border bg-surface-muted px-4 py-3 text-xs font-black text-brand hover:border-brand/60"
+        >
+          {cards}
+        </ProgressiveList>
+      );
+    }
+
     return (
       <div className="min-w-0 max-w-full snap-x overflow-x-auto pb-2">
         <div className="grid auto-cols-[minmax(17rem,85vw)] grid-flow-col gap-3 sm:auto-cols-[18rem] lg:auto-cols-[20rem]">
-          {matches.map((match) => (
-            <TimelineCard key={match.id} match={match} href={href} compact showPrediction={showPrediction} />
-          ))}
+          {cards}
         </div>
       </div>
     );
   }
 
+  const cards = matches.map((match) => (
+    <TimelineCard key={match.id} match={match} href={href} showPrediction={showPrediction} />
+  ));
+
+  if (initialCount) {
+    return (
+      <ProgressiveList
+        initialCount={initialCount}
+        step={step ?? initialCount}
+        moreLabel={moreLabel}
+        className="grid gap-3"
+      >
+        {cards}
+      </ProgressiveList>
+    );
+  }
+
   return (
     <div className="grid gap-3">
-      {matches.map((match) => (
-        <TimelineCard key={match.id} match={match} href={href} showPrediction={showPrediction} />
-      ))}
+      {cards}
     </div>
   );
 }

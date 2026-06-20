@@ -5,6 +5,7 @@ import {
   LinkPendingLabel,
   LinkPendingOverlay,
 } from "@/components/link-pending-feedback";
+import { ProgressiveList } from "@/components/progressive-list";
 import {
   SPECIAL_LOCK_DATE_LABEL,
   specialMarketDisplay,
@@ -21,7 +22,6 @@ export function SpecialPredictionsEntry({
   if (!overview.available) return null;
 
   const progress = specialProgress(overview.markets);
-  const featured = overview.markets.slice(0, 5);
   const next = progress.next;
   const openPendingCount = progress.openPending.length;
 
@@ -110,8 +110,14 @@ export function SpecialPredictionsEntry({
                 </p>
               )}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {featured.map((market) => {
+            <ProgressiveList
+              initialCount={5}
+              step={5}
+              moreLabel="Ver mais especiais"
+              className="grid gap-2 sm:grid-cols-2"
+              buttonClassName="interactive mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-xs font-black text-white hover:border-accent/70"
+            >
+              {overview.markets.map((market) => {
                 const display = specialMarketDisplay(market.key);
                 const Icon = display.icon;
                 const complete = market.predictions.length === market.pickCount;
@@ -145,7 +151,7 @@ export function SpecialPredictionsEntry({
                   </Link>
                 );
               })}
-            </div>
+            </ProgressiveList>
           </div>
         </div>
       </div>

@@ -52,7 +52,8 @@ try {
   await page.goto(BASE_URL);
   await page.getByRole("heading", { name: /Acompanhe a Copa sem se perder|Tem jogo rolando agora/ }).waitFor();
   await page.getByText("Modo demonstração: agenda parcial").waitFor();
-  await page.getByRole("heading", { name: /Próximos 3 jogos|Agora ao vivo/ }).waitFor();
+  await page.getByRole("heading", { name: /Próximos jogos|Agora ao vivo/ }).waitFor();
+  await page.getByRole("button", { name: /Ver mais .*jogos/ }).first().waitFor();
   await page.getByTestId(/^timeline-match-/).first().waitFor();
   await waitForFlagFallbacks(page);
 

@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CountryFlag } from "@/components/country-flag";
 import { PoolFlag } from "@/components/pool-flag";
+import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
@@ -1357,8 +1358,7 @@ function RankingPlayerReport({
     })
     .filter((item): item is { match: DemoMatch; entry: PredictionComparisonEntry } =>
       Boolean(item),
-    )
-    .slice(0, 5);
+    );
 
   return (
     <div data-testid="ranking-player-report" className="border-t bg-surface-muted/55 p-5 md:p-6">
@@ -1406,11 +1406,16 @@ function RankingPlayerReport({
           </span>
         </div>
         {finishedPicks.length > 0 ? (
-          <div className="mt-3 divide-y rounded-2xl border">
+          <ProgressiveList
+            initialCount={5}
+            step={5}
+            moreLabel="Ver mais palpites"
+            className="mt-3 divide-y rounded-2xl border"
+          >
             {finishedPicks.map(({ match, entry }) => (
               <FinishedPickRow key={`${match.id}-${entry.userId ?? entry.name}`} match={match} entry={entry} />
             ))}
-          </div>
+          </ProgressiveList>
         ) : (
           <p className="mt-3 rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
             Nenhum palpite finalizado visível para este participante neste bolão.

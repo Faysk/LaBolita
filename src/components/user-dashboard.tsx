@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { PoolFlag } from "@/components/pool-flag";
+import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { UserAvatar } from "@/components/user-avatar";
 import { UserAlerts } from "@/components/user-alerts";
@@ -238,7 +239,7 @@ export function UserDashboard({
 
         <div className="grid min-w-0 gap-5">
           <ActionQueue
-            pendingMatches={pendingMatches.slice(0, 3)}
+            pendingMatches={pendingMatches}
             specialProgress={specialProgress}
           />
           <FinishedPulse
@@ -639,7 +640,7 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
               </>
             ) : (
               <>
-                Carregar mais participantes <ChevronDown className="size-4" />
+                Ver mais participantes <ChevronDown className="size-4" />
               </>
             )}
           </button>
@@ -807,7 +808,12 @@ function ActionQueue({
         </div>
         <ListChecks className="size-5 text-brand" />
       </div>
-      <div className="mt-4 grid gap-3">
+      <ProgressiveList
+        initialCount={3}
+        step={3}
+        moreLabel="Ver mais pendências"
+        className="mt-4 grid gap-3"
+      >
         {pendingMatches.map((match) => (
           <Link
             key={match.id}
@@ -829,6 +835,8 @@ function ActionQueue({
             <ArrowRight className="size-4 text-brand" />
           </Link>
         ))}
+      </ProgressiveList>
+      <div className={pendingMatches.length > 0 ? "mt-3 grid gap-3" : "mt-4 grid gap-3"}>
         {specialProgress.next ? (
           <Link
             href={`/especiais/${specialProgress.next.key}`}
@@ -878,7 +886,6 @@ function FinishedPulse({
       };
     })
     .filter((item) => item.score)
-    .slice(-3)
     .reverse();
 
   return (
@@ -894,7 +901,12 @@ function FinishedPulse({
           <CircleDot className="size-5 text-brand" />
         )}
       </div>
-      <div className="mt-4 grid gap-2">
+      <ProgressiveList
+        initialCount={3}
+        step={3}
+        moreLabel="Ver mais jogos pontuados"
+        className="mt-4 grid gap-2"
+      >
         {scoredMatches.map((item) => (
           <div key={item.match.id} className="rounded-2xl bg-surface-muted p-3">
             <div className="flex items-center justify-between gap-3">
@@ -910,6 +922,8 @@ function FinishedPulse({
             </p>
           </div>
         ))}
+      </ProgressiveList>
+      <div className={scoredMatches.length > 0 ? "mt-2" : "mt-4"}>
         {scoredMatches.length === 0 && (
           <p className="rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
             Os pontos aparecem depois dos primeiros resultados confirmados.

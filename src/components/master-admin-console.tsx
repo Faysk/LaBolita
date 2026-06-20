@@ -33,6 +33,7 @@ import type {
   MasterUser,
 } from "@/lib/data/admin";
 import { CountryFlag } from "@/components/country-flag";
+import { ProgressiveList } from "@/components/progressive-list";
 import { COUNTRIES } from "@/lib/countries";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
@@ -237,7 +238,13 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
       </div>
 
       {summary.audit.topActions.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <ProgressiveList
+          initialCount={4}
+          step={4}
+          moreLabel="Ver mais ações"
+          className="mt-4 flex flex-wrap gap-2"
+          buttonClassName="interactive mt-3 inline-flex items-center gap-2 rounded-full border bg-surface px-3 py-1.5 text-[10px] font-black text-brand hover:border-brand/60"
+        >
           {summary.audit.topActions.map((action) => (
             <span
               key={action.action}
@@ -246,7 +253,7 @@ function AdminCommandCenter({ summary }: { summary: AdminSummary }) {
               {auditActionLabel(action.action)} · {action.count}
             </span>
           ))}
-        </div>
+        </ProgressiveList>
       )}
     </div>
   );
@@ -851,7 +858,12 @@ function UserReportPanel({
 
       <ReportSection icon={Archive} title="Bolões">
         {report.pools.length > 0 ? (
-          <div className="grid gap-2 md:grid-cols-2">
+          <ProgressiveList
+            initialCount={6}
+            step={6}
+            moreLabel="Ver mais bolões"
+            className="grid gap-2 md:grid-cols-2"
+          >
             {report.pools.map((pool) => (
               <div key={`${pool.poolId}-${pool.role}`} className="rounded-xl border bg-surface-muted/45 px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
@@ -867,7 +879,7 @@ function UserReportPanel({
                 </p>
               </div>
             ))}
-          </div>
+          </ProgressiveList>
         ) : (
           <EmptyReportLine>Sem vínculo de bolão registrado.</EmptyReportLine>
         )}
@@ -875,7 +887,12 @@ function UserReportPanel({
 
       <ReportSection icon={Gauge} title="Palpites recentes">
         {report.recentPredictions.length > 0 ? (
-          <div className="divide-y rounded-xl border">
+          <ProgressiveList
+            initialCount={6}
+            step={6}
+            moreLabel="Ver mais palpites"
+            className="divide-y rounded-xl border"
+          >
             {report.recentPredictions.map((prediction) => (
               <div key={`${prediction.matchId}-${prediction.updatedAt}`} className="grid gap-2 px-3 py-2 md:grid-cols-[1fr_auto] md:items-center">
                 <div className="min-w-0">
@@ -895,7 +912,7 @@ function UserReportPanel({
                 </div>
               </div>
             ))}
-          </div>
+          </ProgressiveList>
         ) : (
           <EmptyReportLine>Nenhum palpite de jogo encontrado.</EmptyReportLine>
         )}
@@ -904,7 +921,12 @@ function UserReportPanel({
       <div className="grid gap-3 xl:grid-cols-2">
         <ReportSection icon={Sparkles} title="Especiais">
           {report.specialMarkets.length > 0 ? (
-            <div className="space-y-2">
+            <ProgressiveList
+              initialCount={6}
+              step={6}
+              moreLabel="Ver mais especiais"
+              className="space-y-2"
+            >
               {report.specialMarkets.map((market) => (
                 <div key={`${market.marketKey}-${market.updatedAt}`} className="rounded-xl border bg-surface-muted/45 px-3 py-2">
                   <p className="text-xs font-black">{market.marketTitle}</p>
@@ -914,7 +936,7 @@ function UserReportPanel({
                   </p>
                 </div>
               ))}
-            </div>
+            </ProgressiveList>
           ) : (
             <EmptyReportLine>Sem especiais preenchidos.</EmptyReportLine>
           )}
@@ -922,7 +944,12 @@ function UserReportPanel({
 
         <ReportSection icon={ShieldAlert} title="Auditoria">
           {report.auditTrail.length > 0 ? (
-            <div className="divide-y rounded-xl border">
+            <ProgressiveList
+              initialCount={6}
+              step={6}
+              moreLabel="Ver mais auditoria"
+              className="divide-y rounded-xl border"
+            >
               {report.auditTrail.map((entry) => {
                 const summary = metadataSummary(entry.metadata);
                 return (
@@ -939,7 +966,7 @@ function UserReportPanel({
                   </div>
                 );
               })}
-            </div>
+            </ProgressiveList>
           ) : (
             <EmptyReportLine>Sem ações administrativas vinculadas.</EmptyReportLine>
           )}
