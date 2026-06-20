@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { PointerEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -49,6 +49,12 @@ type NextMarketLink = {
   label: string;
 } | null;
 
+type DeckDrag = {
+  pointerId?: number;
+  startX?: number;
+  offsetX?: number;
+};
+
 export function SpecialMarketPicker({
   market,
   nextMarket = null,
@@ -77,6 +83,7 @@ export function SpecialMarketPicker({
   const [search, setSearch] = useState("");
   const [visibleCount, setVisibleCount] = useState(36);
   const [sync, setSync] = useState<SyncState>({});
+  const [drag, setDrag] = useState<DeckDrag>({});
 
   const selectedOptions = selectedKeys
     .map((key) => optionByKey.get(key))
@@ -101,6 +108,9 @@ export function SpecialMarketPicker({
   const activeSelected = activeOption
     ? selectedKeys.includes(activeOption.key)
     : false;
+  const deckCanMove = deckOptions.length > 1;
+  const dragOffset = drag.offsetX ?? 0;
+  const dragRotation = Math.max(-10, Math.min(10, dragOffset / 12));
   const visibleOptions = filteredOptions.slice(0, visibleCount);
   const saveLabel = market.predictions.length > 0 ? "Salvar alteração" : "Salvar palpite";
   const canSave = complete && dirty && !market.locked && !sync.busy;
@@ -156,6 +166,29 @@ export function SpecialMarketPicker({
     if (deckOptions.length === 0) return;
     const nextIndex = wrapIndex(safeActiveIndex + direction, deckOptions.length);
     setActiveKey(deckOptions[nextIndex].key);
+    setDrag({});
+  }
+
+  function startDeckDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!deckCanMove) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDrag({ pointerId: event.pointerId, startX: event.clientX, offsetX: 0 });
+  }
+
+  function updateDeckDrag(event: PointerEvent<HTMLDivElement>) {
+    if (drag.pointerId !== event.pointerId || drag.startX === undefined) return;
+    setDrag((current) => {
+      if (current.pointerId !== event.pointerId || current.startX === undefined) return current;
+      return { ...current, offsetX: event.clientX - current.startX };
+    });
+  }
+
+  function endDeckDrag(event: PointerEvent<HTMLDivElement>) {
+    if (drag.pointerId !== event.pointerId) return;
+    const offset = drag.offsetX ?? 0;
+    setDrag({});
+    if (Math.abs(offset) < 72) return;
+    moveDeck(offset < 0 ? 1 : -1);
   }
 
   async function save() {
@@ -288,11 +321,23 @@ export function SpecialMarketPicker({
               <div className="relative min-h-[24rem] overflow-hidden rounded-[1.7rem] border border-white/15 bg-brand-strong p-4 text-white">
                 <div className="absolute left-5 top-6 h-72 w-44 rotate-[-10deg] rounded-[1.5rem] border border-white/10 bg-white/8" />
                 <div className="absolute right-5 top-9 h-72 w-44 rotate-[10deg] rounded-[1.5rem] border border-white/10 bg-white/8" />
-                <div className="relative z-10 flex h-full min-h-[22rem] flex-col items-center justify-center gap-4">
+                <div
+                  className="relative z-10 flex h-full min-h-[22rem] touch-pan-y select-none flex-col items-center justify-center gap-4"
+                  onPointerDown={startDeckDrag}
+                  onPointerMove={updateDeckDrag}
+                  onPointerUp={endDeckDrag}
+                  onPointerCancel={() => setDrag({})}
+                >
                   <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
                     {safeActiveIndex + 1}/{Math.max(deckOptions.length, 1)}
                   </span>
-                  <div className="flex w-full max-w-[22rem] justify-center">
+                  <div
+                    className="flex w-full max-w-[22rem] justify-center transition-transform duration-150 ease-out"
+                    style={{
+                      transform: `translateX(${dragOffset}px) rotate(${dragRotation}deg)`,
+                      transitionDuration: drag.pointerId ? "0ms" : "150ms",
+                    }}
+                  >
                     <SpecialOptionSticker
                       option={activeOption}
                       variant="feature"
