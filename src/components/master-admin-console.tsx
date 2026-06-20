@@ -41,6 +41,21 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
 
 type AuditFilterNavigation = Pick<MasterOverview["auditFilters"], "source" | "period" | "query">;
+type UserRiskSignal = {
+  id: string;
+  title: string;
+  detail: string;
+  tone: "ok" | "warn" | "danger" | "neutral";
+};
+type UserTimelineEntry = {
+  id: string;
+  source: string;
+  title: string;
+  detail: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+  tone: "admin" | "activity" | "prediction" | "special";
+};
 
 const AUDIT_SOURCE_OPTIONS: { value: AuditSource; label: string }[] = [
   { value: "all", label: "Todas" },
@@ -876,7 +891,10 @@ function MasterUserCard({
   }
 
   return (
-    <article className="rounded-2xl border bg-surface-muted/80 p-4 shadow-sm">
+    <article
+      data-testid="master-user-card"
+      className={`rounded-2xl border bg-surface-muted/80 p-4 shadow-sm ${showReport ? "lg:col-span-2" : ""}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="truncate font-black">{user.displayName}</p><p className="mt-1 truncate text-xs text-muted">{user.email} · {user.poolsOwned} bolões</p></div>
         <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${user.isMasterAdmin ? "bg-accent text-brand-strong" : user.disabledAt ? "bg-red-100 text-red-800" : user.isAdmin ? "bg-blue-100 text-blue-800" : "bg-emerald-100 text-brand"}`}>{user.isMasterAdmin ? "Master principal" : user.disabledAt ? "Suspenso" : user.isAdmin ? "Admin" : "Ativo"}</span>
@@ -891,7 +909,7 @@ function MasterUserCard({
         <input value={reason} minLength={3} maxLength={200} onChange={(event) => setReason(event.target.value)} placeholder="Motivo obrigatório" aria-label={`Motivo para ajustar ${user.displayName}`} className="rounded-xl border bg-surface px-3 py-2.5 text-sm font-bold outline-none placeholder:text-muted focus:border-brand" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" onClick={() => setShowReport((current) => !current)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted"><Gauge className="size-3" /> {showReport ? "Fechar relatório" : "Relatório"}</button>
+        <button type="button" data-testid="master-user-report-toggle" onClick={() => setShowReport((current) => !current)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-brand hover:border-brand/70 hover:bg-surface-muted"><Gauge className="size-3" /> {showReport ? "Fechar relatório" : "Relatório"}</button>
         <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(Boolean(user.disabledAt))} className="interactive flex items-center gap-1 rounded-xl bg-brand px-3 py-2 text-xs font-black text-white shadow-sm disabled:opacity-40">{busy ? <LoaderCircle className="size-3 animate-spin" /> : <Check className="size-3" />} Salvar nome</button>
         {!user.isMasterAdmin && <button type="button" disabled={busy || reason.trim().length < 3} onClick={() => update(!user.disabledAt)} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-danger-fg hover:border-danger-line hover:bg-danger-bg disabled:opacity-40"><UserRoundCog className="size-3" /> {user.disabledAt ? "Reativar conta" : "Suspender conta"}</button>}
         {!user.isMasterAdmin && <button type="button" disabled={busy || Boolean(user.disabledAt) || reason.trim().length < 3} onClick={updateAdminAccess} className="interactive flex items-center gap-1 rounded-xl border bg-surface px-3 py-2 text-xs font-black text-info-fg hover:border-info-line hover:bg-info-bg disabled:opacity-40"><ShieldPlus className="size-3" /> {user.isAdmin ? "Remover admin" : "Promover admin"}</button>}
@@ -987,9 +1005,112 @@ function UserReportPanel({
       createdAt: change.createdAt,
     })),
   ].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  const changedPredictionRate =
+    report.stats.matchPredictions > 0
+      ? report.stats.changedPredictions / report.stats.matchPredictions
+      : 0;
+  const riskSignals = [
+    user.disabledAt
+      ? {
+          id: "disabled",
+          title: "Conta suspensa",
+          detail: `Acesso bloqueado desde ${formatDateTime(user.disabledAt)}.`,
+          tone: "danger",
+        }
+      : null,
+    !user.termsAcceptedAt
+      ? {
+          id: "terms",
+          title: "Termos pendentes",
+          detail: "Usuário precisa aceitar os termos para participar normalmente.",
+          tone: "warn",
+        }
+      : null,
+    !report.identity.lastSignInAt
+      ? {
+          id: "login",
+          title: "Sem login registrado",
+          detail: "Auth ainda não retornou último acesso para esta conta.",
+          tone: "warn",
+        }
+      : null,
+    report.stats.poolMemberships === 0
+      ? {
+          id: "pools",
+          title: "Fora dos bolões",
+          detail: "Não há vínculo ativo de bolão para acompanhar ranking.",
+          tone: "warn",
+        }
+      : null,
+    report.stats.matchPredictions === 0
+      ? {
+          id: "predictions",
+          title: "Sem palpites",
+          detail: "Nenhum palpite de jogo aparece no relatório.",
+          tone: "warn",
+        }
+      : null,
+    changedPredictionRate >= 0.35 && report.stats.changedPredictions >= 3
+      ? {
+          id: "changes",
+          title: "Muitas alterações",
+          detail: `${report.stats.changedPredictions} alterações em ${report.stats.matchPredictions} palpites.`,
+          tone: "warn",
+        }
+      : null,
+    report.stats.adminActionsAsTarget > 0
+      ? {
+          id: "admin-target",
+          title: "Ações administrativas",
+          detail: `${report.stats.adminActionsAsTarget} ação(ões) administrativas sobre esta conta.`,
+          tone: "neutral",
+        }
+      : null,
+    report.stats.resultChanges > 0
+      ? {
+          id: "result-changes",
+          title: "Operou placares",
+          detail: `${report.stats.resultChanges} alteração(ões) de resultado atribuídas ao usuário.`,
+          tone: "neutral",
+        }
+      : null,
+  ].filter((signal): signal is UserRiskSignal => Boolean(signal));
+  const operationalTimeline: UserTimelineEntry[] = [
+    ...report.activity.map((event) => ({
+      id: `activity-${event.id}`,
+      source: "Atividade",
+      title: activityEventLabel(event.eventType),
+      detail: `${entityTypeLabel(event.entityType)} · ${shortId(event.entityId)}`,
+      createdAt: event.createdAt,
+      metadata: event.metadata,
+      tone: "activity" as const,
+    })),
+    ...report.auditTrail.map((entry) => ({
+      id: `audit-${entry.id}`,
+      source: "Admin",
+      title: auditActionLabel(entry.action),
+      detail: `${entityTypeLabel(entry.entityType)} · ${shortId(entry.entityId)}`,
+      createdAt: entry.createdAt,
+      metadata: entry.metadata,
+      tone: "admin" as const,
+    })),
+    ...predictionHistory.map((change) => ({
+      id: `change-${change.id}`,
+      source: change.kind,
+      title: `${change.kind} ${historyActionLabel(change.action)}`,
+      detail: `${change.title} · ${change.previous} -> ${change.next}`,
+      createdAt: change.createdAt,
+      metadata: {
+        action: historyActionLabel(change.action),
+        previous: change.previous,
+        next: change.next,
+      },
+      tone: change.kind === "Especial" ? ("special" as const) : ("prediction" as const),
+    })),
+  ].sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 
   return (
-    <div className="mt-4 space-y-3 rounded-2xl border bg-surface p-4">
+    <div data-testid="master-user-report" className="mt-4 space-y-3 rounded-2xl border bg-surface p-4">
       <div className="grid gap-3 xl:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)]">
         <div className="rounded-2xl border bg-surface-muted/60 p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -1028,6 +1149,33 @@ function UserReportPanel({
         </div>
       </div>
 
+      <div data-testid="master-user-risk-signals" className="rounded-2xl border bg-surface-muted/50 p-4">
+        <div className="flex items-center gap-2">
+          <CircleAlert className="size-4 text-amber-700" />
+          <h3 className="text-sm font-black">Sinais de atenção</h3>
+        </div>
+        {riskSignals.length > 0 ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {riskSignals.map((signal) => (
+              <AccountSignal
+                key={signal.id}
+                label={signal.title}
+                value={riskToneLabel(signal.tone)}
+                detail={signal.detail}
+                tone={signal.tone}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 flex items-start gap-2 rounded-xl border bg-surface px-3 py-2">
+            <ShieldCheck className="mt-0.5 size-4 text-brand" />
+            <p className="text-xs font-bold text-muted">
+              Nenhum bloqueio, pendência ou padrão incomum apareceu nos dados carregados.
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-3 md:grid-cols-[1fr_minmax(18rem,0.8fr)]">
         <div className="grid grid-cols-2 gap-2">
           {stats.map(([label, value, detail]) => (
@@ -1051,6 +1199,46 @@ function UserReportPanel({
           </div>
         </div>
       </div>
+
+      <ReportSection icon={History} title="Linha do tempo operacional">
+        {operationalTimeline.length > 0 ? (
+          <ProgressiveList
+            initialCount={8}
+            step={8}
+            moreLabel="Ver mais eventos"
+            className="divide-y rounded-xl border"
+          >
+            {operationalTimeline.map((event) => {
+              const summary = metadataSummary(event.metadata);
+              return (
+                <details key={event.id} className="group bg-surface">
+                  <summary className="grid cursor-pointer list-none gap-2 px-3 py-3 transition-colors hover:bg-surface-muted/70 md:grid-cols-[8rem_minmax(0,1fr)_9rem] md:items-center [&::-webkit-details-marker]:hidden">
+                    <span className={`w-fit rounded-full border px-2 py-1 text-[10px] font-black ${timelineToneClass(event.tone)}`}>
+                      {event.source}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-black">{event.title}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-muted">
+                        {event.detail}
+                        {summary ? ` · ${summary}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-bold text-muted md:justify-end">
+                      <span>{formatDateTime(event.createdAt)}</span>
+                      <ChevronRight className="size-4 shrink-0 text-brand transition-transform group-open:rotate-90" />
+                    </div>
+                  </summary>
+                  <pre className="mx-3 mb-3 max-h-64 overflow-auto rounded-xl border bg-surface-muted/50 p-3 text-[11px] leading-5 text-muted">
+                    {metadataDetails(event.metadata)}
+                  </pre>
+                </details>
+              );
+            })}
+          </ProgressiveList>
+        ) : (
+          <EmptyReportLine>Eventos de atividade, auditoria e mudanças passam a aparecer aqui.</EmptyReportLine>
+        )}
+      </ReportSection>
 
       <ReportSection icon={Archive} title="Bolões">
         {report.pools.length > 0 ? (
@@ -1262,6 +1450,28 @@ function EmptyReportLine({ children }: { children: React.ReactNode }) {
     <p className="rounded-xl border bg-surface-muted/45 px-3 py-2 text-xs text-muted">
       {children}
     </p>
+  );
+}
+
+function riskToneLabel(tone: UserRiskSignal["tone"]) {
+  return (
+    {
+      ok: "OK",
+      warn: "Atenção",
+      danger: "Crítico",
+      neutral: "Info",
+    }[tone] ?? "Info"
+  );
+}
+
+function timelineToneClass(tone: UserTimelineEntry["tone"]) {
+  return (
+    {
+      admin: "border-brand/25 bg-brand/10 text-brand",
+      activity: "border-sky-200 bg-sky-50 text-sky-700",
+      prediction: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      special: "border-amber-200 bg-amber-50 text-amber-700",
+    }[tone] ?? "border-slate-200 bg-slate-50 text-slate-700"
   );
 }
 
