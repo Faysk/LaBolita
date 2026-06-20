@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Trophy,
   UsersRound,
+  type LucideIcon,
 } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { PageShortcuts } from "@/components/page-shortcuts";
@@ -166,6 +167,65 @@ export function LiveCenter({
     );
   }
 
+  const currentMovement = currentPlayer ? rankingMovement(currentPlayer) : null;
+  const popular = selectedComparison
+    ? popularOutcome(selectedComparison, selectedMatch)
+    : null;
+  const impactCards: Array<{
+    icon: LucideIcon;
+    label: string;
+    value: string;
+    detail: string;
+    tone: "neutral" | "info" | "success" | "warning" | "live";
+  }> = [
+    {
+      icon: Target,
+      label: "Meu cenário",
+      value: predictionLabel(currentPrediction),
+      detail:
+        currentMatchPoints === null
+          ? score
+            ? "sem pontuar neste placar"
+            : "aguardando placar"
+          : `${currentMatchPoints} pts agora`,
+      tone: currentPrediction ? "success" : "warning",
+    },
+    {
+      icon: BarChart3,
+      label: "Ranking",
+      value: currentMovement?.label ?? "sem ranking",
+      detail: currentPlayer
+        ? `${rankingLabel(currentPlayer, orderedRanking, { provisional: true, tiedSuffix: "=" })} · ${provisionalPoints} pts`
+        : "entre em um bolão",
+      tone: currentMovement?.tone === "up" ? "success" : currentMovement?.tone === "down" ? "warning" : "neutral",
+    },
+    {
+      icon: UsersRound,
+      label: "Tendência do bolão",
+      value: popular ? popular.label : "sem mapa",
+      detail: popular
+        ? `${popular.percent}% · ${popular.count} de ${selectedComparison?.predictionCount ?? 0}`
+        : selectedComparison
+          ? "sem palpites visíveis"
+          : "comparação indisponível",
+      tone: popular ? "info" : "neutral",
+    },
+    {
+      icon: Trophy,
+      label: "Melhor parcial",
+      value: bestPartial?.entry.name ?? "aguardando",
+      detail: bestPartial ? `${bestPartial.points} pts neste jogo` : "ninguém pontuando ainda",
+      tone: bestPartial ? "live" : "neutral",
+    },
+    {
+      icon: Clock3,
+      label: "Atualização",
+      value: providerUpdateText(selectedMatch),
+      detail: liveMatches.length > 0 ? "atualiza a cada 15s" : "monitoramento ativo",
+      tone: liveMatches.length > 0 ? "live" : "info",
+    },
+  ];
+
   return (
     <main className="page-container py-7 md:py-10">
       <section className="hero-panel relative overflow-hidden rounded-[2rem] px-5 py-6 text-white md:px-8 md:py-8">
@@ -252,6 +312,28 @@ export function LiveCenter({
           </ProgressiveList>
         </section>
       ) : null}
+
+      <section className="mt-5" aria-labelledby="live-impact-title">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="eyebrow">Resumo rápido</p>
+            <h2 id="live-impact-title" className="mt-1 text-2xl font-black tracking-tight">
+              Impacto agora
+            </h2>
+          </div>
+          <Link
+            href={focusedPredictionHref(selectedMatch)}
+            className="interactive inline-flex items-center justify-center gap-2 rounded-2xl border bg-surface px-4 py-3 text-sm font-black text-brand hover:border-brand/60"
+          >
+            Abrir este jogo <ArrowRight className="size-4" />
+          </Link>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          {impactCards.map((card) => (
+            <ImpactCard key={card.label} {...card} />
+          ))}
+        </div>
+      </section>
 
       <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.8fr)]">
         <article className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
@@ -583,6 +665,46 @@ function HeroMetric({ label, value }: { label: string; value: number }) {
         {label}
       </p>
     </div>
+  );
+}
+
+function ImpactCard({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail: string;
+  tone: "neutral" | "info" | "success" | "warning" | "live";
+}) {
+  const toneClass =
+    tone === "success"
+      ? "status-success"
+      : tone === "warning"
+        ? "status-warning"
+        : tone === "live"
+          ? "status-live"
+          : tone === "info"
+            ? "status-info"
+            : "bg-surface";
+
+  return (
+    <article className={`rounded-[1.2rem] border p-4 shadow-sm ${toneClass}`}>
+      <div className="flex items-center justify-between gap-3">
+        <Icon className={`size-4 ${tone === "live" ? "live-icon" : ""}`} />
+        <p className="text-right text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+          {label}
+        </p>
+      </div>
+      <p className={`mt-3 truncate text-xl font-black ${tone === "live" ? "live-number" : ""}`}>
+        {value}
+      </p>
+      <p className="mt-1 line-clamp-2 text-xs font-bold text-muted">{detail}</p>
+    </article>
   );
 }
 
@@ -988,6 +1110,10 @@ function visibleScore(match: DemoMatch): MatchResult | null {
   return match.result ?? match.liveResult ?? null;
 }
 
+function focusedPredictionHref(match: DemoMatch) {
+  return `/palpites?jogo=${encodeURIComponent(match.id)}#lista-de-jogos`;
+}
+
 function findCurrentPrediction(
   match: DemoMatch,
   comparison: MatchPoolComparison | null,
@@ -1057,6 +1183,32 @@ function bestPartialEntry(comparison: MatchPoolComparison, match: DemoMatch) {
     }))
     .filter((item): item is { entry: PredictionComparisonEntry; points: number } => item.points !== null)
     .sort((left, right) => right.points - left.points || left.entry.name.localeCompare(right.entry.name, "pt-BR"))[0] ?? null;
+}
+
+function popularOutcome(comparison: MatchPoolComparison, match: DemoMatch) {
+  if (comparison.predictionCount === 0) return null;
+
+  const outcomes = [
+    {
+      label: match.homeTeam.shortName,
+      count: comparison.outcomeCounts.home,
+    },
+    {
+      label: "Empate",
+      count: comparison.outcomeCounts.draw,
+    },
+    {
+      label: match.awayTeam.shortName,
+      count: comparison.outcomeCounts.away,
+    },
+  ].sort((left, right) => right.count - left.count || left.label.localeCompare(right.label, "pt-BR"));
+  const top = outcomes[0];
+  if (!top || top.count === 0) return null;
+
+  return {
+    ...top,
+    percent: Math.round((top.count / comparison.predictionCount) * 100),
+  };
 }
 
 function liveAverage(comparison: MatchPoolComparison, match: DemoMatch) {

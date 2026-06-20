@@ -60,6 +60,14 @@ try {
   await page.goto(`${BASE_URL}/ao-vivo`);
   await page.getByRole("heading", { name: /Tudo pronto para acompanhar|O jogo está mexendo/ }).waitFor();
   await page.getByText(/Atualização automática|atualizar sozinha/).waitFor();
+  await page.getByRole("heading", { name: "Impacto agora" }).waitFor();
+  await page.getByText("Tendência do bolão").waitFor();
+  const liveFocusedHref = await page.getByRole("link", { name: "Abrir este jogo" }).getAttribute("href");
+  assert.match(
+    liveFocusedHref ?? "",
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "live impact shortcut must open the focused prediction",
+  );
   await page.getByText("Seu palpite", { exact: true }).waitFor();
   await page.getByText("Distribuição dos palpites").waitFor();
   await page.getByText("Cravadas").first().waitFor();
