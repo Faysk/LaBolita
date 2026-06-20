@@ -15,6 +15,7 @@ type MatchTimelineProps = {
   initialCount?: number;
   step?: number;
   moreLabel?: string;
+  actionLabel?: string;
 };
 
 export function MatchTimeline({
@@ -25,6 +26,7 @@ export function MatchTimeline({
   initialCount,
   step,
   moreLabel = "Ver mais jogos",
+  actionLabel = "Ver agenda",
 }: MatchTimelineProps) {
   if (matches.length === 0) {
     return (
@@ -36,7 +38,14 @@ export function MatchTimeline({
 
   if (variant === "rail") {
     const cards = matches.map((match) => (
-      <TimelineCard key={match.id} match={match} href={href} compact showPrediction={showPrediction} />
+      <TimelineCard
+        key={match.id}
+        match={match}
+        href={href}
+        compact
+        showPrediction={showPrediction}
+        actionLabel={actionLabel}
+      />
     ));
 
     if (initialCount) {
@@ -63,7 +72,13 @@ export function MatchTimeline({
   }
 
   const cards = matches.map((match) => (
-    <TimelineCard key={match.id} match={match} href={href} showPrediction={showPrediction} />
+    <TimelineCard
+      key={match.id}
+      match={match}
+      href={href}
+      showPrediction={showPrediction}
+      actionLabel={actionLabel}
+    />
   ));
 
   if (initialCount) {
@@ -91,11 +106,13 @@ function TimelineCard({
   href,
   compact = false,
   showPrediction = false,
+  actionLabel = "Ver agenda",
 }: {
   match: DemoMatch;
   href?: string;
   compact?: boolean;
   showPrediction?: boolean;
+  actionLabel?: string;
 }) {
   const status = timelineStatus(match);
   const score = match.result ?? match.liveResult;
@@ -120,7 +137,11 @@ function TimelineCard({
           />
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black ${status.className}`}>
-          <status.icon className={`size-3 ${status.kind === "live" ? "animate-pulse" : ""}`} />
+          {status.kind === "live" ? (
+            <span className="live-dot" aria-hidden="true" />
+          ) : (
+            <status.icon className="size-3" />
+          )}
           {status.label}
         </span>
       </div>
@@ -129,7 +150,7 @@ function TimelineCard({
         <TimelineTeam team={match.homeTeam} align="right" />
         <div className="min-w-14 text-center">
           {score ? (
-            <span className="text-2xl font-black tracking-tight">
+            <span className={`text-2xl font-black tracking-tight ${status.kind === "live" ? "live-number" : ""}`}>
               {score.homeScore}x{score.awayScore}
             </span>
           ) : (
@@ -158,7 +179,7 @@ function TimelineCard({
 
       {href && (
         <div className="mt-4 inline-flex items-center gap-1 text-xs font-black text-brand">
-          Ver agenda <ArrowRight className="size-3.5" />
+          {actionLabel} <ArrowRight className="size-3.5" />
         </div>
       )}
     </article>
@@ -196,7 +217,7 @@ function timelineStatus(match: DemoMatch) {
       kind: "live",
       label: "Ao vivo",
       icon: Radio,
-      className: "bg-emerald-600 text-white",
+      className: "status-live",
     } as const;
   }
   if (match.result) {

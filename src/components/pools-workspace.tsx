@@ -528,7 +528,7 @@ function PoolCommandCenter({
             </h2>
           </div>
           <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${live ? "status-live" : "status-info"}`}>
-            {live ? <Radio className="size-4 animate-pulse" /> : <CalendarClock className="size-4" />}
+            {live ? <span className="live-dot" aria-hidden="true" /> : <CalendarClock className="size-4" />}
             {live ? "Ao vivo agora" : "Agenda monitorada"}
           </span>
         </div>
@@ -705,7 +705,7 @@ function PoolMatchSpotlight({ match }: { match: DemoMatch }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
-            {live ? <Radio className="size-3.5 animate-pulse" /> : <CalendarClock className="size-3.5" />}
+            {live ? <span className="live-dot" aria-hidden="true" /> : <CalendarClock className="size-3.5" />}
             {live ? "Ao vivo nos bolões" : "Próximo jogo"}
           </p>
           <h2 className="mt-3 text-2xl font-black tracking-[-0.05em] md:text-3xl">
@@ -723,7 +723,7 @@ function PoolMatchSpotlight({ match }: { match: DemoMatch }) {
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/50">
                 {live ? "Parcial" : "Início"}
               </p>
-              <p className="mt-1 whitespace-nowrap text-2xl font-black text-accent md:text-3xl">
+              <p className={`mt-1 whitespace-nowrap text-2xl font-black text-accent md:text-3xl ${live ? "live-number" : ""}`}>
                 {scoreLabel}
               </p>
             </div>
@@ -1254,19 +1254,19 @@ function Ranking({
       : entries[0]
         ? rankingEntryKey(entries[0])
         : "";
-  const [selectedPlayerKey, setSelectedPlayerKey] = useState(() =>
-    fallbackPlayerKey,
+  const [selectedPlayerKey, setSelectedPlayerKey] = useState<string | null | undefined>(
+    undefined,
   );
-  const activePlayerKey = entries.some(
-    (entry) => rankingEntryKey(entry) === selectedPlayerKey,
-  )
-    ? selectedPlayerKey
-    : fallbackPlayerKey;
-  const selectedPlayer =
-    entries.find((entry) => rankingEntryKey(entry) === activePlayerKey) ??
-    entries.find((entry) => entry.isCurrentUser) ??
-    entries[0] ??
-    null;
+  const activePlayerKey =
+    selectedPlayerKey === null
+      ? null
+      : selectedPlayerKey &&
+          entries.some((entry) => rankingEntryKey(entry) === selectedPlayerKey)
+        ? selectedPlayerKey
+        : fallbackPlayerKey || null;
+  const selectedPlayer = activePlayerKey
+    ? entries.find((entry) => rankingEntryKey(entry) === activePlayerKey) ?? null
+    : null;
 
   return (
     <section
@@ -1299,7 +1299,7 @@ function Ranking({
               type="button"
               data-testid={player.isCurrentUser ? "ranking-current-user" : undefined}
               aria-pressed={selected}
-              onClick={() => setSelectedPlayerKey(rankingEntryKey(player))}
+              onClick={() => setSelectedPlayerKey(selected ? null : rankingEntryKey(player))}
               className={`interactive grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 text-left md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${
                 selected ? "bg-brand text-white" : player.isCurrentUser ? "bg-accent/20" : ""
               }`}

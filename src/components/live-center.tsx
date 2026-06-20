@@ -172,7 +172,7 @@ export function LiveCenter({
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.13em]">
               {liveMatches.length > 0 ? (
-                <Radio className="size-3.5 animate-pulse text-accent" />
+                <Radio className="live-icon size-3.5" />
               ) : (
                 <CalendarDays className="size-3.5 text-accent" />
               )}
@@ -264,7 +264,13 @@ export function LiveCenter({
               />
             </div>
             <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${status?.className ?? "status-info"}`}>
-              {status ? <status.icon className={`size-4 ${status.kind === "live" ? "animate-pulse" : ""}`} /> : null}
+              {status ? (
+                status.kind === "live" ? (
+                  <span className="live-dot" aria-hidden="true" />
+                ) : (
+                  <status.icon className="size-4" />
+                )
+              ) : null}
               {status?.label ?? "Agenda"}
             </span>
           </div>
@@ -273,7 +279,7 @@ export function LiveCenter({
             <ScoreTeam team={selectedMatch.homeTeam} align="right" />
             <div className="min-w-20 text-center">
               {score ? (
-                <p className="text-4xl font-black tracking-tight md:text-5xl">
+                <p className={`text-4xl font-black tracking-tight md:text-5xl ${status?.kind === "live" ? "live-number" : ""}`}>
                   {score.homeScore}<span className="text-brand">x</span>{score.awayScore}
                 </p>
               ) : (

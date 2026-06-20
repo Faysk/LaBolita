@@ -145,6 +145,8 @@ export default async function GamesPage() {
               showPrediction
               initialCount={8}
               moreLabel="Ver mais jogos deste dia"
+              href="/palpites#lista-de-jogos"
+              actionLabel="Abrir palpites"
             />
           </section>
         ))}
@@ -180,7 +182,7 @@ function ScheduleRail({
           <h3 className="mt-1 text-lg font-black">{title}</h3>
         </div>
         {live ? (
-          <Radio className="size-4 animate-pulse text-emerald-600" />
+          <Radio className="live-icon size-4" />
         ) : (
           <CalendarDays className="size-4 text-brand" />
         )}
@@ -221,12 +223,12 @@ function ScheduleMetric({
   return (
     <article className={`rounded-[1.2rem] border p-4 ${toneClass}`}>
       <div className="flex items-center justify-between gap-3">
-        <Icon className={`size-4 ${tone === "live" ? "animate-pulse" : ""}`} />
+        <Icon className={`size-4 ${tone === "live" ? "live-icon" : ""}`} />
         <p className="text-right text-[10px] font-black uppercase text-muted">
           {label}
         </p>
       </div>
-      <p className="mt-3 text-2xl font-black">{value}</p>
+      <p className={`mt-3 text-2xl font-black ${tone === "live" && value > 0 ? "live-number" : ""}`}>{value}</p>
       <p className="mt-1 text-xs font-bold text-muted">{detail}</p>
     </article>
   );

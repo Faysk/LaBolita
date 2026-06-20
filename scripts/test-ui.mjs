@@ -73,6 +73,16 @@ try {
   await page.getByText("Meu palpite").first().waitFor();
   await page.getByRole("heading", { name: "Palpites do bolão por partida" }).waitFor();
   await page.getByText("Agenda completa").waitFor();
+  const completeSchedule = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Agenda completa" }),
+  });
+  assert.match(
+    await completeSchedule.getByTestId(/^timeline-match-/).first().evaluate((element) =>
+      element.closest("a")?.getAttribute("href") ?? "",
+    ),
+    /^\/palpites#lista-de-jogos$/,
+    "complete schedule match cards must open the predictions screen",
+  );
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/jogadores`);
@@ -204,6 +214,9 @@ try {
     true,
     "ranking player report must open directly below the selected participant",
   );
+  await page.getByTestId("ranking-current-user").click();
+  await page.getByTestId("ranking-player-report").waitFor({ state: "hidden" });
+  await page.getByTestId("ranking-current-user").click();
   await page.getByTestId("ranking-player-finished-picks").getByText("2 x 1").first().waitFor();
   await page.getByTestId("pool-friends").getByRole("button", { name: "Ver ranking" }).click();
   await page.getByTestId("pools-command-center").getByText("Resenha da Firma").waitFor();

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock3, MapPin, Radio } from "lucide-react";
+import { ArrowRight, Clock3, MapPin } from "lucide-react";
 import { LinkPendingLabel } from "@/components/link-pending-feedback";
 import { TeamFlag } from "@/components/team-flag";
 import { useLocalResults } from "@/lib/local-state";
@@ -53,7 +53,7 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
               ? "border-accent/45 bg-accent/15 text-accent"
               : "border-white/15 bg-white/10 text-white/70"
           }`}>
-            {isLive ? <Radio className="size-3.5 animate-pulse" /> : <Clock3 className="size-3.5 text-accent" />}
+            {isLive ? <span className="live-dot" aria-hidden="true" /> : <Clock3 className="size-3.5 text-accent" />}
             {heading}
           </span>
           {nextMatch && (
@@ -73,7 +73,7 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
                     <span className="text-[10px] font-black uppercase tracking-[0.16em] text-accent">
                       Ao vivo
                     </span>
-                    <span className="text-4xl font-black leading-none tracking-tight text-white md:text-5xl">
+                    <span className="live-number text-4xl font-black leading-none tracking-tight text-white md:text-5xl">
                       {score ? `${score.homeScore}×${score.awayScore}` : "0×0"}
                     </span>
                   </>

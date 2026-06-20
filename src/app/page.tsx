@@ -40,7 +40,7 @@ export default async function HomePage() {
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.13em]">
               {hasLiveMatch ? (
-                <Radio className="size-3.5 animate-pulse text-accent" />
+                <Radio className="live-icon size-3.5" />
               ) : (
                 <CalendarDays className="size-3.5 text-accent" />
               )}

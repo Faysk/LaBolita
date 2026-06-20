@@ -370,13 +370,14 @@ export function MatchCard({
       {!result && match.liveResult && (
         <div className="status-live mt-4 rounded-2xl border p-3 text-center text-xs">
           <p className="font-black text-foreground">
+            <span className="live-dot mr-1 align-middle" aria-hidden="true" />
             {match.providerStatus === "finished"
               ? "Placar aguardando confirmação"
               : "Placar ao vivo"}
-            : {match.liveResult.homeScore} × {match.liveResult.awayScore}
+            : <span className="live-number">{match.liveResult.homeScore} × {match.liveResult.awayScore}</span>
           </p>
           {provisionalScore && (
-            <p className="mt-1 font-black">
+            <p className="live-number mt-1 font-black">
               Neste momento: {provisionalScore.totalPoints} pontos provisórios
             </p>
           )}

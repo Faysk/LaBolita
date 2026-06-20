@@ -338,10 +338,10 @@ function LivePanel({
       <div className="bg-brand-strong p-5 text-white md:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase text-accent">
-            <Radio className="size-3.5 animate-pulse" />
+            <span className="live-dot" aria-hidden="true" />
             Agora ao vivo
           </p>
-          <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/75">
+          <span className="live-number rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black text-white/75">
             {totalLivePoints} pts parciais
           </span>
         </div>
@@ -382,7 +382,7 @@ function LivePanel({
             <LiveTeam team={primary.match.homeTeam} />
             <div className="rounded-2xl border border-white/15 bg-black/10 px-4 py-3 text-center">
               <p className="text-[10px] font-black uppercase text-white/55">Parcial</p>
-              <p className="mt-1 whitespace-nowrap text-3xl font-black text-accent">
+              <p className="live-number mt-1 whitespace-nowrap text-3xl font-black text-accent">
                 {score ? `${score.homeScore} x ${score.awayScore}` : "x"}
               </p>
             </div>
