@@ -377,7 +377,21 @@ try {
   await page.getByText("mantém").first().waitFor();
   await page.getByRole("button", { name: /Faysk/ }).first().click();
   await page.getByText(/pts atrás de|na disputa pela ponta/).first().waitFor();
+  await assertDashboardRankingDarkContrast(page);
   await waitForFlagFallbacks(page);
+
+  for (const path of [
+    "/",
+    "/ao-vivo",
+    "/jogos",
+    "/jogadores",
+    "/painel",
+    "/palpites",
+    "/especiais",
+    "/boloes",
+  ]) {
+    await assertMobilePageShell(page, path);
+  }
 
   await page.goto(BASE_URL);
   const mobileMainNavigation = page.getByRole("navigation", { name: "Menu principal" });
@@ -488,6 +502,21 @@ try {
     .getByRole("region", { name: "Próximos jogos" })
     .getByRole("button", { name: "Avançar em Próximos jogos" })
     .click();
+  await assertDesktopCarouselDrag(desktopPage, "Próximos jogos");
+
+  const narrowPage = await browser.newPage({
+    viewport: { width: 360, height: 780 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const narrowErrors = [];
+  narrowPage.on("pageerror", (error) => narrowErrors.push(error.message));
+  for (const path of ["/jogadores", "/painel", "/jogos", "/boloes"]) {
+    await assertMobilePageShell(narrowPage, path);
+  }
+  assert.deepEqual(narrowErrors, []);
+  await narrowPage.close();
+
   assert.deepEqual(desktopErrors, []);
 
   console.log("UI flow test passed");
@@ -607,4 +636,126 @@ async function waitForFlagFallbacks(page) {
     }).length,
   );
   assert.equal(invalidSizes, 0, "team flags must keep a readable fixed size");
+}
+
+async function assertMobilePageShell(page, path) {
+  const response = await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+  assert.equal(response?.status(), 200, `${path} must respond successfully on mobile`);
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1),
+    false,
+    `${path} must not overflow horizontally on mobile`,
+  );
+
+  const navigation = page.getByRole("navigation", { name: "Menu principal" });
+  await navigation.getByRole("link", { name: "Ao vivo" }).waitFor();
+  await navigation.getByRole("link", { name: "Painel" }).waitFor();
+  await navigation.getByRole("button", { name: "Menu" }).waitFor();
+
+  const chrome = await page.evaluate(() => {
+    const mobileNav = document.querySelector(".mobile-navigation");
+    const desktopNav = document.querySelector(".desktop-nav");
+    const mobileDisplay = mobileNav ? getComputedStyle(mobileNav).display : null;
+    const desktopDisplay = desktopNav ? getComputedStyle(desktopNav).display : null;
+    const mobileBox = mobileNav?.getBoundingClientRect();
+
+    return {
+      mobileDisplay,
+      desktopDisplay,
+      mobileWidth: mobileBox?.width ?? 0,
+      mobileBottom: mobileBox ? Math.round(window.innerHeight - mobileBox.bottom) : null,
+    };
+  });
+
+  assert.notEqual(chrome.mobileDisplay, "none", `${path} mobile navigation must stay visible`);
+  assert.equal(chrome.desktopDisplay, "none", `${path} desktop navigation must stay hidden on mobile`);
+  assert.ok(chrome.mobileWidth > 280, `${path} mobile navigation must keep usable width`);
+  assert.ok(
+    chrome.mobileBottom !== null && chrome.mobileBottom >= 0 && chrome.mobileBottom <= 24,
+    `${path} mobile navigation must stay anchored near the bottom`,
+  );
+}
+
+async function assertDashboardRankingDarkContrast(page) {
+  const darkToggle = page.getByRole("button", { name: "Usar tema escuro" });
+  if ((await darkToggle.count()) > 0) {
+    await darkToggle.click();
+  }
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+  await page.locator(".dashboard-ranking-row-selected").first().waitFor();
+
+  const contrast = await page.evaluate(() => {
+    const selected = document.querySelector(".dashboard-ranking-row-selected");
+    const panel = document.querySelector(".dashboard-ranking-panel");
+    const summary = document.querySelector(".dashboard-pool-summary");
+    const ranking = document.querySelector(".dashboard-ranking-list");
+
+    function luminanceFromColor(color) {
+      const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+      const linear = channels.map((channel) => {
+        const value = channel / 255;
+        return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    }
+
+    return {
+      selectedColor: selected ? getComputedStyle(selected).color : "",
+      selectedLuminance: selected ? luminanceFromColor(getComputedStyle(selected).color) : 1,
+      selectedBackground: selected ? getComputedStyle(selected).backgroundImage : "",
+      panelWidth: panel?.getBoundingClientRect().width ?? 0,
+      summaryWidth: summary?.getBoundingClientRect().width ?? 0,
+      rankingWidth: ranking?.getBoundingClientRect().width ?? 0,
+      viewportWidth: window.innerWidth,
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    };
+  });
+
+  assert.equal(contrast.overflow, false, "dashboard ranking must not overflow in dark mode");
+  assert.ok(
+    contrast.selectedBackground.includes("gradient"),
+    "dashboard selected ranking row must keep a contrasting selected background",
+  );
+  assert.ok(
+    contrast.selectedLuminance < 0.18,
+    `dashboard selected ranking text must be dark on the bright selected row: ${contrast.selectedColor}`,
+  );
+  if (contrast.viewportWidth >= 1024) {
+    assert.ok(
+      contrast.rankingWidth > contrast.summaryWidth,
+      "dashboard ranking list must have more room than the summary on desktop-sized layouts",
+    );
+  } else {
+    assert.ok(
+      contrast.rankingWidth > contrast.viewportWidth * 0.82 &&
+        contrast.summaryWidth > contrast.viewportWidth * 0.82,
+      "dashboard ranking summary and list must stack with usable width on mobile",
+    );
+  }
+}
+
+async function assertDesktopCarouselDrag(page, regionName) {
+  const region = page.getByRole("region", { name: regionName });
+  const track = region.locator(".carousel-rail-track").first();
+  await track.waitFor();
+  await track.evaluate((element) => {
+    element.scrollTo({ left: 0, behavior: "auto" });
+  });
+  const before = await track.evaluate((element) => element.scrollLeft);
+  const box = await track.boundingBox();
+  assert.ok(box, `${regionName} carousel track must be measurable`);
+
+  await page.mouse.move(box.x + box.width * 0.72, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.30, box.y + box.height / 2, { steps: 12 });
+  const during = await track.evaluate((element) => element.scrollLeft);
+  await page.mouse.up();
+  await page.waitForTimeout(450);
+  const after = await track.evaluate((element) => element.scrollLeft);
+
+  assert.ok(
+    during > before + 40,
+    `${regionName} carousel must follow desktop drag while the mouse is pressed`,
+  );
+  assert.ok(after >= during, `${regionName} carousel must keep momentum after desktop drag`);
 }
