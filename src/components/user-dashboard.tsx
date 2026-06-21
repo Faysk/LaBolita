@@ -212,7 +212,7 @@ export function UserDashboard({
       </section>
 
       <section className="mt-8 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
-        <div className="min-w-0 rounded-[1.5rem] border bg-surface/88 p-4 md:p-5">
+        <div className="dashboard-ranking-panel min-w-0 rounded-[1.5rem] border bg-surface/88 p-4 md:p-5">
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">
               <p className="eyebrow">Disputa nos bolões</p>
@@ -584,23 +584,23 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
     : fallbackPlayerKey;
 
   return (
-    <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-start">
-      <div className="self-start rounded-[1.35rem] border bg-surface-muted p-4">
-        <div className="flex items-start gap-3">
-          <PoolFlag code={snapshot.pool.flagCode} size="lg" />
+    <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(13.5rem,0.68fr)_minmax(0,1.32fr)] lg:items-start">
+      <div className="dashboard-pool-summary self-start rounded-[1.35rem] border bg-surface-muted p-3.5">
+        <div className="flex items-center gap-3">
+          <PoolFlag code={snapshot.pool.flagCode} size="sm" />
           <div className="min-w-0">
-            <p className="truncate text-xl font-black">{snapshot.pool.name}</p>
-            <p className="mt-1 text-sm font-bold text-muted">
+            <p className="truncate text-base font-black">{snapshot.pool.name}</p>
+            <p className="mt-0.5 text-xs font-bold text-muted">
               {snapshot.pool.members} jogadores
             </p>
           </div>
         </div>
         {snapshot.currentPlayer ? (
           <>
-            <div className="mt-5">
+            <div className="mt-3">
               <MovementBadge snapshot={snapshot} />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <MiniDashboardStat
                 label="Oficial"
                 value={`${rankingLabel(snapshot.currentPlayer, snapshot.ranking)} · ${snapshot.currentPlayer.points} pts`}
@@ -611,7 +611,7 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
               />
             </div>
             {snapshot.gapToLeader > 0 ? (
-              <p className="mt-3 text-xs font-bold text-muted">
+              <p className="mt-3 rounded-2xl border bg-surface px-3 py-2 text-xs font-bold text-muted">
                 {snapshot.gapToLeader} pts atrás de {snapshot.leader?.name}.
               </p>
             ) : null}
@@ -622,7 +622,12 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
           </p>
         )}
       </div>
-      <div className="overflow-hidden rounded-[1.35rem] border bg-surface">
+      <div className="dashboard-ranking-list overflow-hidden rounded-[1.35rem] border bg-surface">
+        <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 border-b bg-surface-muted/55 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+          <span className="text-center">Pos.</span>
+          <span>Participante</span>
+          <span className="text-right">Parcial</span>
+        </div>
         {visibleRows.map((player) => {
           const key = dashboardRankingKey(player);
           const selected = key === activePlayerKey;
@@ -634,10 +639,10 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
                 aria-expanded={selected}
                 onClick={() => setSelectedPlayerKey(key)}
                 className={`interactive grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left ${
-                  selected ? "bg-brand text-white" : player.isCurrentUser ? "bg-accent/20" : ""
+                  selected ? "dashboard-ranking-row-selected" : player.isCurrentUser ? "dashboard-ranking-row-current" : "hover:bg-surface-muted/60"
                 }`}
               >
-                <span className={`text-center text-sm font-black ${selected ? "text-white/75" : "text-muted"}`}>
+                <span className={`text-center text-sm font-black ${selected ? "text-brand-strong/75" : "text-muted"}`}>
                   {rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" })}
                 </span>
                 <div className="flex min-w-0 items-center gap-3">
@@ -645,14 +650,14 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-black">{player.name}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <p className={`text-xs font-bold ${selected ? "text-white/65" : "text-muted"}`}>
+                      <p className={`text-xs font-bold ${selected ? "text-brand-strong/70" : "text-muted"}`}>
                         {player.exact} exatas · {player.correct} acertos
                       </p>
                       {!selected ? <PlayerMovementChip player={player} /> : null}
                     </div>
                   </div>
                 </div>
-                <span className={`text-right text-sm font-black ${selected ? "text-accent" : "text-brand"}`}>
+                <span className={`text-right text-sm font-black ${selected ? "text-brand-strong" : "text-brand"}`}>
                   {player.provisionalPoints ?? player.points} pts
                 </span>
               </button>
@@ -666,7 +671,7 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
           <button
             type="button"
             onClick={() => setExpanded((current) => !current)}
-            className="interactive flex w-full items-center justify-center gap-2 px-4 py-3 text-xs font-black text-brand hover:bg-surface-muted"
+            className="dashboard-ranking-toggle interactive flex w-full items-center justify-center gap-2 px-4 py-3 text-xs font-black text-brand hover:bg-surface-muted"
           >
             {expanded ? (
               <>
@@ -696,7 +701,7 @@ function DashboardRankingDetail({
   const gap = Math.max(0, leaderPoints - points);
 
   return (
-    <div className="bg-surface-muted px-4 py-3">
+    <div className="dashboard-ranking-detail border-t px-4 py-3">
       <div className="grid grid-cols-2 gap-2">
         <MiniDashboardStat label="Oficial" value={`${rankingLabel(player, snapshot.ranking)} · ${player.points} pts`} />
         <MiniDashboardStat
@@ -722,16 +727,22 @@ function PoolSnapshotStrip({
   onSelect: (poolId: string) => void;
 }) {
   return (
-    <div className="mt-4">
-      <p className="mb-2 text-xs font-black uppercase tracking-[0.12em] text-muted">
-        Bolões em movimento
-      </p>
+    <div className="mt-4 rounded-[1.25rem] border bg-surface-muted/55 p-2.5">
+      <div className="mb-2 flex items-center justify-between gap-3 px-1">
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-muted">
+          Bolões em movimento
+        </p>
+        <span className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
+          {snapshots.length}
+        </span>
+      </div>
       <CarouselRail
         ariaLabel="Bolões em movimento"
         initialCount={4}
         step={4}
         moreLabel="Ver mais bolões"
-        trackClassName="auto-cols-[minmax(15rem,82vw)] gap-3 sm:auto-cols-[15rem]"
+        trackClassName="auto-cols-[minmax(12.5rem,78vw)] gap-2 sm:auto-cols-[13.5rem]"
+        buttonClassName="interactive mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border bg-surface px-4 py-2.5 text-xs font-black text-brand hover:border-brand/60"
       >
         {snapshots.map((snapshot) => {
           const selected = snapshot.pool.id === selectedPoolId;
@@ -743,20 +754,20 @@ function PoolSnapshotStrip({
               type="button"
               aria-pressed={selected}
               onClick={() => onSelect(snapshot.pool.id)}
-              className={`interactive grid min-w-[15rem] gap-3 rounded-[1.2rem] border p-3 text-left ${
-                selected ? "bg-brand text-white" : "bg-surface-muted hover:border-brand/70"
+              className={`interactive grid min-w-[12.5rem] gap-2 rounded-2xl border p-2.5 text-left sm:min-w-[13.5rem] ${
+                selected ? "pool-snapshot-card-selected" : "bg-surface hover:border-brand/70"
               }`}
             >
               <span className="flex min-w-0 items-center gap-2">
                 <PoolFlag code={snapshot.pool.flagCode} size="sm" />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-black">{snapshot.pool.name}</span>
-                  <span className={`block text-xs font-bold ${selected ? "text-white/65" : "text-muted"}`}>
+                  <span className={`block text-xs font-bold ${selected ? "text-brand-strong/70" : "text-muted"}`}>
                     {snapshot.pool.members} jogadores
                   </span>
                 </span>
               </span>
-              <span className="grid grid-cols-3 gap-2 text-center">
+              <span className="grid grid-cols-3 gap-1.5 text-center">
                 <SnapshotMiniMetric
                   selected={selected}
                   label="Pos."
@@ -795,7 +806,7 @@ function SnapshotMiniMetric({
 }) {
   const toneClass =
     selected
-      ? "bg-white/10 text-white"
+      ? "border-brand-strong/15 bg-white/40 text-brand-strong"
       : tone === "up"
         ? "status-success"
         : tone === "down"
@@ -803,11 +814,11 @@ function SnapshotMiniMetric({
           : "bg-surface";
 
   return (
-    <span className={`rounded-xl border px-2 py-1.5 ${toneClass}`}>
-      <span className={`block text-[9px] font-black uppercase ${selected ? "text-white/58" : "text-muted"}`}>
+    <span className={`rounded-xl border px-2 py-1 ${toneClass}`}>
+      <span className={`block text-[8px] font-black uppercase ${selected ? "text-brand-strong/60" : "text-muted"}`}>
         {label}
       </span>
-      <span className={`mt-0.5 block text-xs font-black ${selected ? "text-accent" : ""}`}>
+      <span className="mt-0.5 block text-[11px] font-black">
         {value}
       </span>
     </span>
@@ -822,7 +833,7 @@ function PlayerMovementChip({ player }: { player: RankingEntry }) {
       ? "status-success"
       : movement.tone === "down"
         ? "status-warning"
-        : "bg-surface-muted";
+        : "status-neutral";
 
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${toneClass}`}>
@@ -1056,15 +1067,15 @@ function MovementBadge({ snapshot }: { snapshot: PoolSnapshot }) {
       ? "status-success"
       : snapshot.movement.tone === "down"
         ? "status-warning"
-        : "status-info";
+        : "status-neutral";
 
   return (
-    <div className={`rounded-2xl border p-3 ${toneClass}`}>
+    <div className={`rounded-2xl border px-3 py-2.5 ${toneClass}`}>
       <div className="flex items-center gap-2">
         <Icon className="size-4" />
         <p className="text-sm font-black">{snapshot.movement.label}</p>
       </div>
-      <p className="mt-1 text-xs font-bold">
+      <p className="mt-1 text-xs font-bold text-muted">
         {snapshot.livePoints > 0
           ? `+${snapshot.livePoints} pts no parcial`
           : "sem ponto parcial neste momento"}
@@ -1075,7 +1086,7 @@ function MovementBadge({ snapshot }: { snapshot: PoolSnapshot }) {
 
 function MiniDashboardStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border bg-surface p-3">
+    <div className="dashboard-soft-stat rounded-2xl border bg-surface px-3 py-2.5">
       <p className="text-[10px] font-black uppercase text-muted">{label}</p>
       <p className="mt-1 text-sm font-black">{value}</p>
     </div>
