@@ -273,12 +273,13 @@ export function PredictionBoard({
               )}
               step={grouping === "stage" ? 8 : 6}
               moreLabel="Ver mais jogos"
-              className="grid gap-4 md:grid-cols-2"
+              className="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
             >
               {groupedMatches.map((match) => (
                 <MatchCard
                   key={match.id}
                   match={match}
+                  compact
                   isAuthenticated
                   termsAccepted
                   highlighted={match.id === resolvedFocusMatchId}
