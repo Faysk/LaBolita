@@ -388,7 +388,9 @@ try {
     "/painel",
     "/palpites",
     "/especiais",
+    "/especiais/artilheiro",
     "/boloes",
+    "/admin",
   ]) {
     await assertMobilePageShell(page, path);
   }
@@ -436,6 +438,7 @@ try {
     "/painel",
     "/palpites",
     "/especiais",
+    "/especiais/artilheiro",
     "/boloes",
     "/regras",
     "/admin",
@@ -511,7 +514,7 @@ try {
   });
   const narrowErrors = [];
   narrowPage.on("pageerror", (error) => narrowErrors.push(error.message));
-  for (const path of ["/jogadores", "/painel", "/jogos", "/boloes"]) {
+  for (const path of ["/jogadores", "/painel", "/jogos", "/boloes", "/admin"]) {
     await assertMobilePageShell(narrowPage, path);
   }
   assert.deepEqual(narrowErrors, []);
