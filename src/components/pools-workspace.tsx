@@ -92,6 +92,11 @@ type PoolSnapshot = {
   completedMatches: number;
 };
 
+type FinishedPick = {
+  match: DemoMatch;
+  entry: PredictionComparisonEntry;
+};
+
 export function PoolsWorkspace({
   pools: initialPools,
   publicPools: initialPublicPools,
@@ -1414,9 +1419,8 @@ function RankingPlayerReport({
       const entry = findPlayerComparisonEntry(player, comparison.entries);
       return entry ? { match, entry } : null;
     })
-    .filter((item): item is { match: DemoMatch; entry: PredictionComparisonEntry } =>
-      Boolean(item),
-    );
+    .filter((item): item is FinishedPick => Boolean(item));
+  const pickSummary = summarizeFinishedPicks(finishedPicks);
 
   return (
     <div data-testid="ranking-player-report" className="border-t bg-surface-muted/55 p-5 md:p-6">
@@ -1454,6 +1458,50 @@ function RankingPlayerReport({
           {gap} pts atrás de {leader.name}.
         </p>
       ) : null}
+      <div data-testid="ranking-player-pick-summary" className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.55fr)]">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <PlayerMetric
+            icon={Target}
+            label="Jogos analisáveis"
+            value={pluralize(pickSummary.total, "jogo", "jogos")}
+          />
+          <PlayerMetric
+            icon={Check}
+            label="Pontuaram"
+            value={pluralize(pickSummary.scoredCount, "palpite", "palpites")}
+            tone={pickSummary.scoredCount > 0 ? "up" : "neutral"}
+          />
+          <PlayerMetric
+            icon={BarChart3}
+            label="Média"
+            value={pickSummary.averagePoints === null ? "sem pontos" : `${pickSummary.averagePoints} pts/jogo`}
+          />
+        </div>
+        {pickSummary.best ? (
+          <Link
+            data-testid="ranking-player-best-pick"
+            href={focusedPredictionHref(pickSummary.best.match)}
+            className="interactive flex min-h-24 flex-col justify-center rounded-2xl border bg-surface px-4 py-3 text-sm font-black text-brand hover:border-brand/70"
+          >
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+              Melhor comparação
+            </span>
+            <span className="mt-1">
+              {pickSummary.best.match.homeTeam.shortName} x {pickSummary.best.match.awayTeam.shortName}
+            </span>
+            <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted">
+              {pickSummary.best.score.totalPoints} pts neste jogo <ArrowRight className="size-3.5" />
+            </span>
+          </Link>
+        ) : (
+          <div className="flex min-h-24 flex-col justify-center rounded-2xl border bg-surface px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+              Melhor comparação
+            </p>
+            <p className="mt-1 text-sm font-black text-muted">aguardando resultado</p>
+          </div>
+        )}
+      </div>
       <div data-testid="ranking-player-finished-picks" className="mt-4 rounded-2xl border bg-surface p-3">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-black uppercase tracking-[0.12em] text-muted">
@@ -1559,7 +1607,7 @@ function FinishedPickRow({
             }
           />
           <Link
-            href={`/palpites?jogo=${encodeURIComponent(match.id)}#lista-de-jogos`}
+            href={focusedPredictionHref(match)}
             className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-surface px-3 text-xs font-black text-brand hover:border-brand/70 sm:col-span-2 lg:col-span-4"
           >
             Abrir comparação deste jogo <ArrowRight className="size-3.5" />
@@ -1737,6 +1785,38 @@ function finishedPickScore(
   if (entry.score) return entry.score;
   if (!entry.prediction || !result) return null;
   return calculateScore(entry.prediction, result, match.stage);
+}
+
+function summarizeFinishedPicks(finishedPicks: FinishedPick[]) {
+  const scored = finishedPicks
+    .map((pick) => ({
+      ...pick,
+      score: finishedPickScore(
+        pick.entry,
+        pick.match,
+        pick.match.result ?? pick.match.liveResult,
+      ),
+    }))
+    .filter((pick): pick is FinishedPick & { score: ScoreBreakdown } =>
+      Boolean(pick.score),
+    );
+  const totalPoints = scored.reduce((total, pick) => total + pick.score.totalPoints, 0);
+  const best = scored
+    .sort((left, right) =>
+      right.score.totalPoints - left.score.totalPoints ||
+      matchTime(right.match) - matchTime(left.match),
+    )[0] ?? null;
+
+  return {
+    total: finishedPicks.length,
+    scoredCount: scored.filter((pick) => pick.score.totalPoints > 0).length,
+    averagePoints: scored.length > 0 ? Math.round(totalPoints / scored.length) : null,
+    best,
+  };
+}
+
+function focusedPredictionHref(match: DemoMatch) {
+  return `/palpites?jogo=${encodeURIComponent(match.id)}#lista-de-jogos`;
 }
 
 function scoreCategoryLabel(category: ScoreBreakdown["category"]) {

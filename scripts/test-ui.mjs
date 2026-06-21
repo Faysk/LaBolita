@@ -290,6 +290,13 @@ try {
   await page.getByTestId("ranking-player-report").waitFor({ state: "hidden" });
   await page.getByTestId("ranking-current-user").click();
   await page.getByTestId("ranking-player-finished-picks").getByText("2 x 1").first().waitFor();
+  await page.getByTestId("ranking-player-pick-summary").getByText("Jogos analisáveis").waitFor();
+  const bestPickHref = await page.getByTestId("ranking-player-best-pick").getAttribute("href");
+  assert.match(
+    bestPickHref ?? "",
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "ranking best pick shortcut must link to the focused prediction comparison",
+  );
   await page.getByTestId("finished-pick-toggle").first().click();
   await page
     .getByTestId("finished-pick-details")
