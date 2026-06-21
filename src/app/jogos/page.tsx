@@ -214,6 +214,7 @@ function ScheduleRail({
       <MatchTimeline
         matches={matches}
         variant="rail"
+        ariaLabel={title}
         showPrediction={showPrediction}
         initialCount={initialCount}
         moreLabel={moreLabel}

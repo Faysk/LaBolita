@@ -10,6 +10,7 @@ import {
   Radio,
   Target,
 } from "lucide-react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
@@ -26,6 +27,7 @@ type MatchTimelineProps = {
   initialCount?: number;
   step?: number;
   moreLabel?: string;
+  ariaLabel?: string;
   actionLabel?: string;
   actionMode?: "auto";
 };
@@ -39,6 +41,7 @@ export function MatchTimeline({
   initialCount,
   step,
   moreLabel = "Ver mais jogos",
+  ariaLabel = "Jogos",
   actionLabel = "Ver agenda",
   actionMode,
 }: MatchTimelineProps) {
@@ -63,26 +66,17 @@ export function MatchTimeline({
       />
     ));
 
-    if (initialCount) {
-      return (
-        <ProgressiveList
-          initialCount={initialCount}
-          step={step ?? initialCount}
-          moreLabel={moreLabel}
-          className="grid min-w-0 max-w-full snap-x auto-cols-[minmax(17rem,85vw)] grid-flow-col gap-3 overflow-x-auto pb-2 sm:auto-cols-[18rem] lg:auto-cols-[20rem]"
-          buttonClassName="interactive mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border bg-surface-muted px-4 py-3 text-xs font-black text-brand hover:border-brand/60"
-        >
-          {cards}
-        </ProgressiveList>
-      );
-    }
-
     return (
-      <div className="min-w-0 max-w-full snap-x overflow-x-auto pb-2">
-        <div className="grid auto-cols-[minmax(17rem,85vw)] grid-flow-col gap-3 sm:auto-cols-[18rem] lg:auto-cols-[20rem]">
-          {cards}
-        </div>
-      </div>
+      <CarouselRail
+        ariaLabel={ariaLabel}
+        initialCount={initialCount}
+        step={step ?? initialCount}
+        moreLabel={moreLabel}
+        className="min-w-0 max-w-full"
+        trackClassName="auto-cols-[minmax(17rem,85vw)] gap-3 sm:auto-cols-[18rem] lg:auto-cols-[20rem]"
+      >
+        {cards}
+      </CarouselRail>
     );
   }
 

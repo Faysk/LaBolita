@@ -158,6 +158,17 @@ a {
   transform: scale(0.975);
 }
 
+.carousel-rail-track {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.carousel-rail-track::-webkit-scrollbar {
+  display: none;
+}
+
 .bg-brand.text-white {
   color: var(--brand-contrast);
 }
@@ -615,8 +626,10 @@ textarea:focus {
 
 @media (prefers-reduced-motion: reduce) {
   .interactive,
+  .carousel-rail-track,
   .skeleton {
     animation: none;
+    scroll-behavior: auto;
     transition: none;
   }
 }

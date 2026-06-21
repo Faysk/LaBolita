@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ChevronDown, Goal, Images, ShieldCheck, Trophy, Users } from "lucide-react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { PageShortcuts } from "@/components/page-shortcuts";
 import {
   PlayersCatalog,
@@ -123,11 +124,12 @@ export async function PlayersDirectory({
             </span>
           </div>
           <div className="-mx-5 px-5 pb-2">
-            <ProgressiveList
+            <CarouselRail
+              ariaLabel="Figurinhas em destaque"
               initialCount={10}
               step={10}
               moreLabel="Ver mais figurinhas"
-              className="grid auto-cols-[8.5rem] grid-flow-col gap-3 overflow-x-auto pb-2"
+              trackClassName="auto-cols-[8.5rem] gap-3"
             >
               {featuredStickers.map((player) => (
                 <PlayerStickerCard
@@ -136,7 +138,7 @@ export async function PlayersDirectory({
                   team={teamForPlayer(player, teamsByCode)}
                 />
               ))}
-            </ProgressiveList>
+            </CarouselRail>
           </div>
         </section>
       )}

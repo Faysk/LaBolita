@@ -96,6 +96,7 @@ try {
   await page.getByText("Trilha rápida").waitFor();
   await page.getByRole("heading", { name: "Próximos jogos" }).waitFor();
   await page.getByText("Meu palpite").first().waitFor();
+  await page.getByRole("region", { name: "Próximos jogos" }).waitFor();
   const quickSchedule = page.locator("section").filter({
     has: page.getByRole("heading", { name: "Agora, próximos e resultados" }),
   });
@@ -129,7 +130,8 @@ try {
 
   await page.goto(`${BASE_URL}/jogadores`);
   await page.getByRole("heading", { name: "Jogadores da Copa" }).waitFor();
-  await page.getByText("Figurinhas em destaque").waitFor();
+  await page.getByRole("heading", { name: "Figurinhas em destaque" }).waitFor();
+  await page.getByRole("region", { name: "Figurinhas em destaque" }).waitFor();
   await page.getByLabel("Ordenar").selectOption("goals");
   await page.getByText(/Mostrando .* Mais gols/).waitFor();
   await page.getByText("Dados do jogador").first().click();
@@ -472,6 +474,11 @@ try {
   await desktopPage.getByRole("menuitem", { name: /Regras/ }).waitFor();
   await desktopPage.keyboard.press("Escape");
   await desktopPage.getByRole("menuitem", { name: /Jogos/ }).waitFor({ state: "hidden" });
+  await desktopPage.goto(`${BASE_URL}/jogos`);
+  await desktopPage
+    .getByRole("region", { name: "Próximos jogos" })
+    .getByRole("button", { name: "Avançar em Próximos jogos" })
+    .click();
   assert.deepEqual(desktopErrors, []);
 
   console.log("UI flow test passed");

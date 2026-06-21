@@ -81,6 +81,7 @@ export default async function HomePage() {
           <MatchTimeline
             matches={liveMatches}
             variant="rail"
+            ariaLabel="Jogos ao vivo"
             href="/ao-vivo"
             initialCount={3}
             moreLabel="Ver mais jogos ao vivo"
@@ -107,6 +108,7 @@ export default async function HomePage() {
         <MatchTimeline
           matches={nextMatches}
           variant="rail"
+          ariaLabel="Próximos jogos"
           href="/jogos"
           initialCount={3}
           moreLabel="Ver mais próximos jogos"
