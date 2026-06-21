@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CheckCircle2, Clock3, EyeOff, ShieldCheck, Sparkles } from "lucide-react";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import {
   SPECIAL_LOCK_DATE_LABEL,
 } from "@/lib/special-market-display";
@@ -42,7 +43,7 @@ export default function RulesPage() {
   return (
     <main className="page-container py-7 md:py-10">
       <div className="max-w-2xl">
-        <p className="eyebrow">Sem letrinha miúda</p>
+        <p className="eyebrow">Regras sem mistério</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
           Regras do jogo
         </h1>
@@ -58,11 +59,16 @@ export default function RulesPage() {
         </p>
       </div>
 
+      <PageShortcuts
+        routeKeys={["predictions", "specials", "pools", "games"]}
+        className="mt-6"
+      />
+
       <section className="mt-8 grid gap-4 md:grid-cols-3">
         {[
           [Clock3, "Até o apito", "Altere seu palpite livremente até o bloqueio."],
-          [EyeOff, "Tudo oculto", "Os palpites rivais aparecem somente após o bloqueio."],
-          [ShieldCheck, "Sem jeitinho", "O horário do servidor decide se um palpite é válido."],
+          [EyeOff, "Rivais ocultos", "Os palpites rivais aparecem somente após o bloqueio."],
+          [ShieldCheck, "Servidor no apito", "O horário do servidor decide se um palpite é válido."],
         ].map(([Icon, title, text]) => {
           const RuleIcon = Icon as typeof Clock3;
           return (
@@ -131,8 +137,8 @@ export default function RulesPage() {
             <Sparkles className="size-5" />
           </span>
           <div>
-            <p className="eyebrow">Extras</p>
-            <h2 className="mt-1 text-2xl font-black">Palpites especiais</h2>
+            <p className="eyebrow">Além dos placares</p>
+            <h2 className="mt-1 text-2xl font-black">Palpites finais</h2>
           </div>
         </div>
         <div className="mt-4">
@@ -142,7 +148,7 @@ export default function RulesPage() {
               ranking separado. Eles não substituem seus placares dos jogos.
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Os especiais ficam abertos até {SPECIAL_LOCK_DATE_LABEL}. Cada categoria tem sua
+              Os palpites finais ficam abertos até {SPECIAL_LOCK_DATE_LABEL}. Cada categoria tem sua
               própria tela com busca, destaques e dados de elenco para ajudar na
               escolha.
             </p>

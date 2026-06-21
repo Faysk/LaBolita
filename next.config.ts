@@ -1,6 +1,17 @@
+import { createRequire } from "node:module";
+import { dirname, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
+const require = createRequire(import.meta.url);
 const isDevelopment = process.env.NODE_ENV === "development";
+const configRoot = dirname(fileURLToPath(import.meta.url));
+const dependencyRoot = dirname(dirname(dirname(require.resolve("next/package.json"))));
+// Worktrees can share node_modules with a parent folder, so Turbopack must cover both.
+const workspaceRoot =
+  configRoot === dependencyRoot || configRoot.startsWith(`${dependencyRoot}${sep}`)
+    ? dependencyRoot
+    : configRoot;
 const scriptSrc = [
   "script-src 'self' 'unsafe-inline'",
   isDevelopment ? "'unsafe-eval'" : "",
@@ -8,6 +19,10 @@ const scriptSrc = [
 
 const nextConfig: NextConfig = {
   distDir: process.env.LABOLITA_BUILD_DIR ?? ".next",
+  outputFileTracingRoot: workspaceRoot,
+  turbopack: {
+    root: workspaceRoot,
+  },
   async headers() {
     return [
       {

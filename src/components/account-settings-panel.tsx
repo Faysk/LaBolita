@@ -109,7 +109,7 @@ export function AccountSettingsPanel({
     }
 
     setSaveState("saved");
-    setMessage("Preferências de perfil salvas.");
+    setMessage("Perfil atualizado.");
     router.refresh();
   }
 
@@ -139,7 +139,7 @@ export function AccountSettingsPanel({
     if (Object.keys(payload).length === 0) return;
 
     setPreferenceState("saving");
-    setPreferenceMessage("Sincronizando preferência com sua conta...");
+    setPreferenceMessage("Sincronizando com sua conta...");
 
     const { data: authData } = await supabase.auth.getUser();
     if (!authData.user) {
@@ -164,7 +164,7 @@ export function AccountSettingsPanel({
     }
 
     setPreferenceState("saved");
-    setPreferenceMessage("Preferência sincronizada com sua conta.");
+    setPreferenceMessage("Preferências sincronizadas.");
     router.refresh();
   }
 
@@ -191,17 +191,18 @@ export function AccountSettingsPanel({
           <div className="min-w-0">
             <p className="eyebrow">Perfil público</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.04em]">
-              Sua identidade no bolão
+              Como você aparece no jogo
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Nome e foto aparecem em rankings e bolões. A foto só fica pública se você permitir.
+              Nome e foto aparecem em rankings e bolões. A foto só aparece para
+              outras pessoas se você permitir.
             </p>
           </div>
         </div>
 
         <form onSubmit={saveProfile} className="mt-6 grid gap-4">
           <label className="grid gap-2 text-sm font-bold">
-            Nome exibido
+            Nome no ranking
             <input
               value={name}
               onChange={(event) => {
@@ -214,7 +215,7 @@ export function AccountSettingsPanel({
               className="interactive min-h-12 rounded-2xl border bg-surface-muted px-4 text-sm font-bold outline-none focus:border-brand focus:bg-surface"
             />
             <span className="text-xs font-medium text-muted">
-              Use de 2 a 60 caracteres.
+              Entre 2 e 60 caracteres.
             </span>
           </label>
 
@@ -231,9 +232,10 @@ export function AccountSettingsPanel({
               className="mt-1 size-4 accent-[var(--color-brand)]"
             />
             <span>
-              <span className="block font-black">Exibir minha foto publicamente</span>
+              <span className="block font-black">Mostrar minha foto nos bolões</span>
               <span className="mt-1 block text-xs leading-5 text-muted">
-                Quando desligado, outras pessoas veem apenas suas iniciais. Você sempre vê sua própria foto.
+                Quando desligado, os outros veem apenas suas iniciais. Você
+                continua vendo sua própria foto.
               </span>
               {!avatarUrl && (
                 <span className="mt-2 block text-xs font-bold text-muted">
@@ -295,14 +297,14 @@ export function AccountSettingsPanel({
               active={themePreference === "light"}
               icon={<Sun className="size-4" />}
               label="Claro"
-              detail="Força modo claro"
+              detail="Sempre claro"
               onClick={() => updateTheme("light")}
             />
             <PreferenceButton
               active={themePreference === "dark"}
               icon={<Moon className="size-4" />}
               label="Escuro"
-              detail="Força modo escuro"
+              detail="Sempre escuro"
               onClick={() => updateTheme("dark")}
             />
           </div>
@@ -338,7 +340,7 @@ export function AccountSettingsPanel({
               active={timePreference.mode === "offset"}
               icon={<Clock3 className="size-4" />}
               label="GMT manual"
-              detail="Offset fixo"
+              detail="Horário fixo"
               onClick={() => updateTime({ mode: "offset", offsetMinutes: Number(offsetValue) })}
             />
           </div>
@@ -412,7 +414,7 @@ export function AccountSettingsPanel({
 
         <div className="card p-5 md:p-6">
           <p className="eyebrow">Conta</p>
-          <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Login e segurança</h2>
+          <h2 className="mt-1 text-xl font-black tracking-[-0.03em]">Acesso e segurança</h2>
           <dl className="mt-4 grid gap-3 text-sm">
             <div className="rounded-2xl border bg-surface-muted p-4">
               <dt className="text-xs font-black uppercase tracking-[0.12em] text-muted">E-mail</dt>
@@ -421,7 +423,7 @@ export function AccountSettingsPanel({
             <div className="rounded-2xl border bg-surface-muted p-4">
               <dt className="text-xs font-black uppercase tracking-[0.12em] text-muted">Foto</dt>
               <dd className="mt-1 text-sm font-bold">
-                {avatarUrl ? "Sincronizada pelo login Google" : "Sem foto sincronizada"}
+                {avatarUrl ? "Vem do login Google" : "Sem foto sincronizada"}
               </dd>
             </div>
           </dl>

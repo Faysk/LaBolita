@@ -1,42 +1,48 @@
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
+import { access, rm } from "node:fs/promises";
 import { spawn, spawnSync } from "node:child_process";
+import path from "node:path";
 import { chromium } from "playwright-core";
 
 const PORT = 3100;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const DEMO_BUILD_DIR = ".next-demo-ui";
 const executablePath = await findBrowser();
-buildDemo();
-const server = spawn(
-  process.execPath,
-  ["node_modules/next/dist/bin/next", "start", "-p", String(PORT)],
-  {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      PORT: String(PORT),
-      LABOLITA_BUILD_DIR: ".next-demo",
-      NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
-      NEXT_PUBLIC_SUPABASE_URL: "",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
-      SUPABASE_SERVICE_ROLE_KEY: "",
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  },
-);
+const nextBin = await findNextBin();
 
 let serverOutput = "";
-server.stdout.on("data", (chunk) => {
-  serverOutput += chunk;
-});
-server.stderr.on("data", (chunk) => {
-  serverOutput += chunk;
-});
-
+let server;
 let browser;
 
 try {
+  await cleanupDemoBuild();
+  buildDemo();
+  server = spawn(
+    process.execPath,
+    [nextBin, "start", "-p", String(PORT)],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        PORT: String(PORT),
+        LABOLITA_BUILD_DIR: DEMO_BUILD_DIR,
+        NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
+        NEXT_PUBLIC_SUPABASE_URL: "",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+        SUPABASE_SERVICE_ROLE_KEY: "",
+      },
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    },
+  );
+
+  server.stdout.on("data", (chunk) => {
+    serverOutput += chunk;
+  });
+  server.stderr.on("data", (chunk) => {
+    serverOutput += chunk;
+  });
+
   await waitForServer();
   browser = await chromium.launch({ executablePath, headless: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -44,19 +50,105 @@ try {
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
   await page.goto(BASE_URL);
-  await page.getByRole("heading", { name: "Seu palpite. Sua resenha. Sua taça." }).waitFor();
+  await page.getByRole("heading", { name: /A Copa fica fácil de acompanhar|Tem jogo valendo bolão agora/ }).waitFor();
   await page.getByText("Modo demonstração: agenda parcial").waitFor();
-  await page.getByText("Bolão em destaque").waitFor();
-  await page.getByText("Família Faysk").first().waitFor();
+  await page.getByRole("heading", { name: /Próximos jogos|Agora ao vivo/ }).waitFor();
+  await page.getByRole("region", { name: /Próximos jogos|Jogos ao vivo/ }).waitFor();
+  await page.getByTestId(/^timeline-match-/).first().waitFor();
+  await waitForFlagFallbacks(page);
+
+  await page.goto(`${BASE_URL}/ao-vivo`);
+  await page.getByRole("heading", { name: /Tudo pronto para acompanhar|O jogo está mexendo/ }).waitFor();
+  await page.getByText(/Atualização automática|atualizar sozinha/).waitFor();
+  await page.getByRole("heading", { name: "Impacto agora" }).waitFor();
+  await page.getByText("Tendência do bolão").waitFor();
+  const liveFocusedHref = await page.getByRole("link", { name: "Abrir este jogo" }).getAttribute("href");
+  assert.match(
+    liveFocusedHref ?? "",
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "live impact shortcut must open the focused prediction",
+  );
+  await page.getByText("Seu palpite", { exact: true }).waitFor();
+  await page.getByText("Distribuição dos palpites").waitFor();
+  await page.getByText("Cravadas").first().waitFor();
+  if (await page.getByText("Pontos do placar").count()) {
+    await page.getByText("Pontos do placar").first().waitFor();
+  }
+  await page.getByRole("link", { name: "Abrir bolões" }).waitFor();
+  await waitForFlagFallbacks(page);
+
+  await page.goto(`${BASE_URL}/painel`);
+  await page.getByRole("heading", { name: "Meu painel" }).waitFor();
+  if (await page.getByTestId("dashboard-live-impact-toggle").count()) {
+    await page.getByTestId("dashboard-live-impact-toggle").first().click();
+    await page
+      .getByTestId("dashboard-live-impact-details")
+      .first()
+      .getByText("Pontos do placar")
+      .waitFor();
+  } else {
+    await page.getByText(/Próxima ação|Tudo encaminhado/).waitFor();
+  }
+  await waitForFlagFallbacks(page);
+
+  await page.goto(`${BASE_URL}/jogos`);
+  await page.getByRole("heading", { name: "Agenda de jogos" }).waitFor();
+  await page.getByText("Trilha rápida").waitFor();
+  await page.getByRole("heading", { name: "Próximos jogos" }).waitFor();
+  await page.getByText("Meu palpite").first().waitFor();
+  await page.getByRole("region", { name: "Próximos jogos" }).waitFor();
+  const quickSchedule = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Agora, próximos e resultados" }),
+  });
+  const quickScheduleHref = await quickSchedule.getByTestId(/^timeline-match-/).first().evaluate((element) =>
+    element.closest("a")?.getAttribute("href") ?? "",
+  );
+  assert.match(
+    quickScheduleHref,
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "quick schedule match cards must open the focused prediction",
+  );
+  await page.getByRole("heading", { name: "Palpites do bolão por partida" }).waitFor();
+  await page.getByText("Agenda completa").waitFor();
+  const completeSchedule = page.locator("section").filter({
+    has: page.getByRole("heading", { name: "Agenda completa" }),
+  });
+  const firstAgendaHref = await completeSchedule.getByTestId(/^timeline-match-/).first().evaluate((element) =>
+    element.closest("a")?.getAttribute("href") ?? "",
+  );
+  assert.match(
+    firstAgendaHref,
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "complete schedule match cards must open the predictions screen",
+  );
+  const focusedMatchId = new URL(firstAgendaHref, BASE_URL).searchParams.get("jogo");
+  assert.ok(focusedMatchId, "complete schedule links must include the match id");
+  await page.goto(`${BASE_URL}${firstAgendaHref}`);
+  await page.getByTestId(`match-${focusedMatchId}`).waitFor();
+  await page.getByText("Jogo aberto pela agenda").waitFor();
+  await waitForFlagFallbacks(page);
+
+  await page.goto(`${BASE_URL}/jogadores`);
+  await page.getByRole("heading", { name: "Jogadores da Copa" }).waitFor();
+  await page.getByRole("heading", { name: "Figurinhas em destaque" }).waitFor();
+  await page.getByRole("region", { name: "Figurinhas em destaque" }).waitFor();
+  await page.getByLabel("Ordenar").selectOption("goals");
+  await page.getByText(/Mostrando .* Mais gols/).waitFor();
+  await page.getByText("Dados do jogador").first().click();
+  await page.getByText("Especiais relacionados").first().waitFor();
+  await page.getByRole("link", { name: "Artilheiro" }).first().waitFor();
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/palpites`);
-  await page.getByRole("heading", { name: "Seus palpites" }).waitFor();
+  await page.getByRole("heading", { name: "Meus palpites" }).waitFor();
+  await page.getByTestId("prediction-workbench-summary").getByText("Próxima ação").waitFor();
+  await page.getByTestId("prediction-next-action").waitFor();
   await waitForFlagFallbacks(page);
-  await page.getByRole("button", { name: "Mata-mata" }).click();
+  const predictionFilters = page.getByRole("region", { name: "Filtros de palpites" });
+  await predictionFilters.getByRole("button", { name: "Mata-mata" }).click();
   await page.getByTestId("match-match-9").waitFor();
-  assert.equal(await page.getByTestId("match-match-1").count(), 0);
-  await page.getByRole("button", { name: "Todos" }).click();
+  assert.equal(await predictionFilters.getByRole("button", { name: "Mata-mata" }).getAttribute("aria-pressed"), "true");
+  await predictionFilters.getByRole("button", { name: "Todos" }).click();
   await page.getByRole("button", { name: "Por data" }).click();
   assert.equal(await page.getByRole("button", { name: "Por data" }).getAttribute("aria-pressed"), "true");
   await page.getByRole("button", { name: "Por fase" }).click();
@@ -115,8 +207,24 @@ try {
     "admin group headers must not render as white bars in dark mode",
   );
   await page.getByRole("button", { name: "Usar tema claro" }).click();
+  await page.goto(`${BASE_URL}/admin?master_tab=audit`);
+  await page.getByLabel("Origem").selectOption("predictions");
+  await page.getByLabel("Período").selectOption("30d");
+  await page.getByPlaceholder("Ação, usuário, jogo, bolão...").fill("palpite");
+  await page.getByRole("button", { name: "Buscar" }).click();
+  await page.waitForURL(/master_audit_source=predictions/);
+  assert.match(page.url(), /master_audit_period=30d/);
+  assert.match(page.url(), /master_audit_query=palpite/);
+  await page.getByText("Nenhum evento encontrado com esses filtros.").waitFor();
+  await page.getByRole("button", { name: "Limpar" }).click();
+  await page.waitForURL(
+    (url) => url.searchParams.get("master_tab") === "audit" && !url.searchParams.has("master_audit_query"),
+  );
+  assert.equal(page.url().includes("master_audit_query"), false);
+  await page.goto(`${BASE_URL}/admin`);
+  await page.getByRole("button", { name: /^Todos ·/ }).click();
   const adminOpeningMatch = page.getByTestId("admin-match-match-1");
-  await adminOpeningMatch.getByRole("button", { name: "Informar resultado" }).click();
+  await adminOpeningMatch.getByRole("button", { name: /Informar resultado|Corrigir resultado/ }).click();
   await adminOpeningMatch.getByRole("spinbutton", { name: "México" }).fill("2");
   await adminOpeningMatch.getByRole("spinbutton", { name: "África do Sul" }).fill("1");
   await adminOpeningMatch.getByLabel("Motivo ou fonte").fill("Conferido na FIFA");
@@ -133,18 +241,35 @@ try {
 
   await page.goto(`${BASE_URL}/palpites`);
   await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("heading", { name: "Comparar palpites do bolão" }).waitFor();
+  await page.getByText("Mapa dos palpites").first().waitFor();
+  await page.getByText("Iguais ao seu").first().waitFor();
+  await page.getByTestId("comparison-current-user").first().click();
+  await page
+    .getByTestId("prediction-comparison-details")
+    .first()
+    .getByText("Pontos do placar")
+    .waitFor();
+  await page.goto(`${BASE_URL}/palpites?jogo=match-1#lista-de-jogos`);
   await page
     .getByTestId("match-match-1")
     .getByText("Seu palpite rendeu 10 pontos")
     .waitFor();
+  assert.equal(await page.getByTestId("match-match-1").getByLabel("Gols de México").isDisabled(), true);
+  await page.goto(`${BASE_URL}/palpites?jogo=match-9#lista-de-jogos`);
   await page
     .getByTestId("match-match-9")
     .getByText("Seu palpite rendeu 53 pontos")
     .waitFor();
-  assert.equal(await page.getByTestId("match-match-1").getByLabel("Gols de México").isDisabled(), true);
+  await page.goto(`${BASE_URL}/palpites?jogo=match-9#lista-de-jogos`);
+  await page.getByTestId("finished-review-selected-match").getByText("Final · simulação").waitFor();
+  await page.getByTestId("match-match-9").getByText("Jogo aberto pela agenda").waitFor();
 
   await page.goto(`${BASE_URL}/boloes`);
   await page.getByRole("heading", { name: "Bolões públicos" }).waitFor();
+  await page.getByTestId("pools-command-center").getByText("Mapa dos bolões").waitFor();
+  await page.getByTestId("pools-command-center").getByRole("link", { name: "Ranking" }).waitFor();
+  await page.getByText("Meus rankings").waitFor();
   await page.getByRole("button", { name: "Usar tema escuro" }).click();
   assert.equal(
     await page.evaluate(() => document.documentElement.dataset.theme),
@@ -160,7 +285,49 @@ try {
   );
   await selectedPoolCard.getByText("Família Faysk").waitFor();
   await page.getByTestId("ranking-current-user").getByText("131 pts").waitFor();
+  assert.equal(
+    await page.getByTestId("ranking-player-report").count(),
+    0,
+    "ranking player report must start closed until a participant is selected",
+  );
+  await page.getByTestId("ranking-current-user").click();
+  await page.getByTestId("ranking-player-report").getByText("Palpites finalizados").waitFor();
+  assert.equal(
+    await page.getByTestId("ranking-current-user").evaluate((element) =>
+      Boolean(element.parentElement?.querySelector('[data-testid="ranking-player-report"]')),
+    ),
+    true,
+    "ranking player report must open directly below the selected participant",
+  );
+  await page.getByTestId("ranking-current-user").click();
+  await page.getByTestId("ranking-player-report").waitFor({ state: "hidden" });
+  await page.getByTestId("ranking-current-user").click();
+  await page.getByTestId("ranking-player-finished-picks").getByText("2 x 1").first().waitFor();
+  await page.getByTestId("ranking-player-pick-summary").getByText("Jogos analisáveis").waitFor();
+  const bestPickHref = await page.getByTestId("ranking-player-best-pick").getAttribute("href");
+  assert.match(
+    bestPickHref ?? "",
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "ranking best pick shortcut must link to the focused prediction comparison",
+  );
+  await page.getByTestId("finished-pick-toggle").first().click();
+  await page
+    .getByTestId("finished-pick-details")
+    .first()
+    .getByText("Pontos do placar")
+    .waitFor();
+  const finishedPickHref = await page
+    .getByTestId("finished-pick-details")
+    .first()
+    .getByRole("link", { name: "Abrir comparação deste jogo" })
+    .getAttribute("href");
+  assert.match(
+    finishedPickHref ?? "",
+    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+    "finished pick details must link to the focused prediction comparison",
+  );
   await page.getByTestId("pool-friends").getByRole("button", { name: "Ver ranking" }).click();
+  await page.getByTestId("pools-command-center").getByText("Resenha da Firma").waitFor();
   await page.getByTestId("pool-ranking").getByText("Resenha da Firma").waitFor();
   await page.getByRole("button", { name: "Criar bolão" }).click();
   const createForm = page.getByTestId("pool-form-create");
@@ -203,8 +370,43 @@ try {
   await page.goto(`${BASE_URL}/boloes`);
   await page.getByTestId("ranking-current-user").getByText("126 pts").waitFor();
 
+  await page.goto(`${BASE_URL}/painel`);
+  await page.getByRole("heading", { name: "Meu painel" }).waitFor();
+  await page.getByText("Ranking em movimento").waitFor();
+  await page.getByRole("region", { name: "Bolões em movimento" }).waitFor();
+  await page.getByText("mantém").first().waitFor();
+  await page.getByRole("button", { name: /Faysk/ }).first().click();
+  await page.getByText(/pts atrás de|na disputa pela ponta/).first().waitFor();
+  await assertDashboardRankingDarkContrast(page);
+  await waitForFlagFallbacks(page);
+
+  for (const path of [
+    "/",
+    "/ao-vivo",
+    "/jogos",
+    "/jogadores",
+    "/painel",
+    "/palpites",
+    "/especiais",
+    "/especiais/artilheiro",
+    "/boloes",
+    "/admin",
+  ]) {
+    await assertMobilePageShell(page, path);
+  }
+
   await page.goto(BASE_URL);
-  await page.getByTestId("home-ranking-current-user").getByText("126 pts").waitFor();
+  const mobileMainNavigation = page.getByRole("navigation", { name: "Menu principal" });
+  await mobileMainNavigation.getByRole("link", { name: "Ao vivo" }).waitFor();
+  await mobileMainNavigation.getByRole("link", { name: "Painel" }).waitFor();
+  await mobileMainNavigation.getByRole("link", { name: "Bolões" }).waitFor();
+  await mobileMainNavigation.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("menuitem", { name: /Início/ }).waitFor();
+  await page.getByRole("menuitem", { name: /Jogos/ }).waitFor();
+  await page.getByRole("menuitem", { name: /Especiais/ }).waitFor();
+  await page.getByRole("menuitem", { name: /Jogadores/ }).waitFor();
+  await page.keyboard.press("Escape");
+  await page.getByRole("menuitem", { name: /Jogos/ }).waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "Abrir menu da conta" }).click();
   await page.getByText("Faysk · demonstração").waitFor();
   await page.keyboard.press("Escape");
@@ -230,7 +432,13 @@ try {
   desktopPage.on("pageerror", (error) => desktopErrors.push(error.message));
   for (const path of [
     "/",
+    "/ao-vivo",
+    "/jogos",
+    "/jogadores",
+    "/painel",
     "/palpites",
+    "/especiais",
+    "/especiais/artilheiro",
     "/boloes",
     "/regras",
     "/admin",
@@ -285,6 +493,34 @@ try {
   await desktopPage.getByRole("link", { name: "contato@faysk.dev" }).waitFor();
   await desktopPage.goto(`${BASE_URL}/termos`);
   await desktopPage.getByRole("heading", { name: "Termos de Serviço" }).waitFor();
+  await desktopPage.goto(BASE_URL);
+  await desktopPage.getByRole("navigation", { name: "Menu principal" }).getByRole("link", { name: "Meu painel" }).waitFor();
+  await desktopPage.getByRole("navigation", { name: "Menu principal" }).getByRole("button", { name: /Mais/ }).click();
+  await desktopPage.getByRole("menuitem", { name: /Jogos/ }).waitFor();
+  await desktopPage.getByRole("menuitem", { name: /Regras/ }).waitFor();
+  await desktopPage.keyboard.press("Escape");
+  await desktopPage.getByRole("menuitem", { name: /Jogos/ }).waitFor({ state: "hidden" });
+  await desktopPage.goto(`${BASE_URL}/jogos`);
+  await assertCarouselKeyboardAccess(desktopPage, "Próximos jogos");
+  await desktopPage
+    .getByRole("region", { name: "Próximos jogos" })
+    .getByRole("button", { name: "Avançar em Próximos jogos" })
+    .click();
+  await assertDesktopCarouselDrag(desktopPage, "Próximos jogos");
+
+  const narrowPage = await browser.newPage({
+    viewport: { width: 360, height: 780 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const narrowErrors = [];
+  narrowPage.on("pageerror", (error) => narrowErrors.push(error.message));
+  for (const path of ["/jogadores", "/painel", "/jogos", "/boloes", "/admin"]) {
+    await assertMobilePageShell(narrowPage, path);
+  }
+  assert.deepEqual(narrowErrors, []);
+  await narrowPage.close();
+
   assert.deepEqual(desktopErrors, []);
 
   console.log("UI flow test passed");
@@ -293,7 +529,8 @@ try {
   throw error;
 } finally {
   await browser?.close();
-  server.kill();
+  server?.kill();
+  await cleanupDemoBuild();
 }
 
 async function waitForServer() {
@@ -316,7 +553,10 @@ function buildDemo() {
     ["scripts/build-demo.mjs"],
     {
       cwd: process.cwd(),
-      env: process.env,
+      env: {
+        ...process.env,
+        LABOLITA_BUILD_DIR: DEMO_BUILD_DIR,
+      },
       stdio: "inherit",
       windowsHide: true,
     },
@@ -324,6 +564,22 @@ function buildDemo() {
 
   if (result.status !== 0) {
     throw new Error("Não foi possível gerar o build de demonstração para o teste UI.");
+  }
+}
+
+async function cleanupDemoBuild() {
+  if (DEMO_BUILD_DIR !== ".next-demo-ui" && !DEMO_BUILD_DIR.startsWith(".next-demo-ui-")) return;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      await rm(DEMO_BUILD_DIR, { recursive: true, force: true });
+      return;
+    } catch (error) {
+      if (attempt === 4) {
+        console.warn(`Não foi possível remover ${DEMO_BUILD_DIR}:`, error);
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
   }
 }
 
@@ -351,6 +607,24 @@ async function findBrowser() {
   );
 }
 
+async function findNextBin() {
+  const candidates = [
+    path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next"),
+    path.join(process.cwd(), "..", "node_modules", "next", "dist", "bin", "next"),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Tenta o próximo diretório de dependências.
+    }
+  }
+
+  return candidates[0];
+}
+
 async function waitForFlagFallbacks(page) {
   const flags = page.getByTestId("team-flag");
   assert.ok((await flags.count()) > 0, "team flags must be rendered");
@@ -366,4 +640,169 @@ async function waitForFlagFallbacks(page) {
     }).length,
   );
   assert.equal(invalidSizes, 0, "team flags must keep a readable fixed size");
+}
+
+async function assertMobilePageShell(page, path) {
+  const response = await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+  assert.equal(response?.status(), 200, `${path} must respond successfully on mobile`);
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1),
+    false,
+    `${path} must not overflow horizontally on mobile`,
+  );
+
+  const navigation = page.getByRole("navigation", { name: "Menu principal" });
+  await navigation.getByRole("link", { name: "Ao vivo" }).waitFor();
+  await navigation.getByRole("link", { name: "Painel" }).waitFor();
+  await navigation.getByRole("button", { name: "Menu" }).waitFor();
+
+  const chrome = await page.evaluate(() => {
+    const mobileNav = document.querySelector(".mobile-navigation");
+    const desktopNav = document.querySelector(".desktop-nav");
+    const mobileDisplay = mobileNav ? getComputedStyle(mobileNav).display : null;
+    const desktopDisplay = desktopNav ? getComputedStyle(desktopNav).display : null;
+    const mobileBox = mobileNav?.getBoundingClientRect();
+
+    return {
+      mobileDisplay,
+      desktopDisplay,
+      mobileWidth: mobileBox?.width ?? 0,
+      mobileBottom: mobileBox ? Math.round(window.innerHeight - mobileBox.bottom) : null,
+    };
+  });
+
+  assert.notEqual(chrome.mobileDisplay, "none", `${path} mobile navigation must stay visible`);
+  assert.equal(chrome.desktopDisplay, "none", `${path} desktop navigation must stay hidden on mobile`);
+  assert.ok(chrome.mobileWidth > 280, `${path} mobile navigation must keep usable width`);
+  assert.ok(
+    chrome.mobileBottom !== null && chrome.mobileBottom >= 0 && chrome.mobileBottom <= 24,
+    `${path} mobile navigation must stay anchored near the bottom`,
+  );
+}
+
+async function assertDashboardRankingDarkContrast(page) {
+  const darkToggle = page.getByRole("button", { name: "Usar tema escuro" });
+  if ((await darkToggle.count()) > 0) {
+    await darkToggle.click();
+  }
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
+  await page.locator(".dashboard-ranking-row-selected").first().waitFor();
+
+  const contrast = await page.evaluate(() => {
+    const selected = document.querySelector(".dashboard-ranking-row-selected");
+    const panel = document.querySelector(".dashboard-ranking-panel");
+    const summary = document.querySelector(".dashboard-pool-summary");
+    const ranking = document.querySelector(".dashboard-ranking-list");
+
+    function luminanceFromColor(color) {
+      const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+      const linear = channels.map((channel) => {
+        const value = channel / 255;
+        return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+    }
+
+    return {
+      selectedColor: selected ? getComputedStyle(selected).color : "",
+      selectedLuminance: selected ? luminanceFromColor(getComputedStyle(selected).color) : 1,
+      selectedBackground: selected ? getComputedStyle(selected).backgroundImage : "",
+      panelWidth: panel?.getBoundingClientRect().width ?? 0,
+      summaryWidth: summary?.getBoundingClientRect().width ?? 0,
+      rankingWidth: ranking?.getBoundingClientRect().width ?? 0,
+      viewportWidth: window.innerWidth,
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    };
+  });
+
+  assert.equal(contrast.overflow, false, "dashboard ranking must not overflow in dark mode");
+  assert.ok(
+    contrast.selectedBackground.includes("gradient"),
+    "dashboard selected ranking row must keep a contrasting selected background",
+  );
+  assert.ok(
+    contrast.selectedLuminance < 0.18,
+    `dashboard selected ranking text must be dark on the bright selected row: ${contrast.selectedColor}`,
+  );
+  if (contrast.viewportWidth >= 1024) {
+    assert.ok(
+      contrast.rankingWidth > contrast.summaryWidth,
+      "dashboard ranking list must have more room than the summary on desktop-sized layouts",
+    );
+  } else {
+    assert.ok(
+      contrast.rankingWidth > contrast.viewportWidth * 0.82 &&
+        contrast.summaryWidth > contrast.viewportWidth * 0.82,
+      "dashboard ranking summary and list must stack with usable width on mobile",
+    );
+  }
+}
+
+async function assertDesktopCarouselDrag(page, regionName) {
+  const region = page.getByRole("region", { name: regionName });
+  const track = region.locator(".carousel-rail-track").first();
+  await track.waitFor();
+  await track.evaluate((element) => {
+    element.scrollTo({ left: 0, behavior: "auto" });
+  });
+  const before = await track.evaluate((element) => element.scrollLeft);
+  const box = await track.boundingBox();
+  assert.ok(box, `${regionName} carousel track must be measurable`);
+
+  await page.mouse.move(box.x + box.width * 0.72, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.30, box.y + box.height / 2, { steps: 12 });
+  const during = await track.evaluate((element) => element.scrollLeft);
+  await page.mouse.up();
+  await page.waitForTimeout(450);
+  const after = await track.evaluate((element) => element.scrollLeft);
+
+  assert.ok(
+    during > before + 40,
+    `${regionName} carousel must follow desktop drag while the mouse is pressed`,
+  );
+  assert.ok(after >= during, `${regionName} carousel must keep momentum after desktop drag`);
+}
+
+async function assertCarouselKeyboardAccess(page, regionName) {
+  const region = page.getByRole("region", { name: regionName });
+  const track = region.locator(".carousel-rail-track").first();
+  await track.waitFor();
+
+  assert.equal(
+    await track.getAttribute("aria-label"),
+    regionName,
+    `${regionName} carousel track must expose an accessible label`,
+  );
+
+  const describedBy = await track.getAttribute("aria-describedby");
+  assert.ok(describedBy, `${regionName} carousel track must expose keyboard instructions`);
+  const description = await page.locator(`[id="${describedBy}"]`).textContent();
+  assert.match(
+    description ?? "",
+    /setas do teclado/,
+    `${regionName} carousel instructions must mention keyboard navigation`,
+  );
+
+  await track.evaluate((element) => {
+    element.scrollTo({ left: 0, behavior: "auto" });
+  });
+  const before = await track.evaluate((element) => element.scrollLeft);
+  await track.focus();
+  assert.equal(
+    await track.evaluate((element) => document.activeElement === element),
+    true,
+    `${regionName} carousel track must be keyboard-focusable`,
+  );
+  await page.keyboard.press("End");
+  await page.waitForTimeout(300);
+  const afterEnd = await track.evaluate((element) => element.scrollLeft);
+  assert.ok(
+    afterEnd > before + 20,
+    `${regionName} carousel must move with the End key`,
+  );
+  await page.keyboard.press("Home");
+  await page.waitForTimeout(300);
+  const afterHome = await track.evaluate((element) => element.scrollLeft);
+  assert.ok(afterHome < afterEnd, `${regionName} carousel must move back with the Home key`);
 }

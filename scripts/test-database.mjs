@@ -868,6 +868,26 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     ),
     2,
   );
+  assert.ok(
+    await scalar("select count(*)::integer from public.user_activity_events"),
+    "user activity events must be recorded by audited user flows",
+  );
+  assert.equal(
+    await scalar(
+      "select count(*)::integer from public.prediction_change_events where user_id = $1 and match_id = $2",
+      [USER_ONE, MATCH_ID],
+    ),
+    1,
+    "saving a match prediction must create a prediction history event",
+  );
+  assert.equal(
+    await scalar(
+      "select count(*)::integer from public.special_prediction_change_events where user_id = $1",
+      [USER_ONE],
+    ),
+    2,
+    "saving special predictions must create special history events",
+  );
 
   await asUser(USER_ONE, async () => {
     const ranking = await db.query(

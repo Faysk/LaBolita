@@ -80,6 +80,7 @@ export type PoolSummary = {
 };
 
 export type RankingEntry = {
+  userId?: string;
   position: number;
   provisionalPosition?: number;
   name: string;

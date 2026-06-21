@@ -29,7 +29,7 @@ export function TermsAcceptancePanel({
       p_version: CURRENT_TERMS_VERSION,
     });
     if (rpcError) {
-      setError("Não foi possível registrar seu aceite. Tente novamente.");
+      setError("Não conseguimos registrar seu aceite. Tente novamente.");
       setBusy(false);
       return;
     }
@@ -54,8 +54,8 @@ export function TermsAcceptancePanel({
         Confirme as regras da casa
       </h1>
       <p className="mt-3 text-sm leading-6 text-muted">
-        Para usar sua conta, leia e aceite a versão atual dos termos e da política
-        de privacidade.
+        Para usar sua conta, leia e aceite a versão atual dos termos e da
+        política de privacidade.
       </p>
       <label className="my-6 flex cursor-pointer items-start gap-3 rounded-2xl border bg-surface-muted p-4 text-sm leading-5 text-muted">
         <input

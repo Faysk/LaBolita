@@ -8,7 +8,7 @@
     "build:demo": "node scripts/build-demo.mjs",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --incremental false",
     "check": "npm run lint && npm run typecheck && npm test && npm run schedule:test && npm run db:smoke && npm run test:ui",
     "test": "vitest run",
     "test:ui": "node scripts/test-ui.mjs",

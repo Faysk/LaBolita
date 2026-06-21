@@ -3,27 +3,50 @@
 import {
   Archive,
   ArchiveRestore,
+  ArrowRight,
+  BarChart3,
+  CalendarClock,
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   Globe2,
   LoaderCircle,
   LogIn,
   Plus,
+  Radio,
   Search,
   Settings2,
+  Target,
+  TrendingDown,
+  TrendingUp,
   UserMinus,
   Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { CountryFlag } from "@/components/country-flag";
+import { EmptyState } from "@/components/empty-state";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { PoolFlag } from "@/components/pool-flag";
+import { ProgressiveList } from "@/components/progressive-list";
+import { TeamFlag } from "@/components/team-flag";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import { demoMatches, demoPools, demoRanking } from "@/lib/demo-data";
+import { calculateScore } from "@/lib/scoring";
 import { COUNTRIES } from "@/lib/countries";
 import type { PoolsOverview } from "@/lib/data/pools";
+import { isLiveMatch } from "@/lib/match-display";
+import {
+  buildDemoMatchComparisons,
+  predictionLabel,
+  type MatchPoolComparison,
+  type PredictionComparisonEntry,
+  type PredictionComparisonOverview,
+} from "@/lib/prediction-comparisons";
 import {
   storeLocalPool,
   useLocalPools,
@@ -31,7 +54,14 @@ import {
   useLocalResults,
 } from "@/lib/local-state";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import type { PoolSummary, RankingEntry } from "@/lib/types";
+import type {
+  DemoMatch,
+  MatchResult,
+  PoolSummary,
+  RankingEntry,
+  ScoreBreakdown,
+  ScorePrediction,
+} from "@/lib/types";
 import { friendlyServerError } from "@/lib/user-errors";
 import { UserAvatar } from "@/components/user-avatar";
 import { rankingLabel } from "@/lib/ranking-display";
@@ -41,6 +71,31 @@ type ManagedMember = {
   display_name: string;
   role: "owner" | "admin" | "member";
   joined_at: string;
+};
+
+type PoolMatchComparisonPreview = {
+  match: DemoMatch;
+  comparison: MatchPoolComparison;
+};
+
+type RankingMovement = {
+  label: string;
+  tone: "neutral" | "up" | "down";
+  icon: typeof BarChart3;
+};
+
+type PoolSnapshot = {
+  pool: PoolSummary;
+  currentPlayer?: RankingEntry;
+  positionLabel: string;
+  pointsLabel: string;
+  movement?: RankingMovement;
+  completedMatches: number;
+};
+
+type FinishedPick = {
+  match: DemoMatch;
+  entry: PredictionComparisonEntry;
 };
 
 export function PoolsWorkspace({
@@ -54,7 +109,14 @@ export function PoolsWorkspace({
   publicPage,
   publicPages,
   publicSearch,
-}: PoolsOverview) {
+  matches,
+  comparisonOverview,
+  spotlightMatch,
+}: PoolsOverview & {
+  matches: DemoMatch[];
+  comparisonOverview: PredictionComparisonOverview;
+  spotlightMatch?: DemoMatch | null;
+}) {
   const router = useRouter();
   const localPools = useLocalPools();
   const localPredictions = useLocalPredictions(demoMatches);
@@ -78,6 +140,12 @@ export function PoolsWorkspace({
   const [notice, setNotice] = useState<string | null>(null);
   const selectedPool =
     [...pools, ...publicPools].find((pool) => pool.id === selectedPoolId) ?? firstPool;
+  const selectedIsMembership = Boolean(
+    selectedPool && pools.some((pool) => pool.id === selectedPool.id),
+  );
+  const selectedIsPublicPool = Boolean(
+    selectedPool && publicPools.some((pool) => pool.id === selectedPool.id),
+  );
   const selectedIsLocal = Boolean(
     selectedPool && localPools.some((pool) => pool.id === selectedPool.id),
   );
@@ -102,6 +170,57 @@ export function PoolsWorkspace({
         localResults,
         selectedPool?.eligibleFrom,
       );
+  const selectedPoolMatchComparisons = selectedPool
+    ? buildPoolMatchComparisons({
+        pool: selectedPool,
+        matches,
+        comparisonOverview,
+        localPredictions,
+        localResults,
+      })
+    : [];
+  function visibleRankingForPool(pool: PoolSummary) {
+    const isLocalPool = localPools.some((localPool) => localPool.id === pool.id);
+    const baseRanking =
+      loadedRankings[pool.id] ??
+      (isLocalPool
+        ? newPoolRanking
+        : selectedPool?.id === pool.id
+          ? selectedBaseRanking
+          : ranking);
+
+    if (usesSupabase) return baseRanking;
+
+    return calculateDemoRanking(
+      baseRanking.length ? baseRanking : demoRanking,
+      demoMatches,
+      localPredictions,
+      localResults,
+      pool.eligibleFrom,
+    );
+  }
+
+  const activePoolSnapshots = activePools.map((pool) =>
+    buildPoolSnapshot({
+      pool,
+      ranking: visibleRankingForPool(pool),
+      completedMatches: buildPoolMatchComparisons({
+        pool,
+        matches,
+        comparisonOverview,
+        localPredictions,
+        localResults,
+      }).length,
+    }),
+  );
+  const selectedPoolSnapshot = selectedPool
+    ? activePoolSnapshots.find((snapshot) => snapshot.pool.id === selectedPool.id) ??
+      buildPoolSnapshot({
+        pool: selectedPool,
+        ranking: visibleRanking,
+        completedMatches: selectedPoolMatchComparisons.length,
+      })
+    : null;
 
   function requireLogin(panelToOpen: "create" | "join") {
     if (!isAuthenticated) {
@@ -169,33 +288,38 @@ export function PoolsWorkspace({
 
   return (
     <main className="page-container py-7 md:py-10">
-      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="eyebrow">A resenha mora aqui</p>
+      <div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <p className="eyebrow">Disputa com a turma</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
             Bolões
           </h1>
           <p className="mt-3 text-sm text-muted">
-            Acompanhe rankings públicos ou entre na disputa com sua turma.
+            Entre com a turma, compare palpites e acompanhe quem está subindo no ranking.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full min-w-0 flex-wrap gap-2 md:w-auto md:justify-end">
           <button
             type="button"
             onClick={() => requireLogin("join")}
-            className="interactive flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-extrabold text-brand md:flex-none"
+            className="interactive flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-extrabold text-brand md:flex-none"
           >
             <LogIn className="size-4" /> Entrar com código
           </button>
           <button
             type="button"
             onClick={() => requireLogin("create")}
-            className="interactive flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-brand/20 md:flex-none"
+            className="interactive flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-brand/20 md:flex-none"
           >
             <Plus className="size-4" /> Criar bolão
           </button>
         </div>
       </div>
+
+      <PageShortcuts
+        routeKeys={["dashboard", "predictions", "live", "games"]}
+        className="mt-5"
+      />
 
       {notice && (
         <p aria-live="polite" className="mt-5 rounded-2xl border bg-white px-4 py-3 text-sm font-bold text-brand">
@@ -216,35 +340,62 @@ export function PoolsWorkspace({
         />
       )}
 
+      {spotlightMatch ? <PoolMatchSpotlight match={spotlightMatch} /> : null}
+
+      <PoolCommandCenter
+        snapshots={activePoolSnapshots}
+        selectedSnapshot={selectedPoolSnapshot}
+        selectedPool={selectedPool}
+        publicCount={publicPools.length}
+        archivedCount={archivedPools.length}
+        selectedIsMembership={selectedIsMembership}
+        selectedIsPublicPool={selectedIsPublicPool}
+        spotlightMatch={spotlightMatch}
+      />
+
+      {activePools.length > 1 && (
+        <PoolQuickSwitch
+          snapshots={activePoolSnapshots}
+          selectedPoolId={selectedPool?.id ?? ""}
+          onSelect={(pool) => void selectPool(pool)}
+        />
+      )}
+
       {isAuthenticated && (
-        <PoolSection title="Seus bolões" subtitle="Grupos em que você participa ou administra.">
+        <PoolSection title="Meus bolões" subtitle="Seus grupos, rankings e códigos de convite.">
           {activePools.map((pool) => (
-            <Fragment key={pool.id}>
-              <PoolCard
-                pool={pool}
-                selected={pool.id === selectedPool?.id}
-                copied={copiedCode === pool.code}
-                onCopy={() => copyCode(pool.code)}
-                onSelect={() => void selectPool(pool)}
-                onManage={pool.isOwner ? () => setManagedPoolId(managedPoolId === pool.id ? null : pool.id) : undefined}
-              />
-              {pool.id === selectedPool?.id && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <Ranking
-                    entries={visibleRanking}
-                    name={selectedPool.name}
-                    memberCount={selectedPool.members}
-                    loading={rankingLoadingId === selectedPool.id}
-                    inline
-                  />
-                </div>
-              )}
-            </Fragment>
+            <PoolCard
+              key={pool.id}
+              pool={pool}
+              selected={pool.id === selectedPool?.id}
+              copied={copiedCode === pool.code}
+              onCopy={() => copyCode(pool.code)}
+              onSelect={() => void selectPool(pool)}
+              onManage={pool.isOwner ? () => setManagedPoolId(managedPoolId === pool.id ? null : pool.id) : undefined}
+            />
           ))}
           {activePools.length === 0 && (
-            <EmptyCard text="Você ainda não participa de nenhum bolão. Crie um grupo, use um convite ou descubra um bolão público." />
+            <EmptyCard
+              title="Nenhum bolão seu ainda"
+              text="Crie um, use um convite ou explore os públicos para começar a disputa."
+              icon={Users}
+            />
           )}
         </PoolSection>
+      )}
+
+      {isAuthenticated && selectedPool && selectedIsMembership && (
+        <div className="mt-5">
+          <Ranking
+            key={selectedPool.id}
+            entries={visibleRanking}
+            name={selectedPool.name}
+            memberCount={selectedPool.members}
+            loading={rankingLoadingId === selectedPool.id}
+            matchComparisons={selectedPoolMatchComparisons}
+            inline
+          />
+        </div>
       )}
 
       {managedPoolId && (
@@ -257,9 +408,9 @@ export function PoolsWorkspace({
       <section className="mt-10">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="eyebrow">Aberto para a torcida</p>
+            <p className="eyebrow">Bolões abertos</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight">Bolões públicos</h2>
-            <p className="mt-2 text-sm text-muted">Resultados paginados para manter tudo leve e organizado.</p>
+            <p className="mt-2 text-sm text-muted">Descubra disputas públicas sem perder o ranking que você já está vendo.</p>
           </div>
           <form action="/boloes" className="flex gap-2">
             <label className="relative min-w-0 flex-1 md:w-72">
@@ -279,31 +430,40 @@ export function PoolsWorkspace({
         </div>
         <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {publicPools.map((pool) => (
-            <Fragment key={pool.id}>
-              <PublicPoolCard
-                pool={pool}
-                selected={pool.id === selectedPool?.id}
-                joining={joiningId === pool.id}
-                onSelect={() => void selectPool(pool)}
-                onJoin={() => joinPublicPool(pool)}
-              />
-              {pool.id === selectedPool?.id && (
-                <div className="md:col-span-2 lg:col-span-3">
-                  <Ranking
-                    entries={visibleRanking}
-                    name={selectedPool.name}
-                    memberCount={selectedPool.members}
-                    loading={rankingLoadingId === selectedPool.id}
-                    inline
-                  />
-                </div>
-              )}
-            </Fragment>
+            <PublicPoolCard
+              key={pool.id}
+              pool={pool}
+              selected={pool.id === selectedPool?.id}
+              joining={joiningId === pool.id}
+              onSelect={() => void selectPool(pool)}
+              onJoin={() => joinPublicPool(pool)}
+            />
           ))}
           {publicPools.length === 0 && (
-            <EmptyCard text={publicSearch ? "Nenhum bolão público encontrado nesta busca." : "Ainda não há bolões públicos disponíveis."} />
+            <EmptyCard
+              title={publicSearch ? "Nada nessa busca" : "Nada aberto agora"}
+              text={
+                publicSearch
+                  ? "Tente outro nome de bolão ou organizador."
+                  : "Quando alguém publicar um bolão aberto, ele aparece aqui."
+              }
+              icon={publicSearch ? Search : Globe2}
+            />
           )}
         </div>
+        {selectedPool && selectedIsPublicPool && (
+          <div className="mt-5">
+            <Ranking
+              key={selectedPool.id}
+              entries={visibleRanking}
+              name={selectedPool.name}
+              memberCount={selectedPool.members}
+              loading={rankingLoadingId === selectedPool.id}
+              matchComparisons={selectedPoolMatchComparisons}
+              inline
+            />
+          </div>
+        )}
         {publicPages > 1 && (
           <div className="mt-5 flex items-center justify-center gap-3 text-sm font-bold">
             <PaginationLink page={publicPage - 1} disabled={publicPage <= 1} search={publicSearch}>Anterior</PaginationLink>
@@ -314,20 +474,41 @@ export function PoolsWorkspace({
       </section>
 
       {archivedPools.length > 0 && (
-        <details className="card mt-8 p-5">
-          <summary className="cursor-pointer text-sm font-black text-muted">Bolões arquivados ({archivedPools.length})</summary>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {archivedPools.map((pool) => (
-              <button
-                key={pool.id}
-                type="button"
-                onClick={() => setManagedPoolId(pool.id)}
-                className="interactive rounded-2xl border bg-surface-muted p-4 text-left"
-              >
-                <span className="flex items-center gap-2 font-black"><Archive className="size-4" /> {pool.name}</span>
-                <span className="mt-1 block text-xs text-muted">Um administrador global pode recuperar.</span>
-              </button>
-            ))}
+        <details className="card group mt-8 overflow-hidden">
+          <summary className="interactive flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-brand">
+                <Archive className="size-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-black">
+                  Bolões arquivados
+                </span>
+                <span className="mt-0.5 block text-xs font-bold text-muted">
+                  {archivedPools.length} fora da lista principal
+                </span>
+              </span>
+            </span>
+            <ChevronDown className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="border-t p-5">
+            <p className="mb-4 text-sm leading-6 text-muted">
+              Bolões arquivados ficam preservados para consulta e podem ser
+              recuperados por um administrador global.
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              {archivedPools.map((pool) => (
+                <button
+                  key={pool.id}
+                  type="button"
+                  onClick={() => setManagedPoolId(pool.id)}
+                  className="interactive rounded-2xl border bg-surface-muted p-4 text-left"
+                >
+                  <span className="flex items-center gap-2 font-black"><Archive className="size-4" /> {pool.name}</span>
+                  <span className="mt-1 block text-xs text-muted">Um administrador global pode recuperar.</span>
+                </button>
+              ))}
+            </div>
           </div>
         </details>
       )}
@@ -344,6 +525,218 @@ export function PoolsWorkspace({
   );
 }
 
+function PoolCommandCenter({
+  snapshots,
+  selectedSnapshot,
+  selectedPool,
+  publicCount,
+  archivedCount,
+  selectedIsMembership,
+  selectedIsPublicPool,
+  spotlightMatch,
+}: {
+  snapshots: PoolSnapshot[];
+  selectedSnapshot: PoolSnapshot | null;
+  selectedPool?: PoolSummary;
+  publicCount: number;
+  archivedCount: number;
+  selectedIsMembership: boolean;
+  selectedIsPublicPool: boolean;
+  spotlightMatch?: DemoMatch | null;
+}) {
+  const totalMembers = snapshots.reduce((total, snapshot) => total + snapshot.pool.members, 0);
+  const live = spotlightMatch ? isLiveMatch(spotlightMatch) : false;
+  const selectedLabel = selectedIsMembership
+    ? "Seu bolão"
+    : selectedIsPublicPool
+      ? "Público"
+      : "Selecionado";
+  const selectedPosition = selectedSnapshot?.currentPlayer
+    ? selectedSnapshot.positionLabel
+    : selectedIsPublicPool
+      ? "prévia"
+      : "—";
+  const selectedPoints = selectedSnapshot?.currentPlayer
+    ? selectedSnapshot.pointsLabel
+    : selectedPool
+      ? `${selectedPool.members} jogadores`
+      : "sem bolão";
+  const SelectedMovementIcon = selectedSnapshot?.movement?.icon ?? BarChart3;
+
+  return (
+    <section
+      data-testid="pools-command-center"
+      className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.8fr)]"
+    >
+      <div className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="eyebrow">Mapa dos bolões</p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight">
+              Tudo em um lugar
+            </h2>
+          </div>
+          <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${live ? "status-live" : "status-info"}`}>
+            {live ? <span className="live-dot" aria-hidden="true" /> : <CalendarClock className="size-4" />}
+            {live ? "Ao vivo agora" : "Agenda monitorada"}
+          </span>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <PoolMapMetric label="Meus bolões" value={snapshots.length} detail="ativos" />
+          <PoolMapMetric label="Participantes" value={totalMembers} detail="somados" />
+          <PoolMapMetric label="Públicos" value={publicCount} detail="disponíveis" />
+          <PoolMapMetric label="Arquivados" value={archivedCount} detail="histórico" />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <a
+            href="#ranking-do-bolao"
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-brand px-4 text-sm font-black text-white"
+          >
+            Ranking <ArrowRight className="size-4" />
+          </a>
+          <Link
+            href="/ao-vivo"
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-white px-4 text-sm font-black text-brand"
+          >
+            Ao vivo <Radio className="size-4" />
+          </Link>
+          <Link
+            href="/palpites"
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-white px-4 text-sm font-black text-brand"
+          >
+            Palpites <Target className="size-4" />
+          </Link>
+        </div>
+      </div>
+
+      <aside className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="eyebrow">Bolão selecionado</p>
+            <h2 className="mt-1 truncate text-2xl font-black tracking-tight">
+              {selectedPool?.name ?? "Nenhum bolão"}
+            </h2>
+            <p className="mt-1 text-sm font-bold text-muted">{selectedLabel}</p>
+          </div>
+          {selectedPool ? (
+            <PoolFlag code={selectedPool.flagCode} size="sm" />
+          ) : (
+            <Users className="size-5 text-brand" />
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <PoolMapMetric label="Posição" value={selectedPosition} detail="ranking atual" />
+          <PoolMapMetric label="Pontos" value={selectedPoints} detail="neste bolão" />
+        </div>
+
+        <div className="mt-4 rounded-2xl border bg-surface-muted p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+              Movimento
+            </p>
+            {selectedSnapshot?.movement ? (
+              <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black ${movementToneClass(selectedSnapshot.movement.tone)}`}>
+                <SelectedMovementIcon className="size-3" />
+                {selectedSnapshot.movement.label}
+              </span>
+            ) : (
+              <span className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
+                sem parcial
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-xs font-bold text-muted">
+            {selectedSnapshot
+              ? `${selectedSnapshot.completedMatches} jogos comparáveis neste bolão.`
+              : "Selecione ou participe de um bolão para acompanhar."}
+          </p>
+        </div>
+      </aside>
+    </section>
+  );
+}
+
+function PoolMapMetric({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-2xl border bg-surface-muted p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-black text-brand">{value}</p>
+      <p className="mt-1 text-xs font-bold text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function PoolQuickSwitch({
+  snapshots,
+  selectedPoolId,
+  onSelect,
+}: {
+  snapshots: PoolSnapshot[];
+  selectedPoolId: string;
+  onSelect: (pool: PoolSummary) => void;
+}) {
+  return (
+    <section className="mt-5 rounded-[1.5rem] border bg-surface/85 p-3 md:p-4">
+      <div className="mb-3 flex items-center justify-between gap-3 px-1">
+        <div>
+          <p className="eyebrow">Alternar bolão</p>
+          <h2 className="mt-1 text-xl font-black tracking-tight">Meus rankings</h2>
+        </div>
+        <BarChart3 className="size-5 text-brand" />
+      </div>
+      <CarouselRail
+        ariaLabel="Alternar bolão"
+        trackClassName="auto-cols-[minmax(12rem,82vw)] gap-2 sm:auto-cols-[12rem]"
+      >
+        {snapshots.map((snapshot) => {
+          const pool = snapshot.pool;
+          const selected = pool.id === selectedPoolId;
+          const MovementIcon = snapshot.movement?.icon ?? BarChart3;
+
+          return (
+            <button
+              key={pool.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onSelect(pool)}
+              className={`interactive flex min-w-[12rem] items-center gap-3 rounded-[1.1rem] border px-3 py-2 text-left ${
+                selected
+                  ? "bg-brand text-white"
+                  : "bg-surface-muted text-foreground hover:border-brand/70"
+              }`}
+            >
+              <PoolFlag code={pool.flagCode} size="sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-black">{pool.name}</span>
+                <span className={`block text-xs font-bold ${selected ? "text-white/62" : "text-muted"}`}>
+                  {snapshot.positionLabel} · {snapshot.pointsLabel}
+                </span>
+              </span>
+              <span className={`hidden items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-black sm:inline-flex ${selected ? "border-white/20 bg-white/10 text-white" : movementToneClass(snapshot.movement?.tone ?? "neutral")}`}>
+                <MovementIcon className="size-3" />
+                {snapshot.movement?.label ?? "sem parcial"}
+              </span>
+            </button>
+          );
+        })}
+      </CarouselRail>
+    </section>
+  );
+}
+
 function PoolSection({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <section className="mt-8">
@@ -351,6 +744,65 @@ function PoolSection({ title, subtitle, children }: { title: string; subtitle: s
       <p className="mt-1 text-sm text-muted">{subtitle}</p>
       <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{children}</div>
     </section>
+  );
+}
+
+function PoolMatchSpotlight({ match }: { match: DemoMatch }) {
+  const live = isLiveMatch(match);
+  const score = match.liveResult ?? match.result;
+  const scoreLabel = score ? `${score.homeScore} x ${score.awayScore}` : "x";
+
+  return (
+    <section className="mt-8 overflow-hidden rounded-[1.8rem] border border-brand/25 bg-gradient-to-r from-brand-strong via-brand to-brand-soft p-4 text-white shadow-2xl shadow-brand/15 md:p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
+            {live ? <span className="live-dot" aria-hidden="true" /> : <CalendarClock className="size-3.5" />}
+            {live ? "Ao vivo nos bolões" : "Próximo jogo"}
+          </p>
+          <h2 className="mt-3 text-2xl font-black tracking-[-0.05em] md:text-3xl">
+            {live ? "Placar mexendo no ranking" : "Próxima chance de pontuar"}
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-white/75">
+            {match.stageLabel} · {match.dateLabel} · {match.timeLabel}
+            {match.venue ? ` · ${match.venue}` : ""}
+          </p>
+        </div>
+        <div className="rounded-[1.4rem] border border-white/15 bg-black/10 p-3 lg:min-w-[26rem]">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <PoolSpotlightTeam team={match.homeTeam} />
+            <div className="rounded-2xl border border-white/15 bg-brand-strong/45 px-4 py-3 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/50">
+                {live ? "Parcial" : "Início"}
+              </p>
+              <p className={`mt-1 whitespace-nowrap text-2xl font-black text-accent md:text-3xl ${live ? "live-number" : ""}`}>
+                {scoreLabel}
+              </p>
+            </div>
+            <PoolSpotlightTeam team={match.awayTeam} align="right" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PoolSpotlightTeam({
+  team,
+  align = "left",
+}: {
+  team: DemoMatch["homeTeam"];
+  align?: "left" | "right";
+}) {
+  return (
+    <div className={`min-w-0 ${align === "right" ? "text-right" : ""}`}>
+      <div className={`flex items-center gap-2 ${align === "right" ? "justify-end" : ""}`}>
+        <TeamFlag team={team} size="lg" />
+      </div>
+      <p className="mt-2 truncate text-sm font-black md:text-base">
+        {team.shortName || team.name}
+      </p>
+    </div>
   );
 }
 
@@ -443,8 +895,23 @@ function PublicPoolCard({
   );
 }
 
-function EmptyCard({ text }: { text: string }) {
-  return <p className="card p-6 text-sm text-muted md:col-span-2 lg:col-span-3">{text}</p>;
+function EmptyCard({
+  title,
+  text,
+  icon,
+}: {
+  title: string;
+  text: string;
+  icon: typeof Users;
+}) {
+  return (
+    <EmptyState
+      icon={icon}
+      title={title}
+      description={text}
+      className="md:col-span-2 lg:col-span-3"
+    />
+  );
 }
 
 function PaginationLink({ page, disabled, search, children }: { page: number; disabled: boolean; search: string; children: React.ReactNode }) {
@@ -769,6 +1236,7 @@ function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {
       avatar_url?: string | null;
     };
     return {
+      userId: row.user_id ?? undefined,
       position: Number(row.rank_position),
       provisionalPosition:
         row.provisional_rank_position === undefined
@@ -787,17 +1255,59 @@ function mapRpcRanking(data: unknown, currentUserId?: string): RankingEntry[] {
   });
 }
 
+function buildPoolMatchComparisons({
+  pool,
+  matches,
+  comparisonOverview,
+  localPredictions,
+  localResults,
+}: {
+  pool: PoolSummary;
+  matches: DemoMatch[];
+  comparisonOverview: PredictionComparisonOverview;
+  localPredictions: Record<string, ScorePrediction>;
+  localResults: Record<string, MatchResult>;
+}): PoolMatchComparisonPreview[] {
+  return matches
+    .map((match) => {
+      const result = localResults[match.id] ?? match.result;
+      const previewMatch = result ? { ...match, result } : match;
+      const comparable =
+        match.locked || Boolean(result) || match.providerStatus === "finished";
+      if (!comparable) return null;
+
+      if (comparisonOverview.source === "supabase") {
+        const comparison = comparisonOverview.comparisonsByMatch[match.id]?.find(
+          (item) => item.poolId === pool.id,
+        );
+        return comparison ? { match: previewMatch, comparison } : null;
+      }
+
+      const comparison = buildDemoMatchComparisons({
+        match,
+        result,
+        currentPrediction: localPredictions[match.id] ?? match.prediction ?? null,
+      }).find((item) => item.poolId === pool.id);
+
+      return comparison ? { match: previewMatch, comparison } : null;
+    })
+    .filter((item): item is PoolMatchComparisonPreview => Boolean(item))
+    .sort((left, right) => matchTime(right.match) - matchTime(left.match));
+}
+
 function Ranking({
   entries,
   name,
   memberCount,
   loading,
+  matchComparisons = [],
   inline = false,
 }: {
   entries: RankingEntry[];
   name: string;
   memberCount: number;
   loading: boolean;
+  matchComparisons?: PoolMatchComparisonPreview[];
   inline?: boolean;
 }) {
   const hasProvisional = entries.some(
@@ -805,8 +1315,19 @@ function Ranking({
       entry.provisionalPoints !== undefined &&
       entry.provisionalPoints !== entry.points,
   );
+  const [selectedPlayerKey, setSelectedPlayerKey] = useState<string | null>(null);
+  const activePlayerKey =
+    selectedPlayerKey &&
+    entries.some((entry) => rankingEntryKey(entry) === selectedPlayerKey)
+      ? selectedPlayerKey
+      : null;
+  const selectedPlayer = activePlayerKey
+    ? entries.find((entry) => rankingEntryKey(entry) === activePlayerKey) ?? null
+    : null;
+
   return (
     <section
+      id="ranking-do-bolao"
       data-testid="pool-ranking"
       className={`card overflow-hidden ${inline ? "" : "mt-8"}`}
     >
@@ -826,24 +1347,370 @@ function Ranking({
       </div>
       <div className="divide-y">
         {loading && Array.from({ length: 3 }, (_, index) => <div key={index} className="flex items-center gap-3 px-5 py-4"><span className="skeleton size-10 rounded-full" /><span className="skeleton h-4 flex-1 rounded-xl" /><span className="skeleton h-4 w-16 rounded-xl" /></div>)}
-        {!loading && entries.map((player) => (
-          <div key={`${player.position}-${player.name}`} data-testid={player.isCurrentUser ? "ranking-current-user" : undefined} className={`grid grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${player.isCurrentUser ? "bg-accent/20" : ""}`}>
-            <span className="text-center text-sm font-black text-muted">{rankingPositionLabel(player, entries, hasProvisional)}</span>
-            <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name} {player.isCurrentUser && <span className="ml-1 rounded-full bg-brand px-2 py-0.5 text-[9px] font-black text-white">Você</span>}</p><p className="text-xs text-muted md:hidden">{pluralize(player.exact, "cravada", "cravadas")} · {pluralize(player.correct, "resultado", "resultados")}</p></div></div>
-            <span className="text-right text-sm font-black text-brand">
-              {hasProvisional ? player.provisionalPoints ?? player.points : player.points} pts
-              {hasProvisional && player.provisionalPoints !== player.points && (
-                <small className="block text-[9px] font-bold text-muted">{player.points} oficial</small>
-              )}
-            </span>
-            <span className="hidden text-center text-sm text-muted md:block">{pluralize(player.exact, "exato", "exatos")}</span>
-            <span className="hidden text-center text-sm text-muted md:block">{pluralize(player.correct, "resultado", "resultados")}</span>
+        {!loading && entries.map((player) => {
+          const selected = selectedPlayer ? rankingEntryKey(player) === rankingEntryKey(selectedPlayer) : false;
+
+          return (
+          <div key={`${player.position}-${player.name}`}>
+            <button
+              type="button"
+              data-testid={player.isCurrentUser ? "ranking-current-user" : undefined}
+              aria-pressed={selected}
+              onClick={() => setSelectedPlayerKey(selected ? null : rankingEntryKey(player))}
+              className={`interactive grid w-full grid-cols-[2rem_1fr_auto] items-center gap-3 px-5 py-4 text-left md:grid-cols-[3rem_1fr_6rem_6rem_6rem] md:px-6 ${
+                selected ? "bg-brand text-white" : player.isCurrentUser ? "bg-accent/20" : ""
+              }`}
+            >
+              <span className={`text-center text-sm font-black ${selected ? "text-white/75" : "text-muted"}`}>{rankingPositionLabel(player, entries, hasProvisional)}</span>
+              <div className="flex min-w-0 items-center gap-3"><UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} /><div className="min-w-0"><p className="truncate text-sm font-bold">{player.name} {player.isCurrentUser && <span className={`ml-1 rounded-full px-2 py-0.5 text-[9px] font-black ${selected ? "bg-accent text-brand-strong" : "bg-brand text-white"}`}>Você</span>}</p><p className={`text-xs md:hidden ${selected ? "text-white/62" : "text-muted"}`}>{pluralize(player.exact, "cravada", "cravadas")} · {pluralize(player.correct, "resultado", "resultados")}</p></div></div>
+              <span className={`text-right text-sm font-black ${selected ? "text-accent" : "text-brand"}`}>
+                {hasProvisional ? player.provisionalPoints ?? player.points : player.points} pts
+                {hasProvisional && player.provisionalPoints !== player.points && (
+                  <small className={`block text-[9px] font-bold ${selected ? "text-white/62" : "text-muted"}`}>{player.points} oficial</small>
+                )}
+              </span>
+              <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.exact, "exato", "exatos")}</span>
+              <span className={`hidden text-center text-sm md:block ${selected ? "text-white/70" : "text-muted"}`}>{pluralize(player.correct, "resultado", "resultados")}</span>
+            </button>
+            {selected && (
+              <RankingPlayerReport
+                player={player}
+                entries={entries}
+                hasProvisional={hasProvisional}
+                matchComparisons={matchComparisons}
+              />
+            )}
           </div>
-        ))}
+        )})}
         {!loading && entries.length === 0 && <p className="p-6 text-center text-sm text-muted">O ranking aparece assim que o bolão tiver participantes.</p>}
       </div>
     </section>
   );
+}
+
+function RankingPlayerReport({
+  player,
+  entries,
+  hasProvisional,
+  matchComparisons,
+}: {
+  player: RankingEntry;
+  entries: RankingEntry[];
+  hasProvisional: boolean;
+  matchComparisons: PoolMatchComparisonPreview[];
+}) {
+  const leader = entries[0];
+  const currentPoints = hasProvisional ? player.provisionalPoints ?? player.points : player.points;
+  const leaderPoints = leader
+    ? hasProvisional
+      ? leader.provisionalPoints ?? leader.points
+      : leader.points
+    : currentPoints;
+  const gap = Math.max(0, leaderPoints - currentPoints);
+  const movement = rankingMovement(player);
+  const finishedPicks = matchComparisons
+    .map(({ match, comparison }) => {
+      const entry = findPlayerComparisonEntry(player, comparison.entries);
+      return entry ? { match, entry } : null;
+    })
+    .filter((item): item is FinishedPick => Boolean(item));
+  const pickSummary = summarizeFinishedPicks(finishedPicks);
+
+  return (
+    <div data-testid="ranking-player-report" className="border-t bg-surface-muted/55 p-5 md:p-6">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="flex min-w-0 items-start gap-3">
+          <UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} />
+          <div className="min-w-0">
+            <p className="eyebrow">Participante</p>
+            <h3 className="mt-1 text-2xl font-black tracking-tight">{player.name}</h3>
+            <p className="mt-1 text-sm font-bold text-muted">
+              {rankingLabel(player, entries, { provisional: hasProvisional, tiedSuffix: "=" })} · {currentPoints} pts
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/palpites"
+          className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-surface px-4 text-sm font-black text-brand hover:border-brand/70"
+        >
+          Ver palpites <ArrowRight className="size-4" />
+        </Link>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <PlayerMetric icon={BarChart3} label="Pontuação" value={`${currentPoints} pts`} />
+        <PlayerMetric icon={Target} label="Cravadas" value={pluralize(player.exact, "exata", "exatas")} />
+        <PlayerMetric icon={Check} label="Resultados" value={pluralize(player.correct, "acerto", "acertos")} />
+        <PlayerMetric
+          icon={movement.icon}
+          label="Ao vivo"
+          value={movement.label}
+          tone={movement.tone}
+        />
+      </div>
+      {leader && gap > 0 ? (
+        <p className="mt-3 text-xs font-bold text-muted">
+          {gap} pts atrás de {leader.name}.
+        </p>
+      ) : null}
+      <div data-testid="ranking-player-pick-summary" className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.55fr)]">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <PlayerMetric
+            icon={Target}
+            label="Jogos analisáveis"
+            value={pluralize(pickSummary.total, "jogo", "jogos")}
+          />
+          <PlayerMetric
+            icon={Check}
+            label="Pontuaram"
+            value={pluralize(pickSummary.scoredCount, "palpite", "palpites")}
+            tone={pickSummary.scoredCount > 0 ? "up" : "neutral"}
+          />
+          <PlayerMetric
+            icon={BarChart3}
+            label="Média"
+            value={pickSummary.averagePoints === null ? "sem pontos" : `${pickSummary.averagePoints} pts/jogo`}
+          />
+        </div>
+        {pickSummary.best ? (
+          <Link
+            data-testid="ranking-player-best-pick"
+            href={focusedPredictionHref(pickSummary.best.match)}
+            className="interactive flex min-h-24 flex-col justify-center rounded-2xl border bg-surface px-4 py-3 text-sm font-black text-brand hover:border-brand/70"
+          >
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+              Melhor comparação
+            </span>
+            <span className="mt-1">
+              {pickSummary.best.match.homeTeam.shortName} x {pickSummary.best.match.awayTeam.shortName}
+            </span>
+            <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted">
+              {pickSummary.best.score.totalPoints} pts neste jogo <ArrowRight className="size-3.5" />
+            </span>
+          </Link>
+        ) : (
+          <div className="flex min-h-24 flex-col justify-center rounded-2xl border bg-surface px-4 py-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+              Melhor comparação
+            </p>
+            <p className="mt-1 text-sm font-black text-muted">aguardando resultado</p>
+          </div>
+        )}
+      </div>
+      <div data-testid="ranking-player-finished-picks" className="mt-4 rounded-2xl border bg-surface p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-muted">
+            Palpites finalizados
+          </p>
+          <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-black text-muted">
+            {finishedPicks.length} jogos
+          </span>
+        </div>
+        {finishedPicks.length > 0 ? (
+          <ProgressiveList
+            initialCount={5}
+            step={5}
+            autoLoad={false}
+            moreLabel="Ver mais palpites"
+            className="mt-3 divide-y rounded-2xl border"
+          >
+            {finishedPicks.map(({ match, entry }) => (
+              <FinishedPickRow key={`${match.id}-${entry.userId ?? entry.name}`} match={match} entry={entry} />
+            ))}
+          </ProgressiveList>
+        ) : (
+          <p className="mt-3 rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
+            Nenhum palpite finalizado visível para este participante neste bolão.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FinishedPickRow({
+  match,
+  entry,
+}: {
+  match: DemoMatch;
+  entry: PredictionComparisonEntry;
+}) {
+  const result = match.result ?? match.liveResult;
+  const updatedAt = formatShortDateTime(entry.updatedAt);
+  const [expanded, setExpanded] = useState(false);
+  const score = finishedPickScore(entry, match, result);
+  const Chevron = expanded ? ChevronUp : ChevronDown;
+
+  return (
+    <div data-testid="finished-pick-row">
+      <button
+        type="button"
+        data-testid="finished-pick-toggle"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((current) => !current)}
+        className="interactive grid w-full gap-3 p-3 text-left md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center"
+      >
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+            {match.stageLabel}
+          </p>
+          <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+            <MiniMatchTeam team={match.homeTeam} />
+            <span className="rounded-xl bg-surface-muted px-2 py-1 text-center text-xs font-black">
+              {result ? `${result.homeScore} x ${result.awayScore}` : "bloq."}
+            </span>
+            <MiniMatchTeam team={match.awayTeam} align="right" />
+          </div>
+        </div>
+        <div className="rounded-xl bg-surface-muted px-3 py-2">
+          <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+            Palpite
+          </p>
+          <p className="mt-0.5 text-sm font-black">{predictionLabel(entry.prediction)}</p>
+          {updatedAt ? <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p> : null}
+        </div>
+        <div className="rounded-xl bg-surface-muted px-3 py-2 text-left md:text-right">
+          <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+            Pontos
+          </p>
+          <p className="mt-0.5 text-sm font-black text-brand">
+            {score ? `${score.totalPoints} pts` : "—"}
+          </p>
+          {score ? (
+            <p className="text-[10px] font-bold text-muted">
+              {scoreCategoryLabel(score.category)}
+            </p>
+          ) : null}
+        </div>
+        <Chevron className="size-4 text-muted md:justify-self-end" />
+      </button>
+      {expanded ? (
+        <div
+          data-testid="finished-pick-details"
+          className="grid gap-2 border-t bg-surface-muted/55 p-3 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <PickDetail label="Resultado" value={result ? `${result.homeScore} x ${result.awayScore}` : "aguardando"} />
+          <PickDetail label="Categoria" value={score ? scoreCategoryLabel(score.category) : "sem cálculo"} />
+          <PickDetail label="Pontos do placar" value={score ? `${score.matchPoints} pts` : "—"} />
+          <PickDetail
+            label={match.stage === "group" ? "Atualização" : "Avanço"}
+            value={
+              match.stage === "group"
+                ? updatedAt ?? "sem data"
+                : score
+                  ? `${score.advancementPoints} pts`
+                  : "—"
+            }
+          />
+          <Link
+            href={focusedPredictionHref(match)}
+            className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border bg-surface px-3 text-xs font-black text-brand hover:border-brand/70 sm:col-span-2 lg:col-span-4"
+          >
+            Abrir comparação deste jogo <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PickDetail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border bg-surface px-3 py-2">
+      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-black">{value}</p>
+    </div>
+  );
+}
+
+function MiniMatchTeam({
+  team,
+  align = "left",
+}: {
+  team: DemoMatch["homeTeam"];
+  align?: "left" | "right";
+}) {
+  return (
+    <span className={`flex min-w-0 items-center gap-2 ${align === "right" ? "justify-end text-right" : ""}`}>
+      {align === "left" ? <TeamFlag team={team} size="sm" /> : null}
+      <span className="truncate text-xs font-black">{team.shortName}</span>
+      {align === "right" ? <TeamFlag team={team} size="sm" /> : null}
+    </span>
+  );
+}
+
+function PlayerMetric({
+  icon: Icon,
+  label,
+  value,
+  tone = "neutral",
+}: {
+  icon: typeof BarChart3;
+  label: string;
+  value: string;
+  tone?: "neutral" | "up" | "down";
+}) {
+  const toneClass =
+    tone === "up"
+      ? "status-success"
+      : tone === "down"
+        ? "status-warning"
+        : "bg-surface";
+
+  return (
+    <div className={`rounded-2xl border p-3 ${toneClass}`}>
+      <div className="flex items-center gap-2">
+        <Icon className="size-4 text-brand" />
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+          {label}
+        </p>
+      </div>
+      <p className="mt-2 text-sm font-black">{value}</p>
+    </div>
+  );
+}
+
+function buildPoolSnapshot({
+  pool,
+  ranking,
+  completedMatches,
+}: {
+  pool: PoolSummary;
+  ranking: RankingEntry[];
+  completedMatches: number;
+}): PoolSnapshot {
+  const hasProvisional = ranking.some(
+    (entry) =>
+      entry.provisionalPoints !== undefined &&
+      entry.provisionalPoints !== entry.points,
+  );
+  const currentPlayer = ranking.find((entry) => entry.isCurrentUser);
+  const currentPoints = currentPlayer
+    ? hasProvisional
+      ? currentPlayer.provisionalPoints ?? currentPlayer.points
+      : currentPlayer.points
+    : null;
+
+  return {
+    pool,
+    currentPlayer,
+    positionLabel: currentPlayer
+      ? rankingLabel(currentPlayer, ranking, {
+          provisional: hasProvisional,
+          tiedSuffix: "=",
+        })
+      : "sem posição",
+    pointsLabel: currentPoints === null ? `${pool.members} jogadores` : `${currentPoints} pts`,
+    movement: currentPlayer ? rankingMovement(currentPlayer) : undefined,
+    completedMatches,
+  };
 }
 
 function rankingPositionLabel(player: RankingEntry, entries: RankingEntry[], provisional: boolean) {
@@ -853,6 +1720,122 @@ function rankingPositionLabel(player: RankingEntry, entries: RankingEntry[], pro
   });
 }
 
+function rankingEntryKey(player: RankingEntry) {
+  if (player.userId) return player.userId;
+  return `${player.position}:${player.name}`;
+}
+
+function rankingMovement(player: RankingEntry): RankingMovement {
+  if (!player.provisionalPosition || player.provisionalPosition === player.position) {
+    return { label: "mantém posição", tone: "neutral", icon: BarChart3 };
+  }
+  if (player.provisionalPosition < player.position) {
+    return {
+      label: `sobe ${player.position - player.provisionalPosition}`,
+      tone: "up",
+      icon: TrendingUp,
+    };
+  }
+  return {
+    label: `cai ${player.provisionalPosition - player.position}`,
+    tone: "down",
+    icon: TrendingDown,
+  };
+}
+
+function movementToneClass(tone: RankingMovement["tone"]) {
+  if (tone === "up") return "status-success";
+  if (tone === "down") return "status-warning";
+  return "bg-surface";
+}
+
 function pluralize(value: number, singular: string, plural: string) {
   return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function findPlayerComparisonEntry(
+  player: RankingEntry,
+  entries: PredictionComparisonEntry[],
+) {
+  if (player.userId) {
+    const byId = entries.find((entry) => entry.userId === player.userId);
+    if (byId) return byId;
+  }
+  if (player.isCurrentUser) {
+    const currentUserEntry = entries.find((entry) => entry.isCurrentUser);
+    if (currentUserEntry) return currentUserEntry;
+  }
+  return (
+    entries.find(
+      (entry) => entry.name === player.name && entry.initials === player.initials,
+    ) ?? null
+  );
+}
+
+function finishedPickScore(
+  entry: PredictionComparisonEntry,
+  match: DemoMatch,
+  result?: MatchResult,
+) {
+  if (entry.score) return entry.score;
+  if (!entry.prediction || !result) return null;
+  return calculateScore(entry.prediction, result, match.stage);
+}
+
+function summarizeFinishedPicks(finishedPicks: FinishedPick[]) {
+  const scored = finishedPicks
+    .map((pick) => ({
+      ...pick,
+      score: finishedPickScore(
+        pick.entry,
+        pick.match,
+        pick.match.result ?? pick.match.liveResult,
+      ),
+    }))
+    .filter((pick): pick is FinishedPick & { score: ScoreBreakdown } =>
+      Boolean(pick.score),
+    );
+  const totalPoints = scored.reduce((total, pick) => total + pick.score.totalPoints, 0);
+  const best = scored
+    .sort((left, right) =>
+      right.score.totalPoints - left.score.totalPoints ||
+      matchTime(right.match) - matchTime(left.match),
+    )[0] ?? null;
+
+  return {
+    total: finishedPicks.length,
+    scoredCount: scored.filter((pick) => pick.score.totalPoints > 0).length,
+    averagePoints: scored.length > 0 ? Math.round(totalPoints / scored.length) : null,
+    best,
+  };
+}
+
+function focusedPredictionHref(match: DemoMatch) {
+  return `/palpites?jogo=${encodeURIComponent(match.id)}#lista-de-jogos`;
+}
+
+function scoreCategoryLabel(category: ScoreBreakdown["category"]) {
+  if (category === "exact") return "cravado";
+  if (category === "refined") return "refinado";
+  if (category === "result") return "resultado";
+  if (category === "one-score") return "um placar";
+  return "sem acerto";
+}
+
+function formatShortDateTime(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function matchTime(match: DemoMatch) {
+  if (!match.scheduledAt) return 0;
+  const date = new Date(match.scheduledAt);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }

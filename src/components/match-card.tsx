@@ -7,6 +7,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   Save,
+  Target,
   TriangleAlert,
   Undo2,
 } from "lucide-react";
@@ -36,11 +37,13 @@ export function MatchCard({
   compact = false,
   isAuthenticated = true,
   termsAccepted = true,
+  highlighted = false,
 }: {
   match: DemoMatch;
   compact?: boolean;
   isAuthenticated?: boolean;
   termsAccepted?: boolean;
+  highlighted?: boolean;
 }) {
   const router = useRouter();
   const storedPrediction = useLocalPrediction(match.id);
@@ -193,9 +196,22 @@ export function MatchCard({
 
   return (
     <article
+      id={predictionMatchCardId(match.id)}
       data-testid={`match-${match.id}`}
-      className={`card match-card p-5 ${effectiveLocked ? "match-card-locked" : ""}`}
+      tabIndex={highlighted ? -1 : undefined}
+      aria-current={highlighted ? "true" : undefined}
+      className={`card match-card scroll-mt-28 outline-none ${
+        compact ? "p-3 md:p-4" : "p-5"
+      } ${
+        effectiveLocked ? "match-card-locked" : ""
+      } ${highlighted ? "ring-2 ring-brand/50 shadow-lg shadow-brand/15" : ""}`}
     >
+      {highlighted ? (
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1.5 text-[11px] font-black text-brand">
+          <Target className="size-3.5" />
+          Jogo aberto pela agenda
+        </div>
+      ) : null}
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[0.13em] text-brand">
@@ -253,25 +269,43 @@ export function MatchCard({
         </span>
       </div>
 
-      <div className={`mt-5 rounded-2xl border bg-surface-muted/65 px-3 py-4 ${compact ? "" : "md:px-4"}`}>
-        <div className="mx-auto grid w-fit max-w-full grid-cols-[minmax(4.75rem,5.75rem)_auto_minmax(4.75rem,5.75rem)] items-start justify-center gap-2 sm:grid-cols-[minmax(5.5rem,6.75rem)_auto_minmax(5.5rem,6.75rem)] sm:gap-4">
-        <Team team={match.homeTeam} compact={compact} />
-        <div className="grid grid-cols-[2.5rem_0.75rem_2.5rem] items-center justify-center gap-1 pt-2 sm:grid-cols-[2.75rem_1rem_2.75rem] sm:gap-2 md:grid-cols-[3rem_1rem_3rem]">
-          <ScoreInput
-            value={homeScore}
-            disabled={inputDisabled}
-            label={`Gols de ${match.homeTeam.name}`}
-            onChange={(value) => updatePrediction("home", value)}
-          />
-          <span className="text-xs font-black text-muted">×</span>
-          <ScoreInput
-            value={awayScore}
-            disabled={inputDisabled}
-            label={`Gols de ${match.awayTeam.name}`}
-            onChange={(value) => updatePrediction("away", value)}
-          />
-        </div>
-        <Team team={match.awayTeam} compact={compact} />
+      <div
+        className={`border bg-surface-muted/65 ${
+          compact ? "mt-3 rounded-xl px-2 py-3" : "mt-5 rounded-2xl px-3 py-4 md:px-4"
+        }`}
+      >
+        <div
+          className={`mx-auto grid w-fit max-w-full items-start justify-center ${
+            compact
+              ? "grid-cols-[minmax(4rem,4.75rem)_auto_minmax(4rem,4.75rem)] gap-1.5 sm:grid-cols-[minmax(4.5rem,5.5rem)_auto_minmax(4.5rem,5.5rem)] sm:gap-2"
+              : "grid-cols-[minmax(4.75rem,5.75rem)_auto_minmax(4.75rem,5.75rem)] gap-2 sm:grid-cols-[minmax(5.5rem,6.75rem)_auto_minmax(5.5rem,6.75rem)] sm:gap-4"
+          }`}
+        >
+          <Team team={match.homeTeam} compact={compact} />
+          <div
+            className={`grid items-center justify-center gap-1 ${
+              compact
+                ? "grid-cols-[2.5rem_0.65rem_2.5rem] pt-1"
+                : "grid-cols-[2.5rem_0.75rem_2.5rem] pt-2 sm:grid-cols-[2.75rem_1rem_2.75rem] sm:gap-2 md:grid-cols-[3rem_1rem_3rem]"
+            }`}
+          >
+            <ScoreInput
+              value={homeScore}
+              disabled={inputDisabled}
+              label={`Gols de ${match.homeTeam.name}`}
+              compact={compact}
+              onChange={(value) => updatePrediction("home", value)}
+            />
+            <span className="text-xs font-black text-muted">×</span>
+            <ScoreInput
+              value={awayScore}
+              disabled={inputDisabled}
+              label={`Gols de ${match.awayTeam.name}`}
+              compact={compact}
+              onChange={(value) => updatePrediction("away", value)}
+            />
+          </div>
+          <Team team={match.awayTeam} compact={compact} />
         </div>
       </div>
       {requiresAdvancingTeam && (
@@ -349,7 +383,11 @@ export function MatchCard({
         <p className="mt-5 text-center text-xs text-muted">{match.venue}</p>
       )}
       {result && (
-        <div className="mt-4 rounded-2xl bg-surface-muted p-3 text-center text-xs">
+        <div
+          className={`bg-surface-muted text-center text-xs ${
+            compact ? "mt-3 rounded-xl px-3 py-2" : "mt-4 rounded-2xl p-3"
+          }`}
+        >
           <p className="font-black text-foreground">
             Resultado: {result.homeScore} × {result.awayScore}
           </p>
@@ -368,15 +406,20 @@ export function MatchCard({
         </div>
       )}
       {!result && match.liveResult && (
-        <div className="status-live mt-4 rounded-2xl border p-3 text-center text-xs">
+        <div
+          className={`status-live border text-center text-xs ${
+            compact ? "mt-3 rounded-xl px-3 py-2" : "mt-4 rounded-2xl p-3"
+          }`}
+        >
           <p className="font-black text-foreground">
+            <span className="live-dot mr-1 align-middle" aria-hidden="true" />
             {match.providerStatus === "finished"
               ? "Placar aguardando confirmação"
               : "Placar ao vivo"}
-            : {match.liveResult.homeScore} × {match.liveResult.awayScore}
+            : <span className="live-number">{match.liveResult.homeScore} × {match.liveResult.awayScore}</span>
           </p>
           {provisionalScore && (
-            <p className="mt-1 font-black">
+            <p className="live-number mt-1 font-black">
               Neste momento: {provisionalScore.totalPoints} pontos provisórios
             </p>
           )}
@@ -404,6 +447,10 @@ export function MatchCard({
   );
 }
 
+export function predictionMatchCardId(matchId: string) {
+  return `palpite-${matchId}`;
+}
+
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
     value,
@@ -428,10 +475,14 @@ function Team({
 }) {
   return (
     <div className="grid min-w-0 justify-items-center gap-2 text-center">
-      <span className="flex h-12 items-center justify-center">
+      <span className={`flex items-center justify-center ${compact ? "h-9" : "h-12"}`}>
         <TeamFlag team={team} size={compact ? "md" : "lg"} />
       </span>
-      <p className={`line-clamp-2 flex min-h-8 w-full max-w-[7.25rem] items-start justify-center text-center font-black leading-4 tracking-tight ${compact ? "text-xs" : "text-sm"}`}>
+      <p
+        className={`line-clamp-2 flex w-full items-start justify-center text-center font-black leading-4 tracking-tight ${
+          compact ? "min-h-7 max-w-[5.75rem] text-[11px]" : "min-h-8 max-w-[7.25rem] text-sm"
+        }`}
+      >
         {team.shortName}
       </p>
     </div>
@@ -442,16 +493,20 @@ function ScoreInput({
   value,
   disabled,
   label,
+  compact,
   onChange,
 }: {
   value: number | "";
   disabled: boolean;
   label: string;
+  compact: boolean;
   onChange: (value: string) => void;
 }) {
   return (
     <input
-      className="score-input size-10 rounded-xl border bg-surface-muted text-center text-lg font-black outline-none transition focus:border-brand focus:bg-surface disabled:cursor-not-allowed sm:size-11 md:size-12"
+      className={`score-input rounded-xl border bg-surface-muted text-center font-black outline-none transition focus:border-brand focus:bg-surface disabled:cursor-not-allowed ${
+        compact ? "size-10 text-base" : "size-10 text-lg sm:size-11 md:size-12"
+      }`}
       type="number"
       min="0"
       max="30"

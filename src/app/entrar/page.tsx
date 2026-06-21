@@ -18,13 +18,13 @@ export default async function LoginPage({
   return (
     <main className="page-container flex min-h-[calc(100vh-4rem)] items-center justify-center py-10">
       <section className="card w-full max-w-md p-6 md:p-8">
-        <p className="eyebrow">Sua conta</p>
+        <p className="eyebrow">Entrar</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em]">
           Entre no LaBolita
         </h1>
         <p className="mb-7 mt-3 text-sm leading-6 text-muted">
-          Seus palpites valem em todos os bolões e ficam ocultos até o bloqueio
-          de cada partida.
+          Seus placares valem em todos os bolões e ficam escondidos dos rivais
+          até cada jogo bloquear.
         </p>
         <LoginPanel nextPath={nextPath} />
         {params.erro && (

@@ -40,29 +40,58 @@ const players = squadData.teams.flatMap((team) =>
   })),
 );
 
-await mkdir(DEST_DIR, { recursive: true });
-await cleanGeneratedWebp(DEST_DIR);
+const sourceFiles = await readdir(SOURCE_DIR).catch((error) => {
+  if (error?.code === "ENOENT") return null;
+  throw error;
+});
 
-const files = (await readdir(SOURCE_DIR))
+if (sourceFiles === null) {
+  console.log(
+    `No sticker source directory found at ${path.relative(PROJECT_ROOT, SOURCE_DIR)}. Keeping existing stickers.`,
+  );
+  process.exit(0);
+}
+
+const files = sourceFiles
   .filter((file) => file.toLowerCase().endsWith(".png"))
   .sort((left, right) => left.localeCompare(right, "pt-BR"));
 
-const assets = [];
 const skipped = [];
+const matchedFiles = files
+  .map((file) => {
+    const baseSlug = sourceSlugFromFile(file);
+    const player = findPlayerForSlug(baseSlug);
+    if (!player) {
+      skipped.push(`${file} (sem jogador correspondente no elenco atual)`);
+      return null;
+    }
+    return { file, player };
+  })
+  .filter(Boolean);
+
+if (matchedFiles.length === 0) {
+  if (skipped.length > 0) {
+    console.warn(`Skipped ${skipped.length} source image(s):`);
+    for (const message of skipped) console.warn(`- ${message}`);
+  }
+  if (files.length > 0) {
+    throw new Error("No source image matched the current squads. Existing stickers were preserved.");
+  }
+  console.log("No PNG sticker source images found. Keeping existing stickers.");
+  process.exit(0);
+}
+
+await mkdir(DEST_DIR, { recursive: true });
+await cleanGeneratedWebp(DEST_DIR);
+
+const assets = [];
 let rawBytes = 0;
 let optimizedBytes = 0;
 
-for (const file of files) {
+for (const { file, player } of matchedFiles) {
   const sourcePath = path.join(SOURCE_DIR, file);
   const raw = await stat(sourcePath);
   rawBytes += raw.size;
-
-  const baseSlug = sourceSlugFromFile(file);
-  const player = findPlayerForSlug(baseSlug);
-  if (!player) {
-    skipped.push(`${file} (sem jogador correspondente no elenco atual)`);
-    continue;
-  }
 
   const outputFile = `${player.team.code.toLowerCase()}-${String(player.number).padStart(
     2,

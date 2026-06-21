@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Goal, Shield, Trophy, Users } from "lucide-react";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
+import { PageShortcuts } from "@/components/page-shortcuts";
+import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import {
   findTeamById,
@@ -10,6 +12,7 @@ import {
   nextMatchForTeam,
   standingForTeam,
 } from "@/lib/competition";
+import { appRoute } from "@/lib/app-routes";
 import { getMatches } from "@/lib/data/matches";
 import { isLiveMatch } from "@/lib/match-display";
 import {
@@ -71,6 +74,17 @@ export default async function TeamPage({
         <ArrowLeft className="size-4" />
         Voltar para Copa
       </Link>
+
+      <PageShortcuts
+        items={[
+          appRoute("games"),
+          appRoute("players"),
+          appRoute("specials"),
+          appRoute("pools"),
+        ]}
+        label={`Caminhos relacionados a ${team.name}`}
+        className="mt-5"
+      />
 
       <section className="card mt-6 overflow-hidden p-6 md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -148,10 +162,17 @@ export default async function TeamPage({
           )}
         </div>
         {squad ? (
-          <div className="grid gap-3 p-5 md:grid-cols-2 md:p-6">
-            {squad.players.map((player) => (
-              <PlayerCard key={player.number} player={player} />
-            ))}
+          <div className="p-5 md:p-6">
+            <ProgressiveList
+              initialCount={12}
+              step={12}
+              moreLabel="Ver mais jogadores"
+              className="grid gap-3 md:grid-cols-2"
+            >
+              {squad.players.map((player) => (
+                <PlayerCard key={player.number} player={player} />
+              ))}
+            </ProgressiveList>
           </div>
         ) : (
           <p className="p-6 text-sm leading-6 text-muted">

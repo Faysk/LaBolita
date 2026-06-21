@@ -45,6 +45,14 @@ export function selectHomeTimelineMatches(matches: DemoMatch[], limit = 3) {
   return prioritizeHomeMatches(matches).filter(isHomeTimelineMatch).slice(0, limit);
 }
 
+export function selectLiveOrNextMatch(matches: DemoMatch[]) {
+  return (
+    prioritizeHomeMatches(matches).find(
+      (match) => isLiveMatch(match) || (!match.result && match.providerStatus !== "finished"),
+    ) ?? null
+  );
+}
+
 function homePriority(match: DemoMatch) {
   if (isLiveMatch(match)) return 0;
   if (!match.result && match.providerStatus !== "finished") return 1;

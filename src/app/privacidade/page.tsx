@@ -12,7 +12,7 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Transparência"
       title="Política de Privacidade"
-      intro="Esta política explica como o LaBolita trata dados pessoais necessários para autenticação, funcionamento dos bolões e segurança da plataforma."
+      intro="Aqui explicamos quais dados o LaBolita usa para login, bolões, rankings, segurança e suporte."
     >
       <section>
         <h2>1. Quem controla os dados</h2>
@@ -107,7 +107,7 @@ export default function PrivacyPage() {
         <h2>8. Alterações e contato</h2>
         <p>
           Esta política pode ser atualizada para refletir mudanças do produto ou
-          da legislação. Alterações relevantes serão comunicadas no app. Consulte
+          da legislação. Alterações relevantes aparecem no app. Consulte
           também os <Link href="/termos">Termos de Serviço</Link>.
         </p>
       </section>

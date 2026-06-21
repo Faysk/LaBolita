@@ -119,7 +119,7 @@ export async function getSpecialMarketsOverview(input?: {
       available: false,
       markets: [],
       missingReason:
-        "Palpites especiais ainda não foram publicados no banco deste ambiente.",
+        "Palpites finais ainda não foram publicados no banco deste ambiente.",
     };
   }
 
@@ -128,7 +128,7 @@ export async function getSpecialMarketsOverview(input?: {
     return {
       available: false,
       markets: [],
-      missingReason: "Nenhum palpite especial foi configurado para o torneio ativo.",
+      missingReason: "Nenhum palpite final foi configurado para o torneio ativo.",
     };
   }
 
@@ -151,12 +151,12 @@ export async function getSpecialMarketsOverview(input?: {
   ]);
 
   if (predictions.error) {
-    throw new Error("Não foi possível carregar seus palpites especiais.", {
+    throw new Error("Não foi possível carregar seus palpites finais.", {
       cause: predictions.error,
     });
   }
   if (results.error) {
-    throw new Error("Não foi possível carregar resultados especiais.", {
+    throw new Error("Não foi possível carregar resultados dos palpites finais.", {
       cause: results.error,
     });
   }

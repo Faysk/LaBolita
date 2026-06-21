@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { AccountSettingsPanel } from "@/components/account-settings-panel";
+import { UserAlerts } from "@/components/user-alerts";
 import { requireUser } from "@/lib/auth";
+import { getAdminAlertsForCurrentUser } from "@/lib/data/admin-alerts";
 import { getMatches } from "@/lib/data/matches";
 import {
   normalizeThemePreference,
@@ -20,20 +22,26 @@ export default async function AccountPage() {
   if (error) throw error;
   if (!profile) throw new Error("Perfil não encontrado.");
 
-  const matches = await getMatches();
+  const [matches, alerts] = await Promise.all([
+    getMatches(),
+    getAdminAlertsForCurrentUser(),
+  ]);
   const sampleMatch = matches.find((match) => !match.result) ?? matches[0] ?? null;
 
   return (
     <main className="page-container py-7 md:py-10">
       <div className="mb-7">
-        <p className="eyebrow">Sua conta</p>
+        <p className="eyebrow">Minha conta</p>
         <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
           Perfil e preferências
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted md:text-base">
-          Ajuste como seu nome aparece nos rankings, controle a privacidade da foto e escolha como os horários dos jogos aparecem para você.
+          Ajuste nome, foto, tema e horário dos jogos do jeito que combina com
+          você.
         </p>
       </div>
+
+      <UserAlerts alerts={alerts} compact />
 
       <AccountSettingsPanel
         displayName={profile.display_name}

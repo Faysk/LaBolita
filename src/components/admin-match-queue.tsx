@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CarouselRail } from "@/components/carousel-rail";
+import { EmptyState } from "@/components/empty-state";
 import { TeamFlag } from "@/components/team-flag";
 import { storeLocalResult, useLocalResults } from "@/lib/local-state";
 import type { DemoMatch, DemoTeam } from "@/lib/types";
@@ -81,7 +83,11 @@ export function AdminMatchQueue({
   return (
     <div>
       <div className="border-b bg-surface-muted/75 p-4 md:p-5">
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <CarouselRail
+          ariaLabel="Filtros da fila admin"
+          centerMode={false}
+          trackClassName="auto-cols-max gap-2"
+        >
           {([
             ...(liveCount > 0
               ? [["live", "Ao vivo", liveCount] as const]
@@ -106,7 +112,7 @@ export function AdminMatchQueue({
               {label} · {count}
             </button>
           ))}
-        </div>
+        </CarouselRail>
         <label className="relative mt-2 block">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <input
@@ -229,9 +235,12 @@ export function AdminMatchQueue({
         ))}
       </div>
       {visible.length === 0 && (
-        <p className="p-6 text-center text-sm text-muted">
-          Nenhuma partida encontrada neste filtro.
-        </p>
+        <EmptyState
+          icon={Search}
+          title="Nenhum jogo neste filtro"
+          description="Troque o filtro, limpe a busca ou abra Todos para revisar a fila completa."
+          className="m-5"
+        />
       )}
     </div>
   );

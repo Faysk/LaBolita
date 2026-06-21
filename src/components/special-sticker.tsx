@@ -102,6 +102,8 @@ export function SpecialOptionAvatar({
           alt={`Figurinha autoral de ${option.label}`}
           className="h-full w-full object-cover"
           sizes={size === "lg" ? "64px" : size === "md" ? "48px" : "40px"}
+          quality={60}
+          decoding="async"
         />
       </span>
     );
@@ -236,6 +238,8 @@ function PlayerImageSticker({
         className="h-full w-full object-cover"
         sizes={sizes}
         priority={variant === "feature"}
+        quality={variant === "feature" ? 82 : variant === "card" ? 70 : 62}
+        decoding="async"
       />
     </span>
   );

@@ -1,13 +1,18 @@
 import { spawnSync } from "node:child_process";
+import { accessSync } from "node:fs";
+import path from "node:path";
+
+const buildDir = process.env.LABOLITA_BUILD_DIR ?? ".next-demo";
+const nextBin = findNextBin();
 
 const result = spawnSync(
   process.execPath,
-  ["node_modules/next/dist/bin/next", "build"],
+  [nextBin, "build"],
   {
     cwd: process.cwd(),
     env: {
       ...process.env,
-      LABOLITA_BUILD_DIR: ".next-demo",
+      LABOLITA_BUILD_DIR: buildDir,
       NEXT_PUBLIC_LABOLITA_DEMO_MODE: "1",
       NEXT_PUBLIC_SUPABASE_URL: "",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
@@ -21,3 +26,21 @@ const result = spawnSync(
 );
 
 process.exit(result.status ?? 1);
+
+function findNextBin() {
+  const candidates = [
+    path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next"),
+    path.join(process.cwd(), "..", "node_modules", "next", "dist", "bin", "next"),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      accessSync(candidate);
+      return candidate;
+    } catch {
+      // Tenta o próximo diretório de dependências.
+    }
+  }
+
+  return candidates[0];
+}

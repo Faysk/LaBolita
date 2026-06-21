@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock3, MapPin, Radio } from "lucide-react";
+import { ArrowRight, Clock3, MapPin } from "lucide-react";
 import { LinkPendingLabel } from "@/components/link-pending-feedback";
 import { TeamFlag } from "@/components/team-flag";
 import { useLocalResults } from "@/lib/local-state";
@@ -37,6 +37,12 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
       : "Ver calendário";
   const isLive = Boolean(liveMatch);
   const score = liveMatch?.liveResult;
+  const actionHref = isLive ? "/ao-vivo" : nextMatch ? "/palpites" : "/jogos";
+  const pendingLabel = isLive
+    ? "Abrindo ao vivo..."
+    : nextMatch
+      ? "Abrindo palpites..."
+      : "Abrindo calendário...";
 
   return (
     <div className={`relative overflow-hidden rounded-[1.75rem] border p-4 shadow-2xl backdrop-blur md:justify-self-end md:p-5 ${
@@ -53,7 +59,7 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
               ? "border-accent/45 bg-accent/15 text-accent"
               : "border-white/15 bg-white/10 text-white/70"
           }`}>
-            {isLive ? <Radio className="size-3.5 animate-pulse" /> : <Clock3 className="size-3.5 text-accent" />}
+            {isLive ? <span className="live-dot" aria-hidden="true" /> : <Clock3 className="size-3.5 text-accent" />}
             {heading}
           </span>
           {nextMatch && (
@@ -73,7 +79,7 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
                     <span className="text-[10px] font-black uppercase tracking-[0.16em] text-accent">
                       Ao vivo
                     </span>
-                    <span className="text-4xl font-black leading-none tracking-tight text-white md:text-5xl">
+                    <span className="live-number text-4xl font-black leading-none tracking-tight text-white md:text-5xl">
                       {score ? `${score.homeScore}×${score.awayScore}` : "0×0"}
                     </span>
                   </>
@@ -119,10 +125,11 @@ export function NextMatchSummary({ matches }: { matches: DemoMatch[] }) {
         )}
 
         <Link
-          href="/palpites"
+          href={actionHref}
+          prefetch={false}
           className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-3 text-sm font-extrabold text-brand-strong transition hover:brightness-95"
         >
-          <LinkPendingLabel pendingLabel="Abrindo palpites...">
+          <LinkPendingLabel pendingLabel={pendingLabel}>
             {action}
             <ArrowRight className="size-4" />
           </LinkPendingLabel>

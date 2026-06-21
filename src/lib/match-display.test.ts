@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   initialPredictionFilter,
   prioritizeHomeMatches,
+  selectLiveOrNextMatch,
   selectHomeTimelineMatches,
 } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
@@ -84,6 +85,39 @@ describe("match display priorities", () => {
       "live",
       "open",
     ]);
+  });
+
+  it("selects the live match before the next unfinished match", () => {
+    const matches = [
+      match("next", { scheduledAt: "2026-06-12T20:00:00Z" }),
+      match("live", {
+        locked: true,
+        providerStatus: "live",
+        scheduledAt: "2026-06-12T18:00:00Z",
+        liveResult: { homeScore: 1, awayScore: 0 },
+      }),
+    ];
+
+    expect(selectLiveOrNextMatch(matches)?.id).toBe("live");
+  });
+
+  it("selects the next unfinished match when there is no live match", () => {
+    const matches = [
+      match("finished", {
+        scheduledAt: "2026-06-11T20:00:00Z",
+        result: { homeScore: 2, awayScore: 0 },
+      }),
+      match("provider-finished", {
+        scheduledAt: "2026-06-12T18:00:00Z",
+        providerStatus: "finished",
+      }),
+      match("next", {
+        locked: true,
+        scheduledAt: "2026-06-12T20:00:00Z",
+      }),
+    ];
+
+    expect(selectLiveOrNextMatch(matches)?.id).toBe("next");
   });
 
   it("starts with live, then pending, then all", () => {

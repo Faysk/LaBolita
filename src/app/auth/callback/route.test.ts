@@ -22,6 +22,10 @@ describe("OAuth callback", () => {
     const response = await GET(callbackRequest());
 
     expect(response.headers.get("location")).toBe("https://labolita.test/palpites");
+    expect(supabase.rpc).toHaveBeenCalledWith("record_user_session_event", {
+      p_event_type: "login_completed",
+      p_next_path: "/palpites",
+    });
     expect(supabase.rpc).toHaveBeenCalledWith("ensure_official_pool_membership");
   });
 

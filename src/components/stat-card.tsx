@@ -56,7 +56,7 @@ export function StatCard({
   if (!href) return content;
 
   return (
-    <Link href={href} className="interactive relative block overflow-hidden rounded-[1.5rem]">
+    <Link href={href} prefetch={false} className="interactive relative block overflow-hidden rounded-[1.5rem]">
       {content}
       <LinkPendingOverlay label="Abrindo..." className="rounded-[1.5rem]" />
     </Link>

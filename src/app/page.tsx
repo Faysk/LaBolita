@@ -1,33 +1,28 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Sparkles,
+  CalendarDays,
+  Radio,
 } from "lucide-react";
-import { HomeOverview } from "@/components/home-overview";
 import { LiveRefresh } from "@/components/live-refresh";
-import { MatchCard } from "@/components/match-card";
+import { MatchTimeline } from "@/components/match-timeline";
 import { NextMatchSummary } from "@/components/next-match-summary";
+import { PageShortcuts } from "@/components/page-shortcuts";
 import { SpecialHomeSummary } from "@/components/special-home-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
-import {
-  getPoolsOverview,
-  getPublicGlobalRanking,
-  getPublicPoolHighlights,
-} from "@/lib/data/pools";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
-import { isLiveMatch, selectHomeTimelineMatches } from "@/lib/match-display";
+import { isLiveMatch } from "@/lib/match-display";
+import type { DemoMatch } from "@/lib/types";
 
 export default async function HomePage() {
-  const [matches, poolsOverview, publicRanking, publicPoolHighlights, viewer] = await Promise.all([
+  const [matches, viewer] = await Promise.all([
     getMatches(),
-    getPoolsOverview(),
-    getPublicGlobalRanking(),
-    getPublicPoolHighlights(),
     getViewerState(),
   ]);
-  const highlightedMatches = selectHomeTimelineMatches(matches, 3);
-  const hasLiveMatch = highlightedMatches.some(isLiveMatch);
+  const liveMatches = matches.filter(isLiveMatch);
+  const nextMatches = selectUpcomingMatches(matches);
+  const hasLiveMatch = liveMatches.length > 0;
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
   );
@@ -38,34 +33,23 @@ export default async function HomePage() {
   return (
     <main className="page-container py-6 md:py-10">
       <LiveRefresh active={hasLiveMatch || awaitingOfficial} />
-      <section className={`hero-panel relative overflow-hidden rounded-[2rem] px-5 text-white md:px-10 ${
-        viewer.isAuthenticated ? "py-5 md:py-8" : "py-7 md:py-11"
-      }`}>
-        <div className="absolute -right-16 -top-20 size-64 rounded-full bg-accent/20 blur-3xl" />
-        <div className="absolute -bottom-28 left-1/3 size-64 rounded-full bg-white/10 blur-3xl" />
+      <section className="hero-panel relative overflow-hidden rounded-[2rem] px-5 py-6 text-white md:px-10 md:py-8">
         <div className="relative grid gap-8 md:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)] md:items-center">
           <div>
-            <div className={`${viewer.isAuthenticated ? "mb-3 md:mb-5" : "mb-5"} inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.13em]`}>
-              <Sparkles className="size-3.5 text-accent" />
-              Copa 2026
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.13em]">
+              {hasLiveMatch ? (
+                <Radio className="live-icon size-3.5" />
+              ) : (
+                <CalendarDays className="size-3.5 text-accent" />
+              )}
+              {hasLiveMatch ? "Ao vivo agora" : "Agenda da Copa"}
             </div>
-            <p className="mb-2 text-sm font-medium text-white/65">
-              Bom dia
-            </p>
-            <h1 className={`max-w-xl font-black leading-[1.02] tracking-[-0.05em] ${
-              viewer.isAuthenticated ? "text-3xl" : "text-4xl"
-            } ${
-              viewer.isAuthenticated ? "md:text-5xl" : "md:text-6xl"
-            }`}>
-              Seu palpite.
-              <br />
-              Sua resenha.
-              <br />
-              <span className="text-accent">Sua taça.</span>
+            <h1 className="max-w-xl text-4xl font-black leading-[1.02] tracking-[-0.05em] md:text-6xl">
+              {hasLiveMatch ? "Tem jogo valendo bolão agora." : "A Copa fica fácil de acompanhar."}
             </h1>
-            <p className={`${viewer.isAuthenticated ? "mt-3 hidden sm:block md:mt-5" : "mt-5"} max-w-lg text-sm leading-6 text-white/70 md:text-base`}>
-              Faça seus palpites uma vez, dispute com todos os seus grupos e
-              acompanhe cada virada no ranking.
+            <p className="mt-5 max-w-lg text-sm leading-6 text-white/70 md:text-base">
+              Veja jogos, placares e horários sem caçar informação. Quando quiser
+              competir, seus palpites e bolões ficam a um toque.
             </p>
           </div>
 
@@ -73,38 +57,62 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mt-7 md:mt-10">
+      <PageShortcuts
+        routeKeys={["live", "games", "predictions", "pools"]}
+        className="mt-5 md:mt-6"
+      />
+
+      {hasLiveMatch ? (
+        <section className="mt-7 md:mt-10">
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <div>
+              <p className="eyebrow">Valendo agora</p>
+              <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">
+                Agora ao vivo
+              </h2>
+            </div>
+            <Link
+              href="/ao-vivo"
+              className="hidden items-center gap-1 text-sm font-bold text-brand md:flex"
+            >
+              Abrir ao vivo <ArrowRight className="size-4" />
+            </Link>
+          </div>
+          <MatchTimeline
+            matches={liveMatches}
+            variant="rail"
+            ariaLabel="Jogos ao vivo"
+            href="/ao-vivo"
+            initialCount={3}
+            moreLabel="Ver mais jogos ao vivo"
+            actionLabel="Abrir central ao vivo"
+          />
+        </section>
+      ) : null}
+
+      <section className={hasLiveMatch ? "mt-7" : "mt-7 md:mt-10"}>
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="eyebrow">{hasLiveMatch ? "A bola está rolando" : "Agenda em destaque"}</p>
+            <p className="eyebrow">Na fila</p>
             <h2 className="mt-1 text-2xl font-black tracking-[-0.04em] md:text-3xl">
-              {hasLiveMatch ? "Agora ao vivo" : "Próximos jogos"}
+              Próximos jogos
             </h2>
           </div>
           <Link
-            href="/palpites"
+            href="/jogos"
             className="hidden items-center gap-1 text-sm font-bold text-brand md:flex"
           >
-            Ver todos <ArrowRight className="size-4" />
+            Abrir agenda <ArrowRight className="size-4" />
           </Link>
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {highlightedMatches.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              compact
-              isAuthenticated={viewer.isAuthenticated}
-              termsAccepted={viewer.termsAccepted}
-            />
-          ))}
-          {highlightedMatches.length === 0 && (
-            <p className="card p-6 text-sm text-muted lg:col-span-3">
-              A agenda ainda não foi importada. O administrador pode carregar o
-              calendário oficial antes de abrir os palpites.
-            </p>
-          )}
-        </div>
+        <MatchTimeline
+          matches={nextMatches}
+          variant="rail"
+          ariaLabel="Próximos jogos"
+          href="/jogos"
+          initialCount={3}
+          moreLabel="Ver mais próximos jogos"
+        />
       </section>
 
       <SpecialHomeSummary
@@ -112,16 +120,25 @@ export default async function HomePage() {
         isAuthenticated={viewer.isAuthenticated}
       />
 
-      <HomeOverview
-        matches={matches}
-        pools={poolsOverview.pools}
-        globalRanking={publicRanking}
-        primaryPoolRanking={poolsOverview.ranking}
-        primaryPoolName={poolsOverview.rankingName}
-        publicPoolHighlights={publicPoolHighlights}
-        isAuthenticated={viewer.isAuthenticated}
-      />
-
     </main>
   );
+}
+
+function selectUpcomingMatches(matches: DemoMatch[]) {
+  return matches
+    .filter(
+      (match) =>
+        !isLiveMatch(match) &&
+        !match.locked &&
+        !match.result &&
+        match.providerStatus !== "finished",
+    )
+    .sort((left, right) => scheduledTime(left) - scheduledTime(right));
+}
+
+function scheduledTime(match: DemoMatch) {
+  const value = match.scheduledAt
+    ? new Date(match.scheduledAt).getTime()
+    : Number.MAX_SAFE_INTEGER;
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }
