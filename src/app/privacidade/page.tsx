@@ -46,7 +46,7 @@ export default function PrivacyPage() {
         <h2>3. Finalidades e bases legais</h2>
         <p>
           Os dados são usados para autenticar contas, registrar palpites, calcular
-          rankings, administrar bolões, prevenir abuso, investigar erros e cumprir
+          rankings, permitir a gestão dos bolões, prevenir abuso, investigar erros e cumprir
           obrigações legais. O tratamento ocorre para executar o serviço solicitado
           pelo usuário e com base no legítimo interesse de manter a plataforma
           segura e funcional.
