@@ -118,6 +118,11 @@
   border-color: var(--line);
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
+}
+
 body {
   background:
     radial-gradient(circle at 5% -10%, rgba(223, 255, 101, 0.24), transparent 24rem),
@@ -131,6 +136,7 @@ body {
   color: var(--foreground);
   font-family: "Segoe UI", Arial, Helvetica, sans-serif;
   min-height: 100vh;
+  overflow-x: clip;
   text-rendering: optimizeLegibility;
 }
 
@@ -160,17 +166,38 @@ a {
 
 .carousel-rail-track {
   -webkit-overflow-scrolling: touch;
+  -webkit-user-drag: none;
   cursor: grab;
+  min-width: 0;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   scroll-behavior: smooth;
   touch-action: pan-x pan-y;
 }
 
+.carousel-rail-track :is(a, button, [role="button"]) {
+  -webkit-user-drag: none;
+  cursor: grab;
+}
+
+.carousel-rail-track img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 .carousel-rail-track[data-dragging="true"] {
   cursor: grabbing;
   scroll-behavior: auto;
   user-select: none;
+}
+
+.carousel-rail-track[data-dragging="true"] *,
+.carousel-rail-track[data-dragging="true"] :is(a, button, [role="button"]) {
+  cursor: grabbing;
+}
+
+.carousel-rail-track[data-dragging="true"] .interactive:active {
+  transform: none;
 }
 
 .carousel-rail-track::-webkit-scrollbar {
@@ -206,13 +233,25 @@ a {
 }
 
 .carousel-rail[data-center-mode="true"] .carousel-rail-item {
-  opacity: 0.82;
-  transform: scale(0.985);
+  opacity: 1;
+  transform: scale(1);
 }
 
 .carousel-rail[data-center-mode="true"] .carousel-rail-item[data-active="true"] {
   opacity: 1;
-  transform: scale(1.018);
+  transform: scale(1);
+}
+
+@media (min-width: 768px) {
+  .carousel-rail[data-center-mode="true"] .carousel-rail-item {
+    opacity: 0.86;
+    transform: scale(0.99);
+  }
+
+  .carousel-rail[data-center-mode="true"] .carousel-rail-item[data-active="true"] {
+    opacity: 1;
+    transform: scale(1.01);
+  }
 }
 
 .bg-brand.text-white {
@@ -671,6 +710,10 @@ textarea:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .interactive,
   .carousel-rail-item,
   .carousel-rail-track,

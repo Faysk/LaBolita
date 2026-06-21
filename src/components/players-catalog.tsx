@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BadgeInfo,
@@ -105,6 +105,7 @@ export function PlayersCatalog({
   const [sortMode, setSortMode] = useState<SortMode>("team");
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const normalizedSearch = normalizeText(search);
   const selectedTeam = teams.find((team) => team.code === teamCode) ?? null;
@@ -123,6 +124,7 @@ export function PlayersCatalog({
   }, [normalizedSearch, onlyStickers, players, position, sortMode, teamCode]);
 
   const visiblePlayers = filteredPlayers.slice(0, visibleCount);
+  const hasMorePlayers = visibleCount < filteredPlayers.length;
   const stickerTotal = players.filter((player) => player.sticker).length;
   const activeFilterCount =
     (teamCode === "all" ? 0 : 1) +
@@ -142,6 +144,24 @@ export function PlayersCatalog({
     setSortMode("team");
     resetVisible();
   }
+
+  useEffect(() => {
+    if (!hasMorePlayers || !loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+
+        setVisibleCount((current) =>
+          Math.min(filteredPlayers.length, current + PAGE_SIZE),
+        );
+      },
+      { rootMargin: "360px 0px" },
+    );
+
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [filteredPlayers.length, hasMorePlayers]);
 
   return (
     <section className="mt-8">
@@ -399,14 +419,22 @@ export function PlayersCatalog({
             </div>
           )}
 
-          {visiblePlayers.length < filteredPlayers.length ? (
+          {hasMorePlayers ? (
+            <div ref={loadMoreRef} aria-hidden="true" className="h-px" />
+          ) : null}
+
+          {hasMorePlayers ? (
             <div className="mt-5 flex justify-center">
               <button
                 type="button"
-                onClick={() => setVisibleCount((current) => current + PAGE_SIZE)}
+                onClick={() =>
+                  setVisibleCount((current) =>
+                    Math.min(filteredPlayers.length, current + PAGE_SIZE),
+                  )
+                }
                 className="interactive min-h-12 rounded-2xl border bg-surface px-5 text-sm font-black text-brand hover:border-brand/70"
               >
-                Mostrar mais jogadores
+                Mostrar mais jogadores ({filteredPlayers.length - visiblePlayers.length})
               </button>
             </div>
           ) : null}

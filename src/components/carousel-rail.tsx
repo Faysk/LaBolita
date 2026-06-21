@@ -27,6 +27,9 @@ type ScrollState = {
   activeIndex: number;
 };
 
+const defaultInitialCount = 12;
+const dragThreshold = 5;
+
 const initialScrollState: ScrollState = {
   canGoBack: false,
   canGoForward: false,
@@ -53,13 +56,19 @@ export function CarouselRail({
   const titleId = useId();
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({
+    captured: false,
     moved: false,
     pointerId: -1,
     startScrollLeft: 0,
     startX: 0,
+    startY: 0,
   });
   const items = Children.toArray(children).filter(Boolean);
-  const safeInitialCount = initialCount ? Math.max(1, initialCount) : items.length;
+  const safeInitialCount = initialCount
+    ? Math.max(1, initialCount)
+    : loadMode === "button"
+      ? items.length
+      : Math.min(items.length, defaultInitialCount);
   const safeStep = Math.max(1, step ?? safeInitialCount);
   const [visibleCount, setVisibleCount] = useState(safeInitialCount);
   const [scrollState, setScrollState] = useState(initialScrollState);
@@ -82,6 +91,16 @@ export function CarouselRail({
 
     track.scrollBy({
       left: direction * Math.max(260, track.clientWidth * 0.82),
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }
+
+  function scrollToEdge(edge: "start" | "end") {
+    const track = trackRef.current;
+    if (!track) return;
+
+    track.scrollTo({
+      left: edge === "start" ? 0 : track.scrollWidth - track.clientWidth,
       behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
   }
@@ -144,25 +163,50 @@ export function CarouselRail({
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     const target = event.target as Element;
     if (!dragScroll || event.button !== 0 || !event.isPrimary) return;
+    if (event.pointerType === "touch") return;
     if (target.closest("input, select, textarea")) return;
 
     dragRef.current = {
+      captured: false,
       moved: false,
       pointerId: event.pointerId,
       startScrollLeft: event.currentTarget.scrollLeft,
       startX: event.clientX,
+      startY: event.clientY,
     };
-    setDragging(true);
   }
 
   function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
     const drag = dragRef.current;
-    if (!dragging || drag.pointerId !== event.pointerId) return;
+    if (drag.pointerId !== event.pointerId) return;
 
     const delta = event.clientX - drag.startX;
-    if (Math.abs(delta) > 4) {
+    const verticalDelta = event.clientY - drag.startY;
+    const horizontalDistance = Math.abs(delta);
+    const verticalDistance = Math.abs(verticalDelta);
+
+    if (!drag.moved) {
+      if (
+        horizontalDistance < dragThreshold &&
+        verticalDistance < dragThreshold
+      ) {
+        return;
+      }
+
+      if (verticalDistance > horizontalDistance) {
+        drag.pointerId = -1;
+        return;
+      }
+
       drag.moved = true;
+      setDragging(true);
+      if (event.currentTarget.setPointerCapture) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.captured = true;
+      }
     }
+
+    event.preventDefault();
     event.currentTarget.scrollLeft = drag.startScrollLeft - delta;
   }
 
@@ -171,7 +215,19 @@ export function CarouselRail({
     if (drag.pointerId !== event.pointerId) return;
 
     setDragging(false);
+    if (
+      drag.captured &&
+      event.currentTarget.hasPointerCapture?.(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
     drag.pointerId = -1;
+    drag.captured = false;
+    window.setTimeout(() => {
+      if (dragRef.current.pointerId === -1) {
+        dragRef.current.moved = false;
+      }
+    }, 0);
   }
 
   function handleClickCapture(event: React.MouseEvent<HTMLDivElement>) {
@@ -198,12 +254,12 @@ export function CarouselRail({
       aria-labelledby={titleId}
       aria-roledescription="carrossel"
       data-center-mode={centerMode ? "true" : "false"}
-      className={`carousel-rail min-w-0 ${className}`}
+      className={`carousel-rail min-w-0 max-w-full overflow-hidden ${className}`}
     >
       <span id={titleId} className="sr-only">
         {ariaLabel}
       </span>
-      <div className="group/rail relative min-w-0">
+      <div className="group/rail relative min-w-0 max-w-full">
         <CarouselButton
           label={`Voltar em ${ariaLabel}`}
           direction="back"
@@ -215,12 +271,18 @@ export function CarouselRail({
           tabIndex={0}
           aria-live="polite"
           data-dragging={dragging ? "true" : "false"}
-          className={`carousel-rail-track grid snap-x snap-mandatory scroll-px-6 grid-flow-col overflow-x-auto py-2 ${trackClassName}`}
+          className={`carousel-rail-track grid w-full max-w-full snap-x snap-mandatory scroll-px-6 grid-flow-col overflow-x-auto py-2 ${trackClassName}`}
           onClickCapture={handleClickCapture}
+          onDragStart={(event) => event.preventDefault()}
           onPointerCancel={handlePointerEnd}
           onPointerDown={handlePointerDown}
           onPointerLeave={(event) => {
-            if (dragging) handlePointerEnd(event);
+            if (
+              dragRef.current.pointerId === event.pointerId &&
+              !dragRef.current.captured
+            ) {
+              handlePointerEnd(event);
+            }
           }}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
@@ -232,6 +294,14 @@ export function CarouselRail({
             if (event.key === "ArrowRight") {
               event.preventDefault();
               move(1);
+            }
+            if (event.key === "Home") {
+              event.preventDefault();
+              scrollToEdge("start");
+            }
+            if (event.key === "End") {
+              event.preventDefault();
+              scrollToEdge("end");
             }
           }}
         >

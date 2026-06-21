@@ -288,8 +288,8 @@ export function PoolsWorkspace({
 
   return (
     <main className="page-container py-7 md:py-10">
-      <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
+      <div className="flex min-w-0 flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
           <p className="eyebrow">Disputa com a turma</p>
           <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
             Bolões
@@ -298,18 +298,18 @@ export function PoolsWorkspace({
             Entre com a turma, compare palpites e acompanhe quem está subindo no ranking.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full min-w-0 flex-wrap gap-2 md:w-auto md:justify-end">
           <button
             type="button"
             onClick={() => requireLogin("join")}
-            className="interactive flex flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-extrabold text-brand md:flex-none"
+            className="interactive flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl border bg-white px-4 py-3 text-sm font-extrabold text-brand md:flex-none"
           >
             <LogIn className="size-4" /> Entrar com código
           </button>
           <button
             type="button"
             onClick={() => requireLogin("create")}
-            className="interactive flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-brand/20 md:flex-none"
+            className="interactive flex min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-extrabold text-white shadow-lg shadow-brand/20 md:flex-none"
           >
             <Plus className="size-4" /> Criar bolão
           </button>

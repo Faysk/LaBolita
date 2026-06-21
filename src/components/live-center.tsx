@@ -337,8 +337,8 @@ export function LiveCenter({
         </div>
       </section>
 
-      <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.8fr)]">
-        <article className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+      <section className="mt-6 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.8fr)]">
+        <article className="min-w-0 rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="eyebrow">{selectedMatch.stageLabel}</p>
@@ -407,7 +407,7 @@ export function LiveCenter({
           </div>
         </article>
 
-        <aside className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
+        <aside className="min-w-0 rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="eyebrow">Seu bolão</p>

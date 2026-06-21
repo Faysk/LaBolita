@@ -153,7 +153,7 @@ export function MobileNavigation() {
         <div
           id="mobile-more-navigation"
           role="menu"
-          className="fixed inset-x-2.5 bottom-[5.45rem] z-50 grid max-h-[calc(100dvh-7rem)] gap-1 overflow-y-auto rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/20 backdrop-blur-xl"
+          className="fixed inset-x-2.5 bottom-[5.45rem] z-50 grid max-h-[calc(100dvh-7rem)] min-w-0 gap-1 overflow-y-auto rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/20 backdrop-blur-xl"
         >
           <MenuHeader title="Mais caminhos" description="Início, agenda, dados e regras." />
           {mobileMenuNavigation.map((item) => (
@@ -167,7 +167,7 @@ export function MobileNavigation() {
         </div>
       ) : null}
       <nav
-        className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid grid-cols-5 rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl"
+        className="mobile-navigation fixed inset-x-2.5 bottom-2.5 z-50 grid min-w-0 grid-cols-5 overflow-hidden rounded-2xl border p-1.5 shadow-2xl shadow-brand/15 backdrop-blur-xl"
         aria-label="Menu principal"
       >
         {mobileQuickNavigation.map((item) => (
@@ -184,14 +184,14 @@ export function MobileNavigation() {
           aria-expanded={menuOpen}
           aria-controls="mobile-more-navigation"
           onClick={() => setMenuOpen((value) => !value)}
-          className={`interactive flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
+          className={`interactive flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
             menuActive || menuOpen
               ? "bg-brand text-white shadow-md shadow-brand/20"
               : "text-muted hover:bg-surface-muted hover:text-brand"
           }`}
         >
           {menuOpen ? <X className="size-4" /> : <Menu className="size-4" />}
-          Menu
+          <span className="max-w-full truncate">Menu</span>
         </button>
       </nav>
     </div>
@@ -234,14 +234,16 @@ function MobileNavigationLink({
       href={item.href}
       aria-current={active ? "page" : undefined}
       onClick={onClick}
-      className={`interactive flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
+      className={`interactive flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-xl px-0.5 py-1 text-[9px] font-bold sm:text-[10px] ${
         active
           ? "bg-brand text-white shadow-md shadow-brand/20"
           : "text-muted hover:bg-surface-muted hover:text-brand"
       }`}
     >
       <item.icon className="size-4" />
-      {item.mobileLabel ?? item.label}
+      <span className="max-w-full truncate">
+        {item.mobileLabel ?? item.label}
+      </span>
     </Link>
   );
 }

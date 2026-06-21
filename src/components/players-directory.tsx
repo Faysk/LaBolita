@@ -304,6 +304,7 @@ function PlayerStickerCard({
             width={asset.width}
             height={asset.height}
             className="size-full object-cover"
+            sizes="(max-width: 640px) 42vw, 9rem"
           />
         ) : (
           <div className="flex size-full items-center justify-center text-2xl font-black text-brand">
@@ -343,6 +344,7 @@ function PlayerMiniPortrait({ player }: { player: PlayerWithTeam }) {
         width={asset.width}
         height={asset.height}
         className="size-full object-cover object-top"
+        sizes="44px"
       />
     </span>
   );

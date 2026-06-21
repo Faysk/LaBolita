@@ -215,8 +215,8 @@ export function PredictionBoard({
         />
       ) : null}
 
-      <section id="prediction-board-filters" className="mb-6 grid scroll-mt-28 gap-3 md:grid-cols-[1fr_auto]">
-        <div className="card p-2">
+      <section id="prediction-board-filters" className="mb-6 grid min-w-0 scroll-mt-28 gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="card min-w-0 p-2">
           <CarouselRail
             ariaLabel="Filtros de palpites"
             centerMode={false}
@@ -237,7 +237,7 @@ export function PredictionBoard({
           ))}
           </CarouselRail>
         </div>
-        <div className="card flex items-center gap-3 px-4 py-3 text-sm">
+        <div className="card flex min-w-0 items-center gap-3 px-4 py-3 text-sm">
           <CircleDashed className="size-4 text-amber-600" />
           <span className="font-bold">{pendingMatches.length} pendentes</span>
           <span className="text-muted">de {openMatches.length} abertos</span>
