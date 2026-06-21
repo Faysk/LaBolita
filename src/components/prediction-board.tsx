@@ -14,6 +14,7 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { MatchCard, predictionMatchCardId } from "@/components/match-card";
 import { EmptyState } from "@/components/empty-state";
 import { PoolFlag } from "@/components/pool-flag";
@@ -215,7 +216,12 @@ export function PredictionBoard({
       ) : null}
 
       <section id="prediction-board-filters" className="mb-6 grid scroll-mt-28 gap-3 md:grid-cols-[1fr_auto]">
-        <div className="card flex gap-2 overflow-x-auto p-2" aria-label="Filtros de palpites">
+        <div className="card p-2">
+          <CarouselRail
+            ariaLabel="Filtros de palpites"
+            centerMode={false}
+            trackClassName="auto-cols-max gap-2 py-0"
+          >
           {filters.map(([value, label]) => (
             <button
               key={value}
@@ -229,6 +235,7 @@ export function PredictionBoard({
               {label}
             </button>
           ))}
+          </CarouselRail>
         </div>
         <div className="card flex items-center gap-3 px-4 py-3 text-sm">
           <CircleDashed className="size-4 text-amber-600" />
@@ -336,11 +343,13 @@ export function FinishedMatchesReview({
             <ReviewPill icon={Target} label="Visíveis" value={totals.predictionCount} />
           </div>
         </div>
-        <ProgressiveList
+        <CarouselRail
+          ariaLabel="Jogos finalizados para comparar"
           initialCount={10}
           step={10}
           moreLabel="Ver mais jogos"
-          className="mt-4 flex gap-3 overflow-x-auto pb-1"
+          className="mt-4"
+          trackClassName="auto-cols-[minmax(13rem,75vw)] gap-3 sm:auto-cols-[14rem]"
         >
           {matches.map((match) => (
             <FinishedMatchButton
@@ -351,7 +360,7 @@ export function FinishedMatchesReview({
               onClick={() => onSelectMatch(match.id)}
             />
           ))}
-        </ProgressiveList>
+        </CarouselRail>
       </div>
 
       <div className="grid gap-4 p-4 md:p-5 lg:grid-cols-[22rem_minmax(0,1fr)]">

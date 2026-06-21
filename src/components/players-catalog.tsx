@@ -18,6 +18,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { EmptyState } from "@/components/empty-state";
 import { TeamFlag } from "@/components/team-flag";
 import { specialMarketPath } from "@/lib/special-market-display";
@@ -283,7 +284,37 @@ export function PlayersCatalog({
               </p>
               <span className="text-xs font-black text-brand">{teams.length}</span>
             </div>
-            <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 xl:mx-0 xl:max-h-[32rem] xl:flex-col xl:overflow-y-auto xl:px-0">
+            <div className="-mx-4 mt-2 px-4 xl:hidden">
+              <CarouselRail
+                ariaLabel="Filtrar jogadores por seleção"
+                centerMode={false}
+                trackClassName="auto-cols-[minmax(10rem,70vw)] gap-2"
+              >
+                <TeamFilterButton
+                  active={teamCode === "all"}
+                  onClick={() => {
+                    setTeamCode("all");
+                    resetVisible();
+                  }}
+                  label="Todas"
+                  sublabel={`${players.length} atletas`}
+                />
+                {teams.map((team) => (
+                  <TeamFilterButton
+                    key={team.code}
+                    active={team.code === teamCode}
+                    onClick={() => {
+                      setTeamCode(team.code);
+                      resetVisible();
+                    }}
+                    team={team}
+                    label={team.shortName}
+                    sublabel={`${team.totalPlayers} atletas · ${team.stickerCount} fig.`}
+                  />
+                ))}
+              </CarouselRail>
+            </div>
+            <div className="mt-2 hidden max-h-[32rem] flex-col gap-2 overflow-y-auto xl:flex">
               <TeamFilterButton
                 active={teamCode === "all"}
                 onClick={() => {

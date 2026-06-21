@@ -35,6 +35,7 @@ import type {
   MasterPool,
   MasterUser,
 } from "@/lib/data/admin";
+import { CarouselRail } from "@/components/carousel-rail";
 import { CountryFlag } from "@/components/country-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { COUNTRIES } from "@/lib/countries";
@@ -144,11 +145,15 @@ export function MasterAdminConsole({ overview }: { overview: MasterOverview }) {
       <AdminCommandCenter summary={overview.summary} />
       <div className="bg-surface/35 p-5 md:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex gap-2 overflow-x-auto">
+          <CarouselRail
+            ariaLabel="Áreas do controle global"
+            centerMode={false}
+            trackClassName="auto-cols-max gap-2"
+          >
             <TabButton active={tab === "pools"} pending={pendingTab === "pools"} disabled={isNavigating} onClick={() => navigate("pools")} icon={Archive}>Bolões</TabButton>
             <TabButton active={tab === "users"} pending={pendingTab === "users"} disabled={isNavigating} onClick={() => navigate("users")} icon={Users}>Usuários</TabButton>
             <TabButton active={tab === "audit"} pending={pendingTab === "audit"} disabled={isNavigating} onClick={() => navigate("audit")} icon={History}>Auditoria</TabButton>
-          </div>
+          </CarouselRail>
           {tab !== "audit" && (
             <form
               onSubmit={(event) => {

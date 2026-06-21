@@ -20,6 +20,7 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { PageShortcuts } from "@/components/page-shortcuts";
 import { PoolFlag } from "@/components/pool-flag";
@@ -277,11 +278,12 @@ export function LiveCenter({
 
       {focusMatches.length > 1 ? (
         <section className="mt-5 min-w-0 max-w-full pb-2">
-          <ProgressiveList
+          <CarouselRail
+            ariaLabel="Jogos ao vivo e próximos"
             initialCount={6}
             step={6}
             moreLabel="Ver mais jogos"
-            className="flex gap-2 overflow-x-auto pb-1"
+            trackClassName="auto-cols-[minmax(16rem,82vw)] gap-2 sm:auto-cols-[16rem]"
           >
             {focusMatches.map((match) => (
               <button
@@ -309,7 +311,7 @@ export function LiveCenter({
                 </span>
               </button>
             ))}
-          </ProgressiveList>
+          </CarouselRail>
         </section>
       ) : null}
 
@@ -417,11 +419,14 @@ export function LiveCenter({
           </div>
 
           {poolOptions.length > 1 ? (
-            <ProgressiveList
+            <CarouselRail
+              ariaLabel="Bolões ao vivo"
+              centerMode={false}
               initialCount={5}
               step={5}
               moreLabel="Ver mais bolões"
-              className="mt-4 flex gap-2 overflow-x-auto pb-1"
+              className="mt-4"
+              trackClassName="auto-cols-max gap-2"
               buttonClassName="interactive mt-2 inline-flex items-center gap-2 rounded-full border bg-surface-muted px-3 py-1.5 text-[10px] font-black text-brand hover:border-brand/60"
             >
               {poolOptions.map((pool) => (
@@ -438,7 +443,7 @@ export function LiveCenter({
                   {pool.name}
                 </button>
               ))}
-            </ProgressiveList>
+            </CarouselRail>
           ) : null}
 
           <div className="mt-4 grid grid-cols-2 gap-3">

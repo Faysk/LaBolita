@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import { ArrowRight, Radio, Table2, Trophy } from "lucide-react";
+import { DragScrollArea } from "@/components/drag-scroll-area";
 import { LiveRefresh } from "@/components/live-refresh";
 import { TeamFlag } from "@/components/team-flag";
 import {
@@ -265,7 +266,7 @@ function KnockoutBracket({
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
+    <DragScrollArea ariaLabel="Chave da Copa" className="pb-4">
       <div
         className="relative"
         style={{
@@ -333,7 +334,7 @@ function KnockoutBracket({
           </div>
         )}
       </div>
-    </div>
+    </DragScrollArea>
   );
 }
 

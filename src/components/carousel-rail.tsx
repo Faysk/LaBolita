@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, useCallback, useEffect, useId, useRef, useState } from "react";
+import { Children, useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 
 type CarouselRailProps = {
@@ -8,6 +8,9 @@ type CarouselRailProps = {
   ariaLabel: string;
   initialCount?: number;
   step?: number;
+  loadMode?: "auto" | "button" | "both";
+  centerMode?: boolean;
+  dragScroll?: boolean;
   moreLabel?: string;
   lessLabel?: string;
   className?: string;
@@ -21,12 +24,14 @@ type ScrollState = {
   canGoBack: boolean;
   canGoForward: boolean;
   progress: number;
+  activeIndex: number;
 };
 
 const initialScrollState: ScrollState = {
   canGoBack: false,
   canGoForward: false,
   progress: 1,
+  activeIndex: 0,
 };
 
 export function CarouselRail({
@@ -34,6 +39,9 @@ export function CarouselRail({
   ariaLabel,
   initialCount,
   step,
+  loadMode = "auto",
+  centerMode = true,
+  dragScroll = true,
   moreLabel = "Ver mais",
   lessLabel = "Mostrar menos",
   className = "",
@@ -44,66 +52,135 @@ export function CarouselRail({
 }: CarouselRailProps) {
   const titleId = useId();
   const trackRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({
+    moved: false,
+    pointerId: -1,
+    startScrollLeft: 0,
+    startX: 0,
+  });
   const items = Children.toArray(children).filter(Boolean);
   const safeInitialCount = initialCount ? Math.max(1, initialCount) : items.length;
   const safeStep = Math.max(1, step ?? safeInitialCount);
   const [visibleCount, setVisibleCount] = useState(safeInitialCount);
   const [scrollState, setScrollState] = useState(initialScrollState);
+  const [dragging, setDragging] = useState(false);
   const hasExpandableItems = items.length > safeInitialCount;
   const hasMore = visibleCount < items.length;
   const hiddenCount = Math.max(0, items.length - visibleCount);
   const visibleItems = items.slice(0, visibleCount);
+  const shouldAutoLoad = loadMode !== "button";
+  const shouldShowLoadButton = loadMode !== "auto";
   const expandLabel = summaryLabel
     ? summaryLabel(hiddenCount, items.length)
     : hiddenCount > 0
       ? `${moreLabel} (${hiddenCount})`
       : moreLabel;
 
-  const updateScrollState = useCallback(() => {
+  function move(direction: -1 | 1) {
     const track = trackRef.current;
     if (!track) return;
 
-    const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
-    const current = Math.min(maxScroll, Math.max(0, track.scrollLeft));
-
-    setScrollState({
-      canGoBack: current > 2,
-      canGoForward: current < maxScroll - 2,
-      progress: maxScroll > 0 ? Math.max(0.08, current / maxScroll) : 1,
+    track.scrollBy({
+      left: direction * Math.max(260, track.clientWidth * 0.82),
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
     });
-  }, []);
-
-  const move = useCallback(
-    (direction: -1 | 1) => {
-      const track = trackRef.current;
-      if (!track) return;
-
-      track.scrollBy({
-        left: direction * Math.max(260, track.clientWidth * 0.82),
-        behavior: prefersReducedMotion() ? "auto" : "smooth",
-      });
-    },
-    [],
-  );
+  }
 
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
+    const activeTrack = track;
+
+    function updateScrollState() {
+      const maxScroll = Math.max(0, activeTrack.scrollWidth - activeTrack.clientWidth);
+      const current = Math.min(maxScroll, Math.max(0, activeTrack.scrollLeft));
+      const activeIndex = activeItemIndex(activeTrack);
+      const nextState = {
+        canGoBack: current > 2,
+        canGoForward: current < maxScroll - 2,
+        progress: maxScroll > 0 ? Math.max(0.08, current / maxScroll) : 1,
+        activeIndex,
+      };
+
+      setScrollState((previous) => {
+        if (
+          previous.canGoBack === nextState.canGoBack &&
+          previous.canGoForward === nextState.canGoForward &&
+          previous.progress === nextState.progress &&
+          previous.activeIndex === nextState.activeIndex
+        ) {
+          return previous;
+        }
+
+        return nextState;
+      });
+
+      if (!shouldAutoLoad || visibleCount >= items.length) return;
+
+      const nearEnd = maxScroll - current < Math.max(180, activeTrack.clientWidth * 0.65);
+      const needsMoreToOverflow = maxScroll < 8;
+      if (nearEnd || needsMoreToOverflow) {
+        setVisibleCount((currentCount) =>
+          Math.min(items.length, currentCount + safeStep),
+        );
+      }
+    }
 
     updateScrollState();
 
     const resizeObserver = new ResizeObserver(updateScrollState);
-    resizeObserver.observe(track);
+    resizeObserver.observe(activeTrack);
 
-    track.addEventListener("scroll", updateScrollState, { passive: true });
+    activeTrack.addEventListener("scroll", updateScrollState, { passive: true });
     window.addEventListener("resize", updateScrollState);
 
     return () => {
       resizeObserver.disconnect();
-      track.removeEventListener("scroll", updateScrollState);
+      activeTrack.removeEventListener("scroll", updateScrollState);
       window.removeEventListener("resize", updateScrollState);
     };
-  }, [updateScrollState, visibleCount]);
+  }, [items.length, safeStep, shouldAutoLoad, visibleCount]);
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    const target = event.target as Element;
+    if (!dragScroll || event.button !== 0 || !event.isPrimary) return;
+    if (target.closest("input, select, textarea")) return;
+
+    dragRef.current = {
+      moved: false,
+      pointerId: event.pointerId,
+      startScrollLeft: event.currentTarget.scrollLeft,
+      startX: event.clientX,
+    };
+    setDragging(true);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!dragging || drag.pointerId !== event.pointerId) return;
+
+    const delta = event.clientX - drag.startX;
+    if (Math.abs(delta) > 4) {
+      drag.moved = true;
+    }
+    event.currentTarget.scrollLeft = drag.startScrollLeft - delta;
+  }
+
+  function handlePointerEnd(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (drag.pointerId !== event.pointerId) return;
+
+    setDragging(false);
+    drag.pointerId = -1;
+  }
+
+  function handleClickCapture(event: React.MouseEvent<HTMLDivElement>) {
+    if (!dragRef.current.moved) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    dragRef.current.moved = false;
+  }
 
   function toggleVisibleItems() {
     setVisibleCount((current) => {
@@ -120,6 +197,7 @@ export function CarouselRail({
     <section
       aria-labelledby={titleId}
       aria-roledescription="carrossel"
+      data-center-mode={centerMode ? "true" : "false"}
       className={`carousel-rail min-w-0 ${className}`}
     >
       <span id={titleId} className="sr-only">
@@ -136,7 +214,16 @@ export function CarouselRail({
           ref={trackRef}
           tabIndex={0}
           aria-live="polite"
-          className={`carousel-rail-track grid snap-x snap-mandatory scroll-px-1 grid-flow-col overflow-x-auto pb-2 ${trackClassName}`}
+          data-dragging={dragging ? "true" : "false"}
+          className={`carousel-rail-track grid snap-x snap-mandatory scroll-px-6 grid-flow-col overflow-x-auto py-2 ${trackClassName}`}
+          onClickCapture={handleClickCapture}
+          onPointerCancel={handlePointerEnd}
+          onPointerDown={handlePointerDown}
+          onPointerLeave={(event) => {
+            if (dragging) handlePointerEnd(event);
+          }}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft") {
               event.preventDefault();
@@ -154,7 +241,8 @@ export function CarouselRail({
               role="group"
               aria-roledescription="slide"
               aria-label={`${index + 1} de ${items.length}`}
-              className={`min-w-0 snap-start scroll-ml-1 ${itemClassName}`}
+              data-active={centerMode && index === scrollState.activeIndex ? "true" : "false"}
+              className={`carousel-rail-item min-w-0 snap-center ${itemClassName}`}
             >
               {item}
             </div>
@@ -185,7 +273,7 @@ export function CarouselRail({
           style={{ transform: `scaleX(${scrollState.progress})` }}
         />
       </div>
-      {hasExpandableItems ? (
+      {hasExpandableItems && shouldShowLoadButton ? (
         <button
           type="button"
           aria-expanded={!hasMore}
@@ -241,6 +329,28 @@ function CarouselButton({
       <Icon className="size-4" />
     </button>
   );
+}
+
+function activeItemIndex(track: HTMLDivElement) {
+  const items = Array.from(track.children) as HTMLElement[];
+  if (items.length === 0) return 0;
+
+  const trackBox = track.getBoundingClientRect();
+  const trackCenter = trackBox.left + trackBox.width / 2;
+  let bestIndex = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  items.forEach((item, index) => {
+    const box = item.getBoundingClientRect();
+    const itemCenter = box.left + box.width / 2;
+    const distance = Math.abs(trackCenter - itemCenter);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index;
+    }
+  });
+
+  return bestIndex;
 }
 
 function prefersReducedMotion() {

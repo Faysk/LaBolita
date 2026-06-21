@@ -53,7 +53,7 @@ try {
   await page.getByRole("heading", { name: /A Copa fica fácil de acompanhar|Tem jogo valendo bolão agora/ }).waitFor();
   await page.getByText("Modo demonstração: agenda parcial").waitFor();
   await page.getByRole("heading", { name: /Próximos jogos|Agora ao vivo/ }).waitFor();
-  await page.getByRole("button", { name: /Ver mais .*jogos/ }).first().waitFor();
+  await page.getByRole("region", { name: /Próximos jogos|Jogos ao vivo/ }).waitFor();
   await page.getByTestId(/^timeline-match-/).first().waitFor();
   await waitForFlagFallbacks(page);
 
@@ -144,10 +144,11 @@ try {
   await page.getByTestId("prediction-workbench-summary").getByText("Próxima ação").waitFor();
   await page.getByTestId("prediction-next-action").waitFor();
   await waitForFlagFallbacks(page);
-  await page.getByRole("button", { name: "Mata-mata" }).click();
+  const predictionFilters = page.getByRole("region", { name: "Filtros de palpites" });
+  await predictionFilters.getByRole("button", { name: "Mata-mata" }).click();
   await page.getByTestId("match-match-9").waitFor();
-  assert.equal(await page.getByTestId("match-match-1").count(), 0);
-  await page.getByRole("button", { name: "Todos" }).click();
+  assert.equal(await predictionFilters.getByRole("button", { name: "Mata-mata" }).getAttribute("aria-pressed"), "true");
+  await predictionFilters.getByRole("button", { name: "Todos" }).click();
   await page.getByRole("button", { name: "Por data" }).click();
   assert.equal(await page.getByRole("button", { name: "Por data" }).getAttribute("aria-pressed"), "true");
   await page.getByRole("button", { name: "Por fase" }).click();
@@ -249,15 +250,17 @@ try {
     .first()
     .getByText("Pontos do placar")
     .waitFor();
+  await page.goto(`${BASE_URL}/palpites?jogo=match-1#lista-de-jogos`);
   await page
     .getByTestId("match-match-1")
     .getByText("Seu palpite rendeu 10 pontos")
     .waitFor();
+  assert.equal(await page.getByTestId("match-match-1").getByLabel("Gols de México").isDisabled(), true);
+  await page.goto(`${BASE_URL}/palpites?jogo=match-9#lista-de-jogos`);
   await page
     .getByTestId("match-match-9")
     .getByText("Seu palpite rendeu 53 pontos")
     .waitFor();
-  assert.equal(await page.getByTestId("match-match-1").getByLabel("Gols de México").isDisabled(), true);
   await page.goto(`${BASE_URL}/palpites?jogo=match-9#lista-de-jogos`);
   await page.getByTestId("finished-review-selected-match").getByText("Final · simulação").waitFor();
   await page.getByTestId("match-match-9").getByText("Jogo aberto pela agenda").waitFor();
@@ -364,7 +367,7 @@ try {
   await page.goto(`${BASE_URL}/painel`);
   await page.getByRole("heading", { name: "Meu painel" }).waitFor();
   await page.getByText("Ranking em movimento").waitFor();
-  await page.getByText("Bolões em movimento").waitFor();
+  await page.getByRole("region", { name: "Bolões em movimento" }).waitFor();
   await page.getByText("mantém").first().waitFor();
   await page.getByRole("button", { name: /Faysk/ }).first().click();
   await page.getByText(/pts atrás de|na disputa pela ponta/).first().waitFor();

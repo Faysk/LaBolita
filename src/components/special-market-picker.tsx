@@ -1,7 +1,7 @@
 "use client";
 
 import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +16,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import { CarouselRail } from "@/components/carousel-rail";
 import {
   SpecialOptionAvatar,
   SpecialOptionSticker,
@@ -95,6 +96,7 @@ export function SpecialMarketPicker({
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_OPTIONS);
   const [sync, setSync] = useState<SyncState>({});
   const [drag, setDrag] = useState<DeckDrag>({});
+  const optionsSentinelRef = useRef<HTMLDivElement>(null);
 
   const selectedOptions = selectedKeys
     .map((key) => optionByKey.get(key))
@@ -149,6 +151,31 @@ export function SpecialMarketPicker({
       ? "Pronto para salvar"
       : "Complete o palpite";
   const deckRailOptions = nearbyDeckOptions(deckOptions, safeActiveIndex, 7);
+  const loadMoreOptions = useCallback(() => {
+    setVisibleCount((current) =>
+      current >= filteredOptions.length
+        ? current
+        : Math.min(filteredOptions.length, current + OPTIONS_PAGE_SIZE),
+    );
+  }, [filteredOptions.length]);
+
+  useEffect(() => {
+    if (visibleOptions.length >= filteredOptions.length || !optionsSentinelRef.current) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadMoreOptions();
+        }
+      },
+      { rootMargin: "320px 0px" },
+    );
+
+    observer.observe(optionsSentinelRef.current);
+    return () => observer.disconnect();
+  }, [filteredOptions.length, loadMoreOptions, visibleOptions.length]);
 
   function chooseOption(option: SpecialOption) {
     if (market.locked || sync.busy) return;
@@ -613,7 +640,12 @@ export function SpecialMarketPicker({
           <QuickSearchMetric label="Selecionadas" value={selectedOptions.length} />
           <QuickSearchMetric label="Escondidas" value={hiddenOptionCount} />
         </div>
-        <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1">
+        <CarouselRail
+          ariaLabel="Filtros de cartas especiais"
+          centerMode={false}
+          className="-mx-1 mt-3 px-1"
+          trackClassName="auto-cols-max gap-2"
+        >
           {filterOptions.map((option) => {
             const active = option.value === effectiveFilter;
             return (
@@ -642,7 +674,7 @@ export function SpecialMarketPicker({
               </button>
             );
           })}
-        </div>
+        </CarouselRail>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visibleOptions.map((option) => (
             <OptionCard
@@ -657,6 +689,9 @@ export function SpecialMarketPicker({
             />
           ))}
         </div>
+        {visibleOptions.length < filteredOptions.length ? (
+          <div ref={optionsSentinelRef} aria-hidden="true" className="h-px" />
+        ) : null}
         {filteredOptions.length === 0 ? (
           <EmptyState
             icon={Search}
@@ -677,7 +712,7 @@ export function SpecialMarketPicker({
           <div className="mt-5 flex justify-center">
             <button
               type="button"
-              onClick={() => setVisibleCount((current) => current + OPTIONS_PAGE_SIZE)}
+              onClick={loadMoreOptions}
               className="interactive min-h-11 rounded-2xl border bg-surface px-5 text-sm font-black text-brand hover:border-brand/70"
             >
               Mostrar mais figurinhas ({hiddenOptionCount})
@@ -783,7 +818,11 @@ function DeckRail({
   onSelect: (option: SpecialOption) => void;
 }) {
   return (
-    <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 md:-mx-5 md:px-5">
+    <CarouselRail
+      ariaLabel="Baralho de opções especiais"
+      className="-mx-4 mt-4 px-4 md:-mx-5 md:px-5"
+      trackClassName="auto-cols-[7rem] gap-2"
+    >
       {options.map((option) => {
         const active = option.key === activeKey;
         const selected = selectedKeys.includes(option.key);
@@ -810,7 +849,7 @@ function DeckRail({
           </button>
         );
       })}
-    </div>
+    </CarouselRail>
   );
 }
 

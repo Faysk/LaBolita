@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { CountryFlag } from "@/components/country-flag";
 import { EmptyState } from "@/components/empty-state";
 import { PageShortcuts } from "@/components/page-shortcuts";
@@ -696,7 +697,10 @@ function PoolQuickSwitch({
         </div>
         <BarChart3 className="size-5 text-brand" />
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <CarouselRail
+        ariaLabel="Alternar bolão"
+        trackClassName="auto-cols-[minmax(12rem,82vw)] gap-2 sm:auto-cols-[12rem]"
+      >
         {snapshots.map((snapshot) => {
           const pool = snapshot.pool;
           const selected = pool.id === selectedPoolId;
@@ -728,7 +732,7 @@ function PoolQuickSwitch({
             </button>
           );
         })}
-      </div>
+      </CarouselRail>
     </section>
   );
 }

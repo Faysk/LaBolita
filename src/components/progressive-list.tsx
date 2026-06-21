@@ -1,6 +1,6 @@
 "use client";
 
-import { Children, useState } from "react";
+import { Children, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 export function ProgressiveList({
@@ -12,6 +12,7 @@ export function ProgressiveList({
   moreLabel = "Ver mais",
   lessLabel = "Mostrar menos",
   summaryLabel,
+  autoLoad = true,
 }: {
   children: React.ReactNode;
   initialCount: number;
@@ -21,7 +22,9 @@ export function ProgressiveList({
   moreLabel?: string;
   lessLabel?: string;
   summaryLabel?: (hiddenCount: number, totalCount: number) => string;
+  autoLoad?: boolean;
 }) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const items = Children.toArray(children).filter(Boolean);
   const safeInitialCount = Math.max(1, initialCount);
   const safeStep = Math.max(1, step ?? initialCount);
@@ -35,9 +38,32 @@ export function ProgressiveList({
       ? `${moreLabel} (${hiddenCount})`
       : moreLabel;
 
+  useEffect(() => {
+    if (!autoLoad || !hasMore || !sentinelRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisibleCount((current) =>
+            current >= items.length
+              ? current
+              : Math.min(items.length, current + safeStep),
+          );
+        }
+      },
+      { rootMargin: "260px 0px" },
+    );
+
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [autoLoad, hasMore, items.length, safeStep]);
+
   return (
     <>
       <div className={className}>{visibleItems}</div>
+      {items.length > safeInitialCount && hasMore ? (
+        <div ref={sentinelRef} aria-hidden="true" className="h-px" />
+      ) : null}
       {items.length > safeInitialCount ? (
         <button
           type="button"

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { EmptyState } from "@/components/empty-state";
 import { TeamFlag } from "@/components/team-flag";
 import { storeLocalResult, useLocalResults } from "@/lib/local-state";
@@ -82,7 +83,11 @@ export function AdminMatchQueue({
   return (
     <div>
       <div className="border-b bg-surface-muted/75 p-4 md:p-5">
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <CarouselRail
+          ariaLabel="Filtros da fila admin"
+          centerMode={false}
+          trackClassName="auto-cols-max gap-2"
+        >
           {([
             ...(liveCount > 0
               ? [["live", "Ao vivo", liveCount] as const]
@@ -107,7 +112,7 @@ export function AdminMatchQueue({
               {label} · {count}
             </button>
           ))}
-        </div>
+        </CarouselRail>
         <label className="relative mt-2 block">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <input

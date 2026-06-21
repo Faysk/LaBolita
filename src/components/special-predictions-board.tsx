@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CarouselRail } from "@/components/carousel-rail";
 import { LinkPendingLabel, LinkPendingOverlay } from "@/components/link-pending-feedback";
 import { ProgressiveList } from "@/components/progressive-list";
 import {
@@ -177,11 +178,14 @@ export function SpecialPredictionsBoard({
               Bloqueia em {SPECIAL_LOCK_DATE_LABEL}
             </p>
           </div>
-          <ProgressiveList
+          <CarouselRail
+            ariaLabel="Especiais abertos"
+            centerMode={false}
             initialCount={6}
             step={6}
             moreLabel="Ver mais abertos"
-            className="mt-4 flex gap-2 overflow-x-auto pb-1"
+            className="mt-4"
+            trackClassName="auto-cols-max gap-2"
           >
             {progress.openPending.map((market) => {
               const display = specialMarketDisplay(market.key);
@@ -199,7 +203,7 @@ export function SpecialPredictionsBoard({
                 </Link>
               );
             })}
-          </ProgressiveList>
+          </CarouselRail>
         </section>
       ) : null}
 
@@ -681,44 +685,46 @@ function SpecialProgressRail({ markets }: { markets: SpecialMarketView[] }) {
         </div>
         <p className="text-xs font-black text-muted">Prazo: {SPECIAL_LOCK_DATE_LABEL}</p>
       </div>
-      <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-1">
-        <div className="grid auto-cols-[12rem] grid-flow-col gap-2">
-          {markets.map((market, index) => {
-            const display = specialMarketDisplay(market.key);
-            const Icon = display.icon;
-            const completed = market.predictions.length === market.pickCount;
-            const statusClass = completed
-              ? "status-success"
-              : market.locked
-                ? "status-neutral"
-                : "status-warning";
+      <CarouselRail
+        ariaLabel="Mapa dos palpites finais"
+        className="-mx-4 mt-4 px-4"
+        trackClassName="auto-cols-[12rem] gap-2"
+      >
+        {markets.map((market, index) => {
+          const display = specialMarketDisplay(market.key);
+          const Icon = display.icon;
+          const completed = market.predictions.length === market.pickCount;
+          const statusClass = completed
+            ? "status-success"
+            : market.locked
+              ? "status-neutral"
+              : "status-warning";
 
-            return (
-              <Link
-                key={market.key}
-                href={specialMarketPath(market.key)}
-                prefetch={false}
-                className={`interactive relative min-h-28 rounded-2xl border bg-surface-muted p-3 hover:border-brand/70 ${completed ? "bg-success-bg/60" : ""}`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="inline-flex size-9 items-center justify-center rounded-xl bg-surface text-brand">
-                    <Icon className="size-4" />
-                  </span>
-                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${statusClass}`}>
-                    {completed ? "OK" : market.locked ? "Fechado" : "Aberto"}
-                  </span>
-                </div>
-                <p className="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-muted">
-                  {String(index + 1).padStart(2, "0")}
-                </p>
-                <p className="mt-1 line-clamp-2 text-sm font-black leading-tight">
-                  {display.shortTitle}
-                </p>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+          return (
+            <Link
+              key={market.key}
+              href={specialMarketPath(market.key)}
+              prefetch={false}
+              className={`interactive relative block min-h-28 rounded-2xl border bg-surface-muted p-3 hover:border-brand/70 ${completed ? "bg-success-bg/60" : ""}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="inline-flex size-9 items-center justify-center rounded-xl bg-surface text-brand">
+                  <Icon className="size-4" />
+                </span>
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${statusClass}`}>
+                  {completed ? "OK" : market.locked ? "Fechado" : "Aberto"}
+                </span>
+              </div>
+              <p className="mt-3 text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+                {String(index + 1).padStart(2, "0")}
+              </p>
+              <p className="mt-1 line-clamp-2 text-sm font-black leading-tight">
+                {display.shortTitle}
+              </p>
+            </Link>
+          );
+        })}
+      </CarouselRail>
     </section>
   );
 }

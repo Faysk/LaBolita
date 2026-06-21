@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { CarouselRail } from "@/components/carousel-rail";
 import { appRouteList, type AppRoute, type AppRouteKey } from "@/lib/app-routes";
 
 export function PageShortcuts({
@@ -18,7 +19,17 @@ export function PageShortcuts({
 
   return (
     <nav aria-label={label} className={`min-w-0 ${className}`}>
-      <div className="flex gap-2 overflow-x-auto pb-1 md:grid md:grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] md:overflow-visible md:pb-0">
+      <CarouselRail
+        ariaLabel={label}
+        centerMode={false}
+        className="md:hidden"
+        trackClassName="auto-cols-[13rem] gap-2"
+      >
+        {shortcuts.map((item) => (
+          <ShortcutCard key={item.href} item={item} />
+        ))}
+      </CarouselRail>
+      <div className="hidden gap-2 md:grid md:grid-cols-[repeat(auto-fit,minmax(12rem,1fr))]">
         {shortcuts.map((item) => (
           <ShortcutCard key={item.href} item={item} />
         ))}

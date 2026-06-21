@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { CarouselRail } from "@/components/carousel-rail";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { EmptyState } from "@/components/empty-state";
 import { PageShortcuts } from "@/components/page-shortcuts";
@@ -330,11 +331,13 @@ function LivePanel({
           Pontos mudando em tempo real
         </h2>
         {liveMatches.length > 1 ? (
-          <ProgressiveList
+          <CarouselRail
+            ariaLabel="Jogos ao vivo do painel"
             initialCount={4}
             step={4}
             moreLabel="Ver mais jogos ao vivo"
-            className="mt-5 flex gap-2 overflow-x-auto pb-1"
+            className="mt-5"
+            trackClassName="auto-cols-[13rem] gap-2"
             buttonClassName="interactive mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-black text-accent hover:bg-white/15"
           >
             {liveMatches.map((item) => (
@@ -362,7 +365,7 @@ function LivePanel({
                 </span>
               </button>
             ))}
-          </ProgressiveList>
+          </CarouselRail>
         ) : null}
         <div className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
@@ -723,11 +726,12 @@ function PoolSnapshotStrip({
       <p className="mb-2 text-xs font-black uppercase tracking-[0.12em] text-muted">
         Bolões em movimento
       </p>
-      <ProgressiveList
+      <CarouselRail
+        ariaLabel="Bolões em movimento"
         initialCount={4}
         step={4}
         moreLabel="Ver mais bolões"
-        className="flex gap-3 overflow-x-auto pb-1"
+        trackClassName="auto-cols-[minmax(15rem,82vw)] gap-3 sm:auto-cols-[15rem]"
       >
         {snapshots.map((snapshot) => {
           const selected = snapshot.pool.id === selectedPoolId;
@@ -773,7 +777,7 @@ function PoolSnapshotStrip({
             </button>
           );
         })}
-      </ProgressiveList>
+      </CarouselRail>
     </div>
   );
 }
