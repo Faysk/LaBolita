@@ -139,6 +139,8 @@ try {
 
   await page.goto(`${BASE_URL}/palpites`);
   await page.getByRole("heading", { name: "Meus palpites" }).waitFor();
+  await page.getByTestId("prediction-workbench-summary").getByText("Próxima ação").waitFor();
+  await page.getByTestId("prediction-next-action").waitFor();
   await waitForFlagFallbacks(page);
   await page.getByRole("button", { name: "Mata-mata" }).click();
   await page.getByTestId("match-match-9").waitFor();

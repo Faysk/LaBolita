@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowRight,
   BarChart3,
   CalendarDays,
   CheckCircle2,
@@ -61,6 +62,7 @@ export function PredictionBoard({
     (match) => !match.locked && !match.result && !results[match.id],
   );
   const pendingMatches = openMatches.filter((match) => !isComplete(match));
+  const savedMatches = openMatches.filter(isComplete);
   const liveMatches = matches.filter(isLiveMatch);
   const finishedMatches = matches.filter(
     (match) =>
@@ -68,6 +70,14 @@ export function PredictionBoard({
       Boolean(resultForMatch(match)) ||
       match.providerStatus === "finished",
   );
+  const matchesWithScore = finishedMatches.filter((match) =>
+    Boolean(resultForMatch(match) ?? match.liveResult),
+  );
+  const nextPendingMatch = selectNextPendingMatch(pendingMatches);
+  const completionPercent =
+    openMatches.length > 0
+      ? Math.round(((openMatches.length - pendingMatches.length) / openMatches.length) * 100)
+      : 100;
   const focusedFinishedMatch = focusedMatch
     ? finishedMatches.find((match) => match.id === focusedMatch.id)
     : undefined;
@@ -159,8 +169,39 @@ export function PredictionBoard({
     };
   }, [focusedFinishedMatchId, resolvedFocusMatchId]);
 
+  function focusBoardMatch(matchId: string | undefined, nextFilter: PredictionFilter) {
+    setFilter(nextFilter);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const element = matchId
+          ? document.getElementById(predictionMatchCardId(matchId))
+          : document.getElementById("prediction-board-filters");
+        element?.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (matchId) element?.focus({ preventScroll: true });
+      });
+    });
+  }
+
   return (
     <>
+      <PredictionCommandCenter
+        nextPendingMatch={nextPendingMatch}
+        pendingCount={pendingMatches.length}
+        openCount={openMatches.length}
+        savedCount={savedMatches.length}
+        finishedCount={finishedMatches.length}
+        scoredCount={matchesWithScore.length}
+        totalCount={matches.length}
+        liveCount={liveMatches.length}
+        completionPercent={completionPercent}
+        onOpenNextPending={() =>
+          nextPendingMatch
+            ? focusBoardMatch(nextPendingMatch.id, "pending")
+            : focusBoardMatch(undefined, finishedMatches.length > 0 ? "locked" : "all")
+        }
+        onSelectFilter={(nextFilter) => focusBoardMatch(undefined, nextFilter)}
+      />
+
       {finishedMatches.length > 0 && selectedFinishedMatch ? (
         <FinishedMatchesReview
           matches={finishedMatches}
@@ -173,7 +214,7 @@ export function PredictionBoard({
         />
       ) : null}
 
-      <section className="mb-6 grid gap-3 md:grid-cols-[1fr_auto]">
+      <section id="prediction-board-filters" className="mb-6 grid scroll-mt-28 gap-3 md:grid-cols-[1fr_auto]">
         <div className="card flex gap-2 overflow-x-auto p-2" aria-label="Filtros de palpites">
           {filters.map(([value, label]) => (
             <button
@@ -387,6 +428,147 @@ export function FinishedMatchesReview({
         </div>
       </div>
     </section>
+  );
+}
+
+function PredictionCommandCenter({
+  nextPendingMatch,
+  pendingCount,
+  openCount,
+  savedCount,
+  finishedCount,
+  scoredCount,
+  totalCount,
+  liveCount,
+  completionPercent,
+  onOpenNextPending,
+  onSelectFilter,
+}: {
+  nextPendingMatch: DemoMatch | null;
+  pendingCount: number;
+  openCount: number;
+  savedCount: number;
+  finishedCount: number;
+  scoredCount: number;
+  totalCount: number;
+  liveCount: number;
+  completionPercent: number;
+  onOpenNextPending: () => void;
+  onSelectFilter: (nextFilter: PredictionFilter) => void;
+}) {
+  return (
+    <section
+      data-testid="prediction-workbench-summary"
+      className="mb-6 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,0.7fr))]"
+    >
+      <button
+        type="button"
+        data-testid="prediction-next-action"
+        onClick={onOpenNextPending}
+        className={`interactive rounded-[1.25rem] border p-4 text-left shadow-sm ${
+          nextPendingMatch ? "status-warning" : "status-success"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+            <Target className="size-4" />
+            Próxima ação
+          </span>
+          <ArrowRight className="size-4 text-brand" />
+        </div>
+        <p className="mt-3 text-xl font-black">
+          {nextPendingMatch
+            ? `${nextPendingMatch.homeTeam.shortName} x ${nextPendingMatch.awayTeam.shortName}`
+            : "Tudo encaminhado"}
+        </p>
+        <p className="mt-1 text-xs font-bold text-muted">
+          {nextPendingMatch
+            ? `${nextPendingMatch.stageLabel} · ${nextPendingMatch.dateLabel} ${nextPendingMatch.timeLabel}`
+            : finishedCount > 0
+              ? "abra os finalizados para comparar"
+              : "sem jogo aberto agora"}
+        </p>
+      </button>
+
+      <PredictionSummaryButton
+        icon={CircleDashed}
+        label="Pendentes"
+        value={pendingCount}
+        detail={`${openCount} abertos`}
+        tone={pendingCount > 0 ? "warning" : "neutral"}
+        onClick={() => onSelectFilter("pending")}
+      />
+      <PredictionSummaryButton
+        icon={CheckCircle2}
+        label="Salvos"
+        value={savedCount}
+        detail={`${completionPercent}% dos abertos`}
+        tone="success"
+        onClick={() => onSelectFilter("saved")}
+      />
+      <PredictionSummaryButton
+        icon={Trophy}
+        label="Finalizados"
+        value={finishedCount}
+        detail={`${scoredCount} com placar`}
+        tone="info"
+        onClick={() => onSelectFilter("locked")}
+      />
+      <PredictionSummaryButton
+        icon={ListChecks}
+        label={liveCount > 0 ? "Ao vivo" : "Agenda"}
+        value={liveCount > 0 ? liveCount : totalCount}
+        detail={liveCount > 0 ? "com parcial" : "calendário completo"}
+        tone={liveCount > 0 ? "live" : "neutral"}
+        onClick={() => onSelectFilter(liveCount > 0 ? "live" : "all")}
+      />
+    </section>
+  );
+}
+
+function PredictionSummaryButton({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone,
+  onClick,
+}: {
+  icon: typeof Target;
+  label: string;
+  value: number;
+  detail: string;
+  tone: "neutral" | "info" | "success" | "warning" | "live";
+  onClick: () => void;
+}) {
+  const toneClass =
+    tone === "success"
+      ? "status-success"
+      : tone === "warning"
+        ? "status-warning"
+        : tone === "live"
+          ? "status-live"
+          : tone === "info"
+            ? "status-info"
+            : "bg-surface";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`interactive rounded-[1.25rem] border p-4 text-left shadow-sm ${toneClass}`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <Icon className={`size-4 ${tone === "live" ? "live-icon" : ""}`} />
+        <p className="text-right text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+          {label}
+        </p>
+      </div>
+      <p className={`mt-3 text-2xl font-black ${tone === "live" ? "live-number" : ""}`}>
+        {value}
+      </p>
+      <p className="mt-1 text-xs font-bold text-muted">{detail}</p>
+    </button>
   );
 }
 
@@ -688,6 +870,17 @@ function groupMatches(matches: DemoMatch[], grouping: "stage" | "date") {
     groups.set(label, [...(groups.get(label) ?? []), match]);
   }
   return [...groups.entries()];
+}
+
+function selectNextPendingMatch(matches: DemoMatch[]) {
+  return [...matches].sort((left, right) => matchTime(left) - matchTime(right))[0] ?? null;
+}
+
+function matchTime(match: DemoMatch) {
+  const value = match.scheduledAt
+    ? new Date(match.scheduledAt).getTime()
+    : Number.MAX_SAFE_INTEGER;
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }
 
 function progressiveInitialCount(
