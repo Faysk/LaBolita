@@ -187,6 +187,7 @@ a {
 
 .carousel-rail-track[data-dragging="true"] {
   cursor: grabbing;
+  scroll-snap-type: none;
   scroll-behavior: auto;
   user-select: none;
 }

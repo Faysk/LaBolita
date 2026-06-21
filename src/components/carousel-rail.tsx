@@ -29,6 +29,9 @@ type ScrollState = {
 
 const defaultInitialCount = 12;
 const dragThreshold = 5;
+const dragMomentumFactor = 440;
+const dragMomentumLimit = 720;
+const dragMomentumRestoreDelay = 360;
 
 const initialScrollState: ScrollState = {
   canGoBack: false,
@@ -62,6 +65,9 @@ export function CarouselRail({
     startScrollLeft: 0,
     startX: 0,
     startY: 0,
+    lastX: 0,
+    lastTime: 0,
+    velocity: 0,
   });
   const items = Children.toArray(children).filter(Boolean);
   const safeInitialCount = initialCount
@@ -160,83 +166,140 @@ export function CarouselRail({
     };
   }, [items.length, safeStep, shouldAutoLoad, visibleCount]);
 
-  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    const target = event.target as Element;
-    if (!dragScroll || event.button !== 0 || !event.isPrimary) return;
-    if (event.pointerType === "touch") return;
-    if (target.closest("input, select, textarea")) return;
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !dragScroll) return;
+    const activeTrack = track;
 
-    dragRef.current = {
-      captured: false,
-      moved: false,
-      pointerId: event.pointerId,
-      startScrollLeft: event.currentTarget.scrollLeft,
-      startX: event.clientX,
-      startY: event.clientY,
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Element;
+      if (event.button !== 0 || !event.isPrimary) return;
+      if (event.pointerType === "touch") return;
+      if (target.closest("input, select, textarea")) return;
+
+      dragRef.current = {
+        captured: false,
+        moved: false,
+        pointerId: event.pointerId,
+        startScrollLeft: activeTrack.scrollLeft,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        lastTime: performance.now(),
+        velocity: 0,
+      };
+    }
+
+    function handlePointerMove(event: PointerEvent) {
+      const drag = dragRef.current;
+      if (drag.pointerId !== event.pointerId) return;
+
+      const delta = event.clientX - drag.startX;
+      const verticalDelta = event.clientY - drag.startY;
+      const horizontalDistance = Math.abs(delta);
+      const verticalDistance = Math.abs(verticalDelta);
+      const now = performance.now();
+      const elapsed = Math.max(16, now - drag.lastTime);
+      const movement = event.clientX - drag.lastX;
+
+      if (!drag.moved) {
+        if (
+          horizontalDistance < dragThreshold &&
+          verticalDistance < dragThreshold
+        ) {
+          return;
+        }
+
+        if (verticalDistance > horizontalDistance) {
+          drag.pointerId = -1;
+          return;
+        }
+
+        drag.moved = true;
+        setDragging(true);
+        disableDragFriction(activeTrack);
+        if (activeTrack.setPointerCapture) {
+          activeTrack.setPointerCapture(event.pointerId);
+          drag.captured = true;
+        }
+      }
+
+      event.preventDefault();
+      disableDragFriction(activeTrack);
+      drag.velocity = movement / elapsed;
+      drag.lastX = event.clientX;
+      drag.lastTime = now;
+      activeTrack.scrollLeft = drag.startScrollLeft - delta;
+    }
+
+    function handlePointerEnd(event: PointerEvent) {
+      const drag = dragRef.current;
+      if (drag.pointerId !== event.pointerId) return;
+
+      setDragging(false);
+      if (drag.captured && activeTrack.hasPointerCapture?.(event.pointerId)) {
+        activeTrack.releasePointerCapture(event.pointerId);
+      }
+      let restoreDelay = 0;
+      if (drag.moved && Math.abs(drag.velocity) > 0.08 && !prefersReducedMotion()) {
+        const momentum = clamp(
+          -drag.velocity * dragMomentumFactor,
+          -dragMomentumLimit,
+          dragMomentumLimit,
+        );
+
+        if (Math.abs(momentum) > 20) {
+          activeTrack.scrollBy({ left: momentum, behavior: "smooth" });
+          restoreDelay = dragMomentumRestoreDelay;
+        }
+      }
+      restoreDragFriction(activeTrack, restoreDelay);
+      drag.pointerId = -1;
+      drag.captured = false;
+      window.setTimeout(() => {
+        if (dragRef.current.pointerId === -1) {
+          dragRef.current.moved = false;
+        }
+      }, 0);
+    }
+
+    function handlePointerLeave(event: PointerEvent) {
+      const drag = dragRef.current;
+      if (drag.pointerId === event.pointerId && !drag.captured) {
+        handlePointerEnd(event);
+      }
+    }
+
+    function handleClickCapture(event: MouseEvent) {
+      if (!dragRef.current.moved) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      dragRef.current.moved = false;
+    }
+
+    function preventNativeDrag(event: DragEvent) {
+      event.preventDefault();
+    }
+
+    activeTrack.addEventListener("click", handleClickCapture, true);
+    activeTrack.addEventListener("dragstart", preventNativeDrag);
+    activeTrack.addEventListener("pointercancel", handlePointerEnd);
+    activeTrack.addEventListener("pointerdown", handlePointerDown);
+    activeTrack.addEventListener("pointerleave", handlePointerLeave);
+    activeTrack.addEventListener("pointermove", handlePointerMove);
+    activeTrack.addEventListener("pointerup", handlePointerEnd);
+
+    return () => {
+      activeTrack.removeEventListener("click", handleClickCapture, true);
+      activeTrack.removeEventListener("dragstart", preventNativeDrag);
+      activeTrack.removeEventListener("pointercancel", handlePointerEnd);
+      activeTrack.removeEventListener("pointerdown", handlePointerDown);
+      activeTrack.removeEventListener("pointerleave", handlePointerLeave);
+      activeTrack.removeEventListener("pointermove", handlePointerMove);
+      activeTrack.removeEventListener("pointerup", handlePointerEnd);
     };
-  }
-
-  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    const drag = dragRef.current;
-    if (drag.pointerId !== event.pointerId) return;
-
-    const delta = event.clientX - drag.startX;
-    const verticalDelta = event.clientY - drag.startY;
-    const horizontalDistance = Math.abs(delta);
-    const verticalDistance = Math.abs(verticalDelta);
-
-    if (!drag.moved) {
-      if (
-        horizontalDistance < dragThreshold &&
-        verticalDistance < dragThreshold
-      ) {
-        return;
-      }
-
-      if (verticalDistance > horizontalDistance) {
-        drag.pointerId = -1;
-        return;
-      }
-
-      drag.moved = true;
-      setDragging(true);
-      if (event.currentTarget.setPointerCapture) {
-        event.currentTarget.setPointerCapture(event.pointerId);
-        drag.captured = true;
-      }
-    }
-
-    event.preventDefault();
-    event.currentTarget.scrollLeft = drag.startScrollLeft - delta;
-  }
-
-  function handlePointerEnd(event: React.PointerEvent<HTMLDivElement>) {
-    const drag = dragRef.current;
-    if (drag.pointerId !== event.pointerId) return;
-
-    setDragging(false);
-    if (
-      drag.captured &&
-      event.currentTarget.hasPointerCapture?.(event.pointerId)
-    ) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    drag.pointerId = -1;
-    drag.captured = false;
-    window.setTimeout(() => {
-      if (dragRef.current.pointerId === -1) {
-        dragRef.current.moved = false;
-      }
-    }, 0);
-  }
-
-  function handleClickCapture(event: React.MouseEvent<HTMLDivElement>) {
-    if (!dragRef.current.moved) return;
-
-    event.preventDefault();
-    event.stopPropagation();
-    dragRef.current.moved = false;
-  }
+  }, [dragScroll]);
 
   function toggleVisibleItems() {
     setVisibleCount((current) => {
@@ -272,20 +335,6 @@ export function CarouselRail({
           aria-live="polite"
           data-dragging={dragging ? "true" : "false"}
           className={`carousel-rail-track grid w-full max-w-full snap-x snap-mandatory scroll-px-6 grid-flow-col overflow-x-auto py-2 ${trackClassName}`}
-          onClickCapture={handleClickCapture}
-          onDragStart={(event) => event.preventDefault()}
-          onPointerCancel={handlePointerEnd}
-          onPointerDown={handlePointerDown}
-          onPointerLeave={(event) => {
-            if (
-              dragRef.current.pointerId === event.pointerId &&
-              !dragRef.current.captured
-            ) {
-              handlePointerEnd(event);
-            }
-          }}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerEnd}
           onKeyDown={(event) => {
             if (event.key === "ArrowLeft") {
               event.preventDefault();
@@ -425,4 +474,20 @@ function activeItemIndex(track: HTMLDivElement) {
 
 function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function disableDragFriction(track: HTMLDivElement) {
+  track.style.scrollBehavior = "auto";
+  track.style.scrollSnapType = "none";
+}
+
+function restoreDragFriction(track: HTMLDivElement, delay: number) {
+  window.setTimeout(() => {
+    track.style.scrollBehavior = "";
+    track.style.scrollSnapType = "";
+  }, delay);
 }

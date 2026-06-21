@@ -20,7 +20,7 @@ import type { DemoMatch } from "@/lib/types";
 
 type MatchTimelineProps = {
   matches: DemoMatch[];
-  variant?: "rail" | "list";
+  variant?: "rail" | "list" | "compact";
   href?: string;
   hrefMatchParam?: string;
   showPrediction?: boolean;
@@ -81,14 +81,25 @@ export function MatchTimeline({
   }
 
   const cards = matches.map((match) => (
-    <TimelineCard
+    variant === "compact" ? (
+      <TimelineCompactRow
+        key={match.id}
+        match={match}
+        href={buildMatchHref(href, match, hrefMatchParam)}
+        showPrediction={showPrediction}
+        actionLabel={actionLabel}
+        actionMode={actionMode}
+      />
+    ) : (
+      <TimelineCard
       key={match.id}
       match={match}
       href={buildMatchHref(href, match, hrefMatchParam)}
       showPrediction={showPrediction}
       actionLabel={actionLabel}
       actionMode={actionMode}
-    />
+      />
+    )
   ));
 
   if (initialCount) {
@@ -97,7 +108,7 @@ export function MatchTimeline({
         initialCount={initialCount}
         step={step ?? initialCount}
         moreLabel={moreLabel}
-        className="grid gap-3"
+        className={variant === "compact" ? "grid gap-2" : "grid gap-3"}
       >
         {cards}
       </ProgressiveList>
@@ -105,7 +116,7 @@ export function MatchTimeline({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className={variant === "compact" ? "grid gap-2" : "grid gap-3"}>
       {cards}
     </div>
   );
@@ -240,6 +251,109 @@ function TimelineTeam({
         {team.shortName || team.name}
       </span>
     </div>
+  );
+}
+
+function TimelineCompactRow({
+  match,
+  href,
+  showPrediction = false,
+  actionLabel = "Ver agenda",
+  actionMode,
+}: {
+  match: DemoMatch;
+  href?: string;
+  showPrediction?: boolean;
+  actionLabel?: string;
+  actionMode?: "auto";
+}) {
+  const status = timelineStatus(match);
+  const score = match.result ?? match.liveResult;
+  const action = timelineAction(match, status, actionLabel, actionMode);
+  const content = (
+    <article
+      data-testid={`timeline-match-${match.id}`}
+      className={`interactive grid min-w-0 gap-2 rounded-2xl border bg-surface px-3 py-2.5 shadow-sm sm:grid-cols-[7.25rem_minmax(0,1fr)_minmax(6rem,0.5fr)_minmax(7rem,0.55fr)] sm:items-center ${
+        status.kind === "live" ? "border-success-line bg-success-bg/45" : ""
+      }`}
+    >
+      <div className="min-w-0">
+        <p className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-brand">
+          {match.stageLabel}
+        </p>
+        <LocalMatchDateTime
+          scheduledAt={match.scheduledAt}
+          fallbackDate={match.dateLabel}
+          fallbackTime={match.timeLabel}
+          includeZone
+          className="mt-0.5 block truncate text-[11px] font-bold text-muted"
+        />
+      </div>
+
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl bg-surface-muted px-2 py-2 sm:bg-transparent sm:px-0 sm:py-0">
+        <TimelineCompactTeam team={match.homeTeam} />
+        <span className={`min-w-12 rounded-xl bg-surface px-2 py-1 text-center text-sm font-black sm:bg-surface-muted ${
+          status.kind === "live" ? "live-number" : ""
+        }`}>
+          {score ? `${score.homeScore}x${score.awayScore}` : "x"}
+        </span>
+        <TimelineCompactTeam team={match.awayTeam} align="right" />
+      </div>
+
+      <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end">
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black ${status.className}`}>
+          {status.kind === "live" ? (
+            <span className="live-dot" aria-hidden="true" />
+          ) : (
+            <status.icon className="size-3" />
+          )}
+          {status.label}
+        </span>
+        {showPrediction ? (
+          <span className="truncate text-right text-[11px] font-black text-muted">
+            Palpite <span className="text-foreground">{predictionLabel(match.prediction)}</span>
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex min-w-0 items-center justify-between gap-2 text-[11px] font-bold text-muted sm:justify-end">
+        <span className="inline-flex min-w-0 items-center gap-1 sm:hidden">
+          <MapPin className="size-3.5 shrink-0" />
+          <span className="truncate">{match.venue}</span>
+        </span>
+        {href && action ? (
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-xl border bg-surface-muted px-2.5 py-1.5 font-black text-brand">
+            <action.icon className="size-3.5" />
+            <span className="max-w-28 truncate">{action.label}</span>
+            <ArrowRight className="size-3.5" />
+          </span>
+        ) : null}
+      </div>
+    </article>
+  );
+
+  if (!href) return content;
+
+  return (
+    <Link href={href} className="block min-w-0">
+      {content}
+    </Link>
+  );
+}
+
+function TimelineCompactTeam({
+  team,
+  align = "left",
+}: {
+  team: DemoMatch["homeTeam"];
+  align?: "left" | "right";
+}) {
+  return (
+    <span className={`flex min-w-0 items-center gap-2 ${align === "right" ? "justify-end text-right" : ""}`}>
+      {align === "left" ? <TeamFlag team={team} size="sm" /> : null}
+      <span className="truncate text-xs font-black">{team.shortName || team.name}</span>
+      {align === "right" ? <TeamFlag team={team} size="sm" /> : null}
+    </span>
   );
 }
 

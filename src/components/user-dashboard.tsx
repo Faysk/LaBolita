@@ -584,8 +584,8 @@ function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
     : fallbackPlayerKey;
 
   return (
-    <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <div className="rounded-[1.35rem] border bg-surface-muted p-4">
+    <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] lg:items-start">
+      <div className="self-start rounded-[1.35rem] border bg-surface-muted p-4">
         <div className="flex items-start gap-3">
           <PoolFlag code={snapshot.pool.flagCode} size="lg" />
           <div className="min-w-0">
@@ -849,8 +849,9 @@ function ActionQueue({
         <ListChecks className="size-5 text-brand" />
       </div>
       <ProgressiveList
-        initialCount={3}
-        step={3}
+        initialCount={5}
+        step={5}
+        autoLoad={false}
         moreLabel="Ver mais pendências"
         className="mt-4 grid gap-3"
       >
@@ -945,8 +946,9 @@ function FinishedPulse({
         )}
       </div>
       <ProgressiveList
-        initialCount={3}
-        step={3}
+        initialCount={5}
+        step={5}
+        autoLoad={false}
         moreLabel="Ver mais jogos pontuados"
         className="mt-4 grid gap-2"
       >

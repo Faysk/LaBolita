@@ -285,6 +285,12 @@ try {
   );
   await selectedPoolCard.getByText("Família Faysk").waitFor();
   await page.getByTestId("ranking-current-user").getByText("131 pts").waitFor();
+  assert.equal(
+    await page.getByTestId("ranking-player-report").count(),
+    0,
+    "ranking player report must start closed until a participant is selected",
+  );
+  await page.getByTestId("ranking-current-user").click();
   await page.getByTestId("ranking-player-report").getByText("Palpites finalizados").waitFor();
   assert.equal(
     await page.getByTestId("ranking-current-user").evaluate((element) =>

@@ -77,7 +77,7 @@ export async function PlayersDirectory({
   };
 
   return (
-    <main className="page-container py-7 md:py-10">
+    <main className="page-container min-w-0 overflow-hidden py-7 md:py-10">
       <section className="mb-7">
         <div>
           <p className="eyebrow">Elencos oficiais</p>

@@ -157,8 +157,10 @@ export default async function GamesPage() {
             </div>
             <MatchTimeline
               matches={groupMatches}
+              variant="compact"
               showPrediction
-              initialCount={8}
+              initialCount={12}
+              step={12}
               moreLabel="Ver mais jogos deste dia"
               href="/palpites#lista-de-jogos"
               hrefMatchParam="jogo"

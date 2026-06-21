@@ -1315,22 +1315,12 @@ function Ranking({
       entry.provisionalPoints !== undefined &&
       entry.provisionalPoints !== entry.points,
   );
-  const fallbackPlayerKey =
-    entries.find((entry) => entry.isCurrentUser)
-      ? rankingEntryKey(entries.find((entry) => entry.isCurrentUser)!)
-      : entries[0]
-        ? rankingEntryKey(entries[0])
-        : "";
-  const [selectedPlayerKey, setSelectedPlayerKey] = useState<string | null | undefined>(
-    undefined,
-  );
+  const [selectedPlayerKey, setSelectedPlayerKey] = useState<string | null>(null);
   const activePlayerKey =
-    selectedPlayerKey === null
-      ? null
-      : selectedPlayerKey &&
-          entries.some((entry) => rankingEntryKey(entry) === selectedPlayerKey)
-        ? selectedPlayerKey
-        : fallbackPlayerKey || null;
+    selectedPlayerKey &&
+    entries.some((entry) => rankingEntryKey(entry) === selectedPlayerKey)
+      ? selectedPlayerKey
+      : null;
   const selectedPlayer = activePlayerKey
     ? entries.find((entry) => rankingEntryKey(entry) === activePlayerKey) ?? null
     : null;
@@ -1519,6 +1509,7 @@ function RankingPlayerReport({
           <ProgressiveList
             initialCount={5}
             step={5}
+            autoLoad={false}
             moreLabel="Ver mais palpites"
             className="mt-3 divide-y rounded-2xl border"
           >

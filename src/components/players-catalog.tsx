@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowRight,
   BadgeInfo,
@@ -72,8 +72,8 @@ type PositionFilter = "all" | PlayerCatalogItem["position"];
 type ViewMode = "cards" | "list";
 type SortMode = "team" | "name" | "goals" | "caps" | "age" | "stickers";
 
-const INITIAL_VISIBLE = 48;
-const PAGE_SIZE = 48;
+const INITIAL_VISIBLE = 24;
+const PAGE_SIZE = 24;
 
 const positionFilters: Array<{ value: PositionFilter; label: string }> = [
   { value: "all", label: "Todos" },
@@ -105,7 +105,6 @@ export function PlayersCatalog({
   const [sortMode, setSortMode] = useState<SortMode>("team");
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const normalizedSearch = normalizeText(search);
   const selectedTeam = teams.find((team) => team.code === teamCode) ?? null;
@@ -145,26 +144,8 @@ export function PlayersCatalog({
     resetVisible();
   }
 
-  useEffect(() => {
-    if (!hasMorePlayers || !loadMoreRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-
-        setVisibleCount((current) =>
-          Math.min(filteredPlayers.length, current + PAGE_SIZE),
-        );
-      },
-      { rootMargin: "360px 0px" },
-    );
-
-    observer.observe(loadMoreRef.current);
-    return () => observer.disconnect();
-  }, [filteredPlayers.length, hasMorePlayers]);
-
   return (
-    <section className="mt-8">
+    <section className="mt-8 min-w-0 max-w-full overflow-hidden">
       <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="eyebrow">Catálogo</p>
@@ -177,8 +158,8 @@ export function PlayersCatalog({
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[18.5rem_minmax(0,1fr)] xl:items-start">
-        <aside className="rounded-[1.5rem] border bg-surface p-4 shadow-sm xl:sticky xl:top-24">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[18.5rem_minmax(0,1fr)] xl:items-start">
+        <aside className="min-w-0 rounded-[1.5rem] border bg-surface p-4 shadow-sm xl:sticky xl:top-24">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
@@ -361,7 +342,7 @@ export function PlayersCatalog({
           </div>
         </aside>
 
-        <div className="min-w-0">
+        <div className="min-w-0 max-w-full">
           <div className="rounded-[1.5rem] border bg-surface p-4 shadow-sm md:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <SelectedTeamSummary team={selectedTeam} playersTotal={players.length} stickerTotal={stickerTotal} />
@@ -406,22 +387,18 @@ export function PlayersCatalog({
               </button>
             </EmptyState>
           ) : viewMode === "cards" ? (
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+            <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
               {visiblePlayers.map((player, index) => (
                 <PlayerCard key={player.key} player={player} priority={index < 6} />
               ))}
             </div>
           ) : (
-            <div className="mt-4 grid gap-2">
+            <div className="mt-4 grid min-w-0 gap-2">
               {visiblePlayers.map((player, index) => (
                 <PlayerListRow key={player.key} player={player} priority={index < 8} />
               ))}
             </div>
           )}
-
-          {hasMorePlayers ? (
-            <div ref={loadMoreRef} aria-hidden="true" className="h-px" />
-          ) : null}
 
           {hasMorePlayers ? (
             <div className="mt-5 flex justify-center">
@@ -448,8 +425,8 @@ function PlayerCard({ player, priority }: { player: PlayerCatalogItem; priority:
   const team = teamForPlayer(player);
 
   return (
-    <article className="overflow-hidden rounded-[1.5rem] border bg-surface shadow-sm">
-      <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-0 sm:grid-cols-1">
+    <article className="min-w-0 overflow-hidden rounded-[1.5rem] border bg-surface shadow-sm">
+      <div className="grid grid-cols-[minmax(6.75rem,38%)_minmax(0,1fr)] gap-0 sm:grid-cols-1">
         <div className="relative min-h-48 bg-surface-muted sm:min-h-0">
           <div className="relative aspect-[2/3] h-full min-h-48 w-full overflow-hidden bg-surface-muted sm:h-auto sm:min-h-0">
             <PlayerImage player={player} priority={priority} sizes="(max-width: 640px) 136px, (max-width: 1536px) 45vw, 18rem" />
