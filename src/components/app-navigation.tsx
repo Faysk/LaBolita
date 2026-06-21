@@ -102,7 +102,7 @@ export function DesktopNavigation() {
             role="menu"
             className="absolute right-0 top-12 z-50 grid w-80 gap-1 rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/15"
           >
-            <MenuHeader title="Mais caminhos" description="Agenda, finais, jogadores e regras." />
+            <MenuHeader title="Mais caminhos" description="Jogos, especiais, jogadores e regras." />
             {desktopMoreNavigation.map((item) => (
               <MoreNavigationLink
                 key={item.href}
@@ -155,7 +155,7 @@ export function MobileNavigation() {
           role="menu"
           className="fixed inset-x-2.5 bottom-[5.45rem] z-50 grid max-h-[calc(100dvh-7rem)] min-w-0 gap-1 overflow-y-auto rounded-2xl border bg-surface p-2 shadow-2xl shadow-brand/20 backdrop-blur-xl"
         >
-          <MenuHeader title="Mais caminhos" description="Início, agenda, dados e regras." />
+          <MenuHeader title="Mais caminhos" description="Início, jogos, especiais e jogadores." />
           {mobileMenuNavigation.map((item) => (
             <MoreNavigationLink
               key={item.href}

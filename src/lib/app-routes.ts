@@ -43,7 +43,7 @@ export const appRoutes = {
   predictions: {
     href: "/palpites",
     label: "Palpites",
-    description: "Marque placares e compare jogos.",
+    description: "Marque placares e compare palpites.",
     icon: Target,
   },
   pools: {
@@ -61,7 +61,7 @@ export const appRoutes = {
   specials: {
     href: "/especiais",
     label: "Especiais",
-    description: "Campeão, artilheiro e finais.",
+    description: "Campeão, artilheiro e palpites finais.",
     icon: Sparkles,
   },
   players: {

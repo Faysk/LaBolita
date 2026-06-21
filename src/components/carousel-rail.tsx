@@ -57,6 +57,7 @@ export function CarouselRail({
   summaryLabel,
 }: CarouselRailProps) {
   const titleId = useId();
+  const instructionsId = useId();
   const trackRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({
     captured: false,
@@ -322,6 +323,9 @@ export function CarouselRail({
       <span id={titleId} className="sr-only">
         {ariaLabel}
       </span>
+      <span id={instructionsId} className="sr-only">
+        Use as setas do teclado para navegar pelo carrossel. No desktop, também dá para arrastar com o mouse.
+      </span>
       <div className="group/rail relative min-w-0 max-w-full">
         <CarouselButton
           label={`Voltar em ${ariaLabel}`}
@@ -333,6 +337,8 @@ export function CarouselRail({
           ref={trackRef}
           tabIndex={0}
           aria-live="polite"
+          aria-label={ariaLabel}
+          aria-describedby={instructionsId}
           data-dragging={dragging ? "true" : "false"}
           className={`carousel-rail-track grid w-full max-w-full snap-x snap-mandatory scroll-px-6 grid-flow-col overflow-x-auto py-2 ${trackClassName}`}
           onKeyDown={(event) => {

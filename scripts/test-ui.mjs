@@ -501,6 +501,7 @@ try {
   await desktopPage.keyboard.press("Escape");
   await desktopPage.getByRole("menuitem", { name: /Jogos/ }).waitFor({ state: "hidden" });
   await desktopPage.goto(`${BASE_URL}/jogos`);
+  await assertCarouselKeyboardAccess(desktopPage, "Próximos jogos");
   await desktopPage
     .getByRole("region", { name: "Próximos jogos" })
     .getByRole("button", { name: "Avançar em Próximos jogos" })
@@ -761,4 +762,47 @@ async function assertDesktopCarouselDrag(page, regionName) {
     `${regionName} carousel must follow desktop drag while the mouse is pressed`,
   );
   assert.ok(after >= during, `${regionName} carousel must keep momentum after desktop drag`);
+}
+
+async function assertCarouselKeyboardAccess(page, regionName) {
+  const region = page.getByRole("region", { name: regionName });
+  const track = region.locator(".carousel-rail-track").first();
+  await track.waitFor();
+
+  assert.equal(
+    await track.getAttribute("aria-label"),
+    regionName,
+    `${regionName} carousel track must expose an accessible label`,
+  );
+
+  const describedBy = await track.getAttribute("aria-describedby");
+  assert.ok(describedBy, `${regionName} carousel track must expose keyboard instructions`);
+  const description = await page.locator(`[id="${describedBy}"]`).textContent();
+  assert.match(
+    description ?? "",
+    /setas do teclado/,
+    `${regionName} carousel instructions must mention keyboard navigation`,
+  );
+
+  await track.evaluate((element) => {
+    element.scrollTo({ left: 0, behavior: "auto" });
+  });
+  const before = await track.evaluate((element) => element.scrollLeft);
+  await track.focus();
+  assert.equal(
+    await track.evaluate((element) => document.activeElement === element),
+    true,
+    `${regionName} carousel track must be keyboard-focusable`,
+  );
+  await page.keyboard.press("End");
+  await page.waitForTimeout(300);
+  const afterEnd = await track.evaluate((element) => element.scrollLeft);
+  assert.ok(
+    afterEnd > before + 20,
+    `${regionName} carousel must move with the End key`,
+  );
+  await page.keyboard.press("Home");
+  await page.waitForTimeout(300);
+  const afterHome = await track.evaluate((element) => element.scrollLeft);
+  assert.ok(afterHome < afterEnd, `${regionName} carousel must move back with the Home key`);
 }

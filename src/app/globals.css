@@ -347,7 +347,13 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 80%, white);
+  outline-offset: 2px;
+}
+
+[tabindex]:not([tabindex="-1"]):focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 80%, white);
   outline-offset: 2px;
 }
