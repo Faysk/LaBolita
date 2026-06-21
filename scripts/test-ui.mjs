@@ -371,8 +371,10 @@ try {
   await page.goto(BASE_URL);
   const mobileMainNavigation = page.getByRole("navigation", { name: "Menu principal" });
   await mobileMainNavigation.getByRole("link", { name: "Ao vivo" }).waitFor();
+  await mobileMainNavigation.getByRole("link", { name: "Painel" }).waitFor();
   await mobileMainNavigation.getByRole("link", { name: "Bolões" }).waitFor();
   await mobileMainNavigation.getByRole("button", { name: "Menu" }).click();
+  await page.getByRole("menuitem", { name: /Início/ }).waitFor();
   await page.getByRole("menuitem", { name: /Jogos/ }).waitFor();
   await page.getByRole("menuitem", { name: /Especiais/ }).waitFor();
   await page.getByRole("menuitem", { name: /Jogadores/ }).waitFor();
