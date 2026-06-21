@@ -205,6 +205,24 @@ a {
   display: none;
 }
 
+.lazy-render-card,
+.lazy-render-row,
+.lazy-render-panel {
+  content-visibility: auto;
+}
+
+.lazy-render-card {
+  contain-intrinsic-size: auto 26rem;
+}
+
+.lazy-render-row {
+  contain-intrinsic-size: auto 7rem;
+}
+
+.lazy-render-panel {
+  contain-intrinsic-size: auto 20rem;
+}
+
 .drag-scroll-area {
   -webkit-overflow-scrolling: touch;
   cursor: grab;

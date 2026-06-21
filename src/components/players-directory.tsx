@@ -199,7 +199,7 @@ function Leaderboard({
   metric: (player: SquadPlayer) => string;
 }) {
   return (
-    <section className="min-w-0 overflow-hidden rounded-2xl border bg-surface p-5 shadow-sm">
+    <section className="lazy-render-panel min-w-0 overflow-hidden rounded-2xl border bg-surface p-5 shadow-sm">
       <div>
         <p className="eyebrow">Destaques</p>
         <h2 className="mt-1 text-xl font-black tracking-tight">{title}</h2>
@@ -239,7 +239,7 @@ function PlayerLeaderboardRow({
   const hasSticker = Boolean(playerStickerAsset(stickerKey(player)));
 
   return (
-    <details className="group min-w-0 overflow-hidden rounded-2xl bg-surface-muted">
+    <details className="lazy-render-row group min-w-0 overflow-hidden rounded-2xl bg-surface-muted">
       <summary className="interactive flex cursor-pointer list-none items-center gap-3 p-3 [&::-webkit-details-marker]:hidden">
         <span className="w-6 shrink-0 text-center text-sm font-black text-muted">
           {index + 1}
@@ -305,6 +305,8 @@ function PlayerStickerCard({
             height={asset.height}
             className="size-full object-cover"
             sizes="(max-width: 640px) 42vw, 9rem"
+            quality={68}
+            decoding="async"
           />
         ) : (
           <div className="flex size-full items-center justify-center text-2xl font-black text-brand">
@@ -345,6 +347,8 @@ function PlayerMiniPortrait({ player }: { player: PlayerWithTeam }) {
         height={asset.height}
         className="size-full object-cover object-top"
         sizes="44px"
+        quality={60}
+        decoding="async"
       />
     </span>
   );

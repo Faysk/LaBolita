@@ -425,7 +425,7 @@ function PlayerCard({ player, priority }: { player: PlayerCatalogItem; priority:
   const team = teamForPlayer(player);
 
   return (
-    <article className="min-w-0 overflow-hidden rounded-[1.5rem] border bg-surface shadow-sm">
+    <article className="lazy-render-card min-w-0 overflow-hidden rounded-[1.5rem] border bg-surface shadow-sm">
       <div className="grid grid-cols-[minmax(6.75rem,38%)_minmax(0,1fr)] gap-0 sm:grid-cols-1">
         <div className="relative min-h-48 bg-surface-muted sm:min-h-0">
           <div className="relative aspect-[2/3] h-full min-h-48 w-full overflow-hidden bg-surface-muted sm:h-auto sm:min-h-0">
@@ -483,7 +483,7 @@ function PlayerListRow({ player, priority }: { player: PlayerCatalogItem; priori
   const team = teamForPlayer(player);
 
   return (
-    <article className="rounded-[1.25rem] border bg-surface p-3 shadow-sm">
+    <article className="lazy-render-row rounded-[1.25rem] border bg-surface p-3 shadow-sm">
       <div className="grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-3 md:grid-cols-[4.25rem_minmax(0,1.4fr)_minmax(0,1fr)_auto]">
         <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-surface-muted">
           <PlayerImage player={player} priority={priority} sizes="68px" />
@@ -588,6 +588,8 @@ function PlayerImage({
         className="h-full w-full object-cover"
         sizes={sizes}
         priority={priority}
+        quality={priority ? 82 : 68}
+        decoding="async"
       />
     );
   }
