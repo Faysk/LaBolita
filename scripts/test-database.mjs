@@ -165,6 +165,12 @@ async function verifySeedAndScoring() {
       "provider updates must be applied through one database transaction",
     );
   });
+
+  assert.equal(
+    await scalar("select bracket_status from public.get_public_results_sync_status()"),
+    "never",
+    "public sync status must expose bracket sync state without internal errors",
+  );
 }
 
 async function verifyPredictionPrivacyAndResultCorrection() {
@@ -270,6 +276,84 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       away_placeholder = 'Vencedor da partida 2'
     where id = '${FOLLOWUP_MATCH_ID}';
   `);
+
+  await asUser(USER_ONE, async () => {
+    await assert.rejects(
+      db.query("select public.apply_knockout_participant_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: UNRESOLVED_MATCH_ID,
+            home_team_id: HOME_TEAM_ID,
+            away_team_id: null,
+          },
+        ]),
+      ]),
+      "only the service role may synchronize official knockout participants",
+    );
+  });
+
+  await asService(async () => {
+    await assert.rejects(
+      db.query("select public.apply_knockout_participant_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: MATCH_ID,
+            home_team_id: HOME_TEAM_ID,
+            away_team_id: AWAY_TEAM_ID,
+          },
+        ]),
+      ]),
+      "the bracket sync must not rewrite group-stage participants",
+    );
+    assert.equal(
+      await scalar("select public.apply_knockout_participant_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: UNRESOLVED_MATCH_ID,
+            home_team_id: HOME_TEAM_ID,
+            away_team_id: null,
+          },
+        ]),
+      ]),
+      1,
+      "the bracket sync must apply a newly confirmed home participant",
+    );
+  });
+  assert.equal(
+    await scalar("select home_team_id from public.matches where id = $1", [
+      UNRESOLVED_MATCH_ID,
+    ]),
+    HOME_TEAM_ID,
+  );
+  assert.equal(
+    await scalar("select away_team_id from public.matches where id = $1", [
+      UNRESOLVED_MATCH_ID,
+    ]),
+    null,
+    "null official bracket slots must not clear or invent participants",
+  );
+
+  await asService(async () => {
+    assert.equal(
+      await scalar("select public.apply_knockout_participant_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: UNRESOLVED_MATCH_ID,
+            home_team_id: null,
+            away_team_id: AWAY_TEAM_ID,
+          },
+        ]),
+      ]),
+      1,
+      "the bracket sync must preserve the existing side while filling the other",
+    );
+  });
+  assert.equal(
+    await scalar("select away_team_id from public.matches where id = $1", [
+      UNRESOLVED_MATCH_ID,
+    ]),
+    AWAY_TEAM_ID,
+  );
 
   await asUser(USER_ONE, async () => {
     await db.query("select public.master_set_terms_enforcement(true, 'ativação de teste')");
@@ -403,6 +487,8 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       team_id: HOME_TEAM_ID,
     },
   ]);
+
+  await db.exec("update public.special_markets set status = 'open', lock_at = now() + interval '1 day'");
 
   await asUser(USER_ONE, async () => {
     await db.query("select public.save_special_prediction('team_most_goals', $1::jsonb)", [
