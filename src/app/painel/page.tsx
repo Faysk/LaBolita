@@ -5,7 +5,10 @@ import { requireUser } from "@/lib/auth";
 import { getAdminAlertsForCurrentUser } from "@/lib/data/admin-alerts";
 import { getMatches } from "@/lib/data/matches";
 import { getPoolsOverview } from "@/lib/data/pools";
-import { getSpecialMarketsOverview } from "@/lib/data/specials";
+import {
+  getSpecialGlobalRanking,
+  getSpecialMarketsOverview,
+} from "@/lib/data/specials";
 import { isLiveMatch } from "@/lib/match-display";
 
 export const metadata: Metadata = {
@@ -16,9 +19,10 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   await requireUser("/painel");
   const matches = await getMatches();
-  const [poolsOverview, specialsOverview, alerts] = await Promise.all([
+  const [poolsOverview, specialsOverview, specialGlobalRanking, alerts] = await Promise.all([
     getPoolsOverview({ includeAllRankings: true }),
     getSpecialMarketsOverview({ matches }),
+    getSpecialGlobalRanking(),
     getAdminAlertsForCurrentUser(),
   ]);
   const awaitingOfficial = matches.some(
@@ -32,6 +36,7 @@ export default async function DashboardPage() {
         alerts={alerts}
         matches={matches}
         poolsOverview={poolsOverview}
+        specialGlobalRanking={specialGlobalRanking}
         specialsOverview={specialsOverview}
       />
     </>

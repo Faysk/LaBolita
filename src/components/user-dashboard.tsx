@@ -12,10 +12,13 @@ import {
   CircleAlert,
   CircleDot,
   ListChecks,
+  Medal,
   Radio,
   Sparkles,
+  Target,
   TrendingDown,
   TrendingUp,
+  Trophy,
   Users,
 } from "lucide-react";
 import { CarouselRail } from "@/components/carousel-rail";
@@ -31,7 +34,12 @@ import { demoRanking } from "@/lib/demo-data";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import type { AdminAlertView } from "@/lib/data/admin-alerts";
 import type { PoolsOverview } from "@/lib/data/pools";
-import type { SpecialMarketsOverview } from "@/lib/data/specials";
+import type {
+  SpecialGlobalRankingEntry,
+  SpecialGlobalRankingOverview,
+  SpecialMarketsOverview,
+  SpecialMarketView,
+} from "@/lib/data/specials";
 import {
   useLocalPools,
   useLocalPredictions,
@@ -74,11 +82,13 @@ export function UserDashboard({
   alerts,
   matches,
   poolsOverview,
+  specialGlobalRanking,
   specialsOverview,
 }: {
   alerts: AdminAlertView[];
   matches: DemoMatch[];
   poolsOverview: PoolsOverview;
+  specialGlobalRanking: SpecialGlobalRankingOverview;
   specialsOverview: SpecialMarketsOverview;
 }) {
   const localPools = useLocalPools();
@@ -210,6 +220,11 @@ export function UserDashboard({
           />
         )}
       </section>
+
+      <GlobalSpecialRankingPanel
+        ranking={specialGlobalRanking}
+        specialsOverview={specialsOverview}
+      />
 
       <section className="mt-8 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
         <div className="dashboard-ranking-panel min-w-0 rounded-[1.5rem] border bg-surface/88 p-4 md:p-5">
@@ -981,6 +996,270 @@ function FinishedPulse({
   );
 }
 
+function GlobalSpecialRankingPanel({
+  ranking,
+  specialsOverview,
+}: {
+  ranking: SpecialGlobalRankingOverview;
+  specialsOverview: SpecialMarketsOverview;
+}) {
+  const markets = specialsOverview.available ? specialsOverview.markets : [];
+  const resolvedMarkets = markets.filter(
+    (market) => market.status === "resolved" && market.results.length > 0,
+  );
+  const lockedMarkets = markets.filter(
+    (market) => market.locked && market.status !== "void",
+  ).length;
+  const scoreableMarkets = lockedMarkets || markets.length;
+  const leader = ranking.entries[0] ?? null;
+  const currentEntry = ranking.entries.find((entry) => entry.isCurrentUser) ?? null;
+  const participantCount = ranking.participantCount || ranking.entries.length;
+
+  return (
+    <section
+      id="palpites-finais-globais"
+      data-testid="dashboard-special-global-ranking"
+      className="mt-6 rounded-[1.5rem] border bg-surface/88 p-4 md:p-5"
+    >
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(21rem,0.65fr)] xl:items-start">
+        <div className="min-w-0">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <p className="eyebrow">Palpites finais globais</p>
+              <h2 className="mt-1 text-2xl font-black">Bolão dos finais</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                Resultados publicados, acertos e pontuação geral dos especiais.
+              </p>
+            </div>
+            <Link
+              href="/especiais"
+              className="interactive inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-brand px-4 text-sm font-black text-white"
+            >
+              Ver finais <ArrowRight className="size-4" />
+            </Link>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <GlobalSpecialMiniStat
+              icon={Trophy}
+              label="Ponta"
+              value={leader ? `${leader.points} pts` : "—"}
+              detail={leader?.name ?? "sem líder ainda"}
+            />
+            <GlobalSpecialMiniStat
+              icon={Target}
+              label="Resultados"
+              value={`${resolvedMarkets.length}/${markets.length}`}
+              detail={resolvedMarkets.length > 0 ? "finais pontuados" : "aguardando oficiais"}
+            />
+            <GlobalSpecialMiniStat
+              icon={Medal}
+              label="Minha posição"
+              value={currentEntry ? `${currentEntry.position}º` : "—"}
+              detail={currentEntry ? `${currentEntry.points} pts` : "sem entrada global"}
+            />
+          </div>
+
+          <SpecialResultsDigest markets={markets} />
+        </div>
+
+        <GlobalSpecialRankingList
+          ranking={ranking}
+          totalMarkets={scoreableMarkets}
+          participantCount={participantCount}
+        />
+      </div>
+    </section>
+  );
+}
+
+function GlobalSpecialMiniStat({
+  icon: Icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="dashboard-soft-stat rounded-2xl border bg-surface-muted px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-black uppercase text-muted">{label}</p>
+        <Icon className="size-4 text-brand" />
+      </div>
+      <p className="mt-2 truncate text-lg font-black">{value}</p>
+      <p className="mt-0.5 truncate text-xs font-bold text-muted">{detail}</p>
+    </div>
+  );
+}
+
+function SpecialResultsDigest({ markets }: { markets: SpecialMarketView[] }) {
+  const marketsWithResults = markets.filter((market) => market.results.length > 0);
+
+  return (
+    <div className="mt-4 rounded-[1.35rem] border bg-surface">
+      <div className="flex items-center justify-between gap-3 border-b bg-surface-muted/55 px-4 py-3">
+        <div>
+          <p className="eyebrow">Resultados dos finais</p>
+          <h3 className="mt-1 text-base font-black">Oficiais publicados</h3>
+        </div>
+        <span className="rounded-full border bg-surface px-2.5 py-1 text-[10px] font-black text-muted">
+          {marketsWithResults.length}
+        </span>
+      </div>
+      {marketsWithResults.length > 0 ? (
+        <ProgressiveList
+          initialCount={4}
+          step={4}
+          autoLoad={false}
+          moreLabel="Ver mais resultados"
+          className="divide-y"
+          buttonClassName="dashboard-ranking-toggle interactive flex w-full items-center justify-center gap-2 px-4 py-3 text-xs font-black text-brand hover:bg-surface-muted"
+        >
+          {marketsWithResults.map((market) => (
+            <SpecialResultRow key={market.id} market={market} />
+          ))}
+        </ProgressiveList>
+      ) : (
+        <EmptyState
+          icon={Sparkles}
+          title="Resultados finais em espera"
+          description="Quando um especial for resolvido, o resultado aparece aqui junto da pontuação."
+          className="m-3 bg-surface-muted shadow-none"
+        />
+      )}
+    </div>
+  );
+}
+
+function SpecialResultRow({ market }: { market: SpecialMarketView }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-black">{market.title}</p>
+        <p className="mt-1 truncate text-xs font-bold text-muted">
+          {specialResultText(market)}
+        </p>
+      </div>
+      <span className="rounded-xl bg-surface-muted px-3 py-2 text-right text-xs font-black text-brand">
+        {market.partialPoints > 0
+          ? `${market.exactPoints}/${market.partialPoints} pts`
+          : `${market.exactPoints} pts`}
+      </span>
+    </div>
+  );
+}
+
+function GlobalSpecialRankingList({
+  ranking,
+  totalMarkets,
+  participantCount,
+}: {
+  ranking: SpecialGlobalRankingOverview;
+  totalMarkets: number;
+  participantCount: number;
+}) {
+  if (!ranking.available) {
+    return (
+      <div className="rounded-[1.35rem] border bg-surface">
+        <EmptyState
+          icon={Trophy}
+          title="Ranking global em publicação"
+          description={ranking.missingReason ?? "A classificação dos finais ainda não está disponível."}
+          className="m-3 bg-surface-muted shadow-none"
+        />
+      </div>
+    );
+  }
+
+  if (ranking.entries.length === 0) {
+    return (
+      <div className="rounded-[1.35rem] border bg-surface">
+        <EmptyState
+          icon={Trophy}
+          title="Ranking global em espera"
+          description="A lista aparece depois que os finais bloquearem e tiverem participantes."
+          className="m-3 bg-surface-muted shadow-none"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-[1.35rem] border bg-surface">
+      <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 border-b bg-surface-muted/55 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-muted">
+        <span className="text-center">Pos.</span>
+        <span>Participante</span>
+        <span className="text-right">Pontos</span>
+      </div>
+      <ProgressiveList
+        initialCount={7}
+        step={7}
+        autoLoad={false}
+        moreLabel="Ver mais participantes"
+        className="divide-y"
+        buttonClassName="dashboard-ranking-toggle interactive flex w-full items-center justify-center gap-2 px-4 py-3 text-xs font-black text-brand hover:bg-surface-muted"
+      >
+        {ranking.entries.map((entry) => (
+          <GlobalSpecialRankingRow
+            key={`${entry.position}-${entry.name}`}
+            entry={entry}
+            totalMarkets={totalMarkets}
+          />
+        ))}
+      </ProgressiveList>
+      {participantCount > ranking.entries.length ? (
+        <p className="border-t bg-surface-muted/55 px-4 py-2 text-center text-[11px] font-bold text-muted">
+          Mostrando {ranking.entries.length} de {participantCount} participantes.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function GlobalSpecialRankingRow({
+  entry,
+  totalMarkets,
+}: {
+  entry: SpecialGlobalRankingEntry;
+  totalMarkets: number;
+}) {
+  return (
+    <div
+      data-testid={entry.isCurrentUser ? "dashboard-special-ranking-current-user" : undefined}
+      className={`grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 ${
+        entry.isCurrentUser ? "dashboard-ranking-row-current" : "hover:bg-surface-muted/60"
+      }`}
+    >
+      <span className="text-center text-sm font-black text-muted">
+        {entry.position}º
+      </span>
+      <div className="flex min-w-0 items-center gap-3">
+        <UserAvatar
+          name={entry.name}
+          initials={entry.initials}
+          avatarUrl={entry.avatarUrl}
+        />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black">{entry.name}</p>
+          <p className="mt-1 truncate text-xs font-bold text-muted">
+            {entry.exactHits} exato{entry.exactHits === 1 ? "" : "s"} ·{" "}
+            {entry.partialHits} parcial{entry.partialHits === 1 ? "" : "is"} ·{" "}
+            {specialCompletionText(entry, totalMarkets)}
+          </p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-base font-black text-brand">{entry.points}</p>
+        <p className="text-[10px] font-black uppercase text-muted">pts</p>
+      </div>
+    </div>
+  );
+}
+
 function ScoredMatchPulseRow({
   item,
 }: {
@@ -1378,6 +1657,23 @@ function providerUpdateText(match: DemoMatch) {
 function predictionText(prediction?: ScorePrediction | null) {
   if (!prediction) return "sem palpite";
   return `${prediction.homeScore} x ${prediction.awayScore}`;
+}
+
+function specialResultText(market: SpecialMarketView) {
+  const labels = market.results.map((result) => result.label);
+  if (labels.length === 0) return "Resultado a confirmar";
+  if (labels.length <= 2) return labels.join(" · ");
+  return `${labels.slice(0, 2).join(" · ")} +${labels.length - 2}`;
+}
+
+function specialCompletionText(
+  entry: SpecialGlobalRankingEntry,
+  totalMarkets: number,
+) {
+  if (totalMarkets <= 0) {
+    return `${entry.completedMarkets} fina${entry.completedMarkets === 1 ? "l" : "is"}`;
+  }
+  return `${entry.completedMarkets}/${totalMarkets} finais`;
 }
 
 function dashboardRankingKey(player: RankingEntry) {
