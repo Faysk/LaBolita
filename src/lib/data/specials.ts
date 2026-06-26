@@ -39,6 +39,19 @@ type DatabaseSpecialPick = {
   option_team_id: string | null;
 };
 
+type DatabaseSpecialGlobalRankingRow = {
+  rank_position: number;
+  is_current_user?: boolean | null;
+  display_name: string;
+  avatar_url?: string | null;
+  total_points: number;
+  exact_hits: number;
+  partial_hits: number;
+  completed_markets: number;
+  submitted_markets: number;
+  participant_count: number;
+};
+
 export type SpecialPickView = {
   position: number;
   key: string;
@@ -70,6 +83,26 @@ export type SpecialMarketView = {
 export type SpecialMarketsOverview = {
   available: boolean;
   markets: SpecialMarketView[];
+  missingReason?: string;
+};
+
+export type SpecialGlobalRankingEntry = {
+  position: number;
+  name: string;
+  initials: string;
+  avatarUrl?: string;
+  points: number;
+  exactHits: number;
+  partialHits: number;
+  completedMarkets: number;
+  submittedMarkets: number;
+  isCurrentUser: boolean;
+};
+
+export type SpecialGlobalRankingOverview = {
+  available: boolean;
+  entries: SpecialGlobalRankingEntry[];
+  participantCount: number;
   missingReason?: string;
 };
 
@@ -207,6 +240,63 @@ export async function getSpecialMarketsOverview(input?: {
   };
 }
 
+export async function getSpecialGlobalRanking({
+  limit = 100,
+}: {
+  limit?: number;
+} = {}): Promise<SpecialGlobalRankingOverview> {
+  const supabase = await createServerSupabaseClient();
+  if (!supabase) {
+    return {
+      available: false,
+      entries: [],
+      participantCount: 0,
+      missingReason: "Supabase não está configurado neste ambiente.",
+    };
+  }
+
+  const user = await getOptionalUser(supabase);
+  if (!user) {
+    return {
+      available: false,
+      entries: [],
+      participantCount: 0,
+      missingReason: "Entre para acompanhar o ranking global dos finais.",
+    };
+  }
+
+  const { data, error } = await supabase.rpc("get_special_global_ranking", {
+    p_limit: limit,
+  });
+  if (error) {
+    console.warn("Could not load special global ranking", error);
+    return {
+      available: false,
+      entries: [],
+      participantCount: 0,
+      missingReason: "Ranking global dos finais ainda não publicado neste ambiente.",
+    };
+  }
+
+  const rows = (data ?? []) as DatabaseSpecialGlobalRankingRow[];
+  return {
+    available: true,
+    entries: rows.map((row) => ({
+      position: Number(row.rank_position),
+      name: row.display_name,
+      initials: initials(row.display_name),
+      avatarUrl: row.avatar_url ?? undefined,
+      points: Number(row.total_points),
+      exactHits: Number(row.exact_hits),
+      partialHits: Number(row.partial_hits),
+      completedMarkets: Number(row.completed_markets),
+      submittedMarkets: Number(row.submitted_markets),
+      isCurrentUser: row.is_current_user === true,
+    })),
+    participantCount: Number(rows[0]?.participant_count ?? rows.length),
+  };
+}
+
 function groupPicks(rows: DatabaseSpecialPick[]) {
   const grouped = new Map<string, SpecialPickView[]>();
   for (const row of rows) {
@@ -224,4 +314,13 @@ function groupPicks(rows: DatabaseSpecialPick[]) {
     picks.sort((left, right) => left.position - right.position);
   }
   return grouped;
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }

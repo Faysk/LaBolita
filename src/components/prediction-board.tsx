@@ -329,14 +329,17 @@ export function FinishedMatchesReview({
   const totals = summarizeComparisonTotals(comparisons);
 
   return (
-    <section className="mb-7 overflow-hidden rounded-[1.5rem] border bg-surface/90 shadow-lg shadow-brand/5">
-      <div className="border-b p-4 md:p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+    <section className="mb-5 overflow-hidden rounded-xl border bg-surface/95 shadow-sm">
+      <div className="border-b p-3 md:p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="eyebrow">{eyebrow}</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight">
+            <h2 className="mt-1 text-lg font-black tracking-tight md:text-xl">
               {title}
             </h2>
+            <p className="mt-1 text-xs font-bold text-muted">
+              Resultado final, seu palpite e pontuação por participante.
+            </p>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <ReviewPill icon={ListChecks} label="Jogos" value={matches.length} />
@@ -349,8 +352,8 @@ export function FinishedMatchesReview({
           initialCount={10}
           step={10}
           moreLabel="Ver mais jogos"
-          className="mt-4"
-          trackClassName="auto-cols-[minmax(13rem,75vw)] gap-3 sm:auto-cols-[14rem]"
+          className="mt-3"
+          trackClassName="auto-cols-[minmax(10rem,72vw)] gap-2 sm:auto-cols-[12rem]"
         >
           {matches.map((match) => (
             <FinishedMatchButton
@@ -364,21 +367,21 @@ export function FinishedMatchesReview({
         </CarouselRail>
       </div>
 
-      <div className="grid gap-4 p-4 md:p-5 lg:grid-cols-[22rem_minmax(0,1fr)]">
+      <div className="grid gap-3 p-3 md:p-4 xl:grid-cols-[minmax(18rem,0.55fr)_minmax(0,1.45fr)]">
         <div
           data-testid="finished-review-selected-match"
-          className="rounded-[1.25rem] border bg-surface-muted p-4"
+          className="rounded-xl border bg-surface-muted p-3"
         >
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">
             {selectedMatch.stageLabel}
           </p>
-          <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
             <CompactTeam team={selectedMatch.homeTeam} />
-            <div className="rounded-2xl border bg-surface px-4 py-3 text-center">
+            <div className="rounded-xl border bg-surface px-3 py-2 text-center">
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-muted">
                 {selectedResult ? "Resultado" : "Status"}
               </p>
-              <p className="mt-1 whitespace-nowrap text-2xl font-black">
+              <p className="mt-1 whitespace-nowrap text-xl font-black">
                 {selectedResult
                   ? `${selectedResult.homeScore} x ${selectedResult.awayScore}`
                   : "bloqueado"}
@@ -386,7 +389,7 @@ export function FinishedMatchesReview({
             </div>
             <CompactTeam team={selectedMatch.awayTeam} align="right" />
           </div>
-          <div className="mt-4 grid gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <ReviewStat label="Seu palpite" value={predictionLabel(selectedPrediction)} />
             <ReviewStat
               label="Sua pontuação"
@@ -469,13 +472,13 @@ function PredictionCommandCenter({
   return (
     <section
       data-testid="prediction-workbench-summary"
-      className="mb-6 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_repeat(4,minmax(0,0.7fr))]"
+      className="mb-4 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.7fr))]"
     >
       <button
         type="button"
         data-testid="prediction-next-action"
         onClick={onOpenNextPending}
-        className={`interactive rounded-[1.25rem] border p-4 text-left shadow-sm ${
+        className={`interactive rounded-xl border p-3 text-left shadow-sm ${
           nextPendingMatch ? "status-warning" : "status-success"
         }`}
       >
@@ -486,12 +489,12 @@ function PredictionCommandCenter({
           </span>
           <ArrowRight className="size-4 text-brand" />
         </div>
-        <p className="mt-3 text-xl font-black">
+        <p className="mt-2 truncate text-base font-black md:text-lg">
           {nextPendingMatch
             ? `${nextPendingMatch.homeTeam.shortName} x ${nextPendingMatch.awayTeam.shortName}`
             : "Tudo encaminhado"}
         </p>
-        <p className="mt-1 text-xs font-bold text-muted">
+        <p className="mt-1 truncate text-xs font-bold text-muted">
           {nextPendingMatch
             ? `${nextPendingMatch.stageLabel} · ${nextPendingMatch.dateLabel} ${nextPendingMatch.timeLabel}`
             : finishedCount > 0
@@ -566,7 +569,7 @@ function PredictionSummaryButton({
     <button
       type="button"
       onClick={onClick}
-      className={`interactive rounded-[1.25rem] border p-4 text-left shadow-sm ${toneClass}`}
+      className={`interactive rounded-xl border p-3 text-left shadow-sm ${toneClass}`}
     >
       <div className="flex items-center justify-between gap-3">
         <Icon className={`size-4 ${tone === "live" ? "live-icon" : ""}`} />
@@ -574,7 +577,7 @@ function PredictionSummaryButton({
           {label}
         </p>
       </div>
-      <p className={`mt-3 text-2xl font-black ${tone === "live" ? "live-number" : ""}`}>
+      <p className={`mt-2 text-xl font-black ${tone === "live" ? "live-number" : ""}`}>
         {value}
       </p>
       <p className="mt-1 text-xs font-bold text-muted">{detail}</p>
@@ -598,12 +601,12 @@ function FinishedMatchButton({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`interactive grid min-w-[14rem] grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-[1.2rem] border p-3 text-left ${
+      className={`interactive grid min-w-[10rem] grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl border p-2 text-left ${
         selected ? "bg-brand text-white" : "bg-surface-muted text-foreground hover:border-brand/70"
       }`}
     >
       <MiniTeam team={match.homeTeam} selected={selected} />
-      <span className={`rounded-xl px-2 py-1 text-center text-xs font-black ${selected ? "bg-white/12" : "bg-surface"}`}>
+      <span className={`rounded-lg px-2 py-1 text-center text-xs font-black ${selected ? "bg-white/12" : "bg-surface"}`}>
         {result ? `${result.homeScore} x ${result.awayScore}` : "bloq."}
       </span>
       <MiniTeam team={match.awayTeam} selected={selected} align="right" />
@@ -623,8 +626,8 @@ function PoolComparisonPanel({
   const averagePoints = comparisonAveragePoints(comparison, match);
 
   return (
-    <div className="rounded-[1.25rem] border bg-surface-muted p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-xl border bg-surface-muted p-3">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <PoolFlag code={comparison.flagCode} size="sm" />
           <div className="min-w-0">
@@ -632,7 +635,7 @@ function PoolComparisonPanel({
             <p className="text-xs text-muted">{comparison.memberCount} jogadores</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
+        <div className="grid grid-cols-3 gap-2 text-center sm:grid-cols-5">
           <MiniMetric label="Palpites" value={comparison.predictionCount} />
           <MiniMetric label="Cravadas" value={comparison.exactCount} />
           <MiniMetric label="Acertos" value={comparison.resultCount} />
@@ -646,10 +649,10 @@ function PoolComparisonPanel({
       </div>
       <OutcomeDistribution comparison={comparison} match={match} />
       <ProgressiveList
-        initialCount={8}
+        initialCount={6}
         step={8}
-        moreLabel="Ver mais palpites"
-        className="mt-4 divide-y rounded-2xl border bg-surface"
+        moreLabel="Ver mais pontuações"
+        className="mt-3 divide-y rounded-xl border bg-surface"
       >
         {entries.map((entry) => (
           <ComparisonRow key={`${comparison.poolId}-${entry.userId ?? entry.name}`} entry={entry} match={match} />
@@ -685,7 +688,7 @@ function ComparisonRow({
         data-testid={entry.isCurrentUser ? "comparison-current-user" : undefined}
         aria-expanded={expanded}
         onClick={() => setExpanded((current) => !current)}
-        className="interactive grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-3 text-left"
+        className="interactive grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left"
       >
         <div className="flex min-w-0 items-center gap-3">
           <UserAvatar name={entry.name} initials={entry.initials} avatarUrl={entry.avatarUrl} />
@@ -698,7 +701,7 @@ function ComparisonRow({
                 </span>
               )}
             </p>
-            <p className="text-xs text-muted">{predictionLabel(entry.prediction)}</p>
+            <p className="text-xs font-bold text-muted">{predictionLabel(entry.prediction)}</p>
             {updatedAt ? (
               <p className="text-[10px] font-bold text-muted">Alterado {updatedAt}</p>
             ) : null}
@@ -706,7 +709,7 @@ function ComparisonRow({
         </div>
         <div className="flex items-center justify-end gap-2 text-right">
           <div>
-            <p className="text-sm font-black text-brand">
+            <p className="text-base font-black text-brand">
               {points === null ? "—" : `${points} pts`}
             </p>
             <p className="text-[10px] font-bold text-muted">#{entry.position}</p>
@@ -717,7 +720,7 @@ function ComparisonRow({
       {expanded ? (
         <div
           data-testid="prediction-comparison-details"
-          className="grid gap-2 border-t bg-surface-muted/65 p-3 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid gap-2 border-t bg-surface-muted/65 p-2.5 sm:grid-cols-2 lg:grid-cols-4"
         >
           <DetailMetric
             label="Resultado"
@@ -788,7 +791,7 @@ function OutcomeDistribution({
   ];
 
   return (
-    <div className="mt-4 rounded-2xl border bg-surface p-3">
+    <div className="mt-3 rounded-xl border bg-surface p-3">
       <div className="flex items-center justify-between gap-3">
         <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.12em] text-muted">
           <BarChart3 className="size-3.5 text-brand" />
@@ -827,8 +830,8 @@ function OutcomeDistribution({
           initialCount={3}
           step={6}
           moreLabel="Ver mais placares"
-          className="mt-3 flex flex-wrap gap-2"
-          buttonClassName="interactive mt-3 inline-flex items-center gap-2 rounded-full border bg-surface-muted px-3 py-1.5 text-[10px] font-black text-brand hover:border-brand/60"
+          className="mt-2 flex flex-wrap gap-2"
+          buttonClassName="interactive mt-2 inline-flex items-center gap-2 rounded-full border bg-surface-muted px-3 py-1.5 text-[10px] font-black text-brand hover:border-brand/60"
         >
           {comparison.topScorelines.map((scoreline) => (
             <span
