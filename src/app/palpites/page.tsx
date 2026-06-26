@@ -31,21 +31,23 @@ export default async function PredictionsPage({ searchParams }: PredictionsPageP
   );
 
   return (
-    <main className="page-container py-7 md:py-10">
+    <main className="page-container py-5 md:py-7">
       <LiveRefresh active={matches.some(isLiveMatch) || awaitingOfficial} />
-      <div className="mb-7">
-        <p className="eyebrow">Seus placares</p>
-        <h1 className="mt-1 text-3xl font-black tracking-[-0.05em] md:text-5xl">
-          Meus palpites
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-muted md:text-base">
-          O mesmo placar vale em todos os seus bolões. Dá para mudar até o
-          bloqueio de cada jogo. Depois disso, é acompanhar a rodada e somar.
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="eyebrow">Seus placares</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight md:text-4xl">
+            Meus palpites
+          </h1>
+        </div>
+        <p className="max-w-xl text-sm leading-6 text-muted">
+          Preencha os jogos abertos e acompanhe, nos finalizados, o resultado e a
+          pontuação de cada participante.
         </p>
       </div>
       <PageShortcuts
         routeKeys={["dashboard", "games", "specials", "pools"]}
-        className="mb-6"
+        className="mb-4"
       />
       <SpecialPredictionsEntry overview={specialsOverview} />
       <div id="lista-de-jogos" className="scroll-mt-28" aria-hidden="true" />
