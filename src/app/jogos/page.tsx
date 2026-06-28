@@ -14,7 +14,7 @@ import { MatchTimeline } from "@/components/match-timeline";
 import { PageShortcuts } from "@/components/page-shortcuts";
 import { getMatches } from "@/lib/data/matches";
 import { getPredictionComparisonOverview } from "@/lib/data/prediction-comparisons";
-import { isLiveMatch } from "@/lib/match-display";
+import { isLiveMatch, isOpenMatch } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -289,8 +289,7 @@ function selectUpcomingMatches(matches: DemoMatch[]) {
     .filter(
       (match) =>
         !isLiveMatch(match) &&
-        !match.locked &&
-        !match.result &&
+        isOpenMatch(match) &&
         match.providerStatus !== "finished",
     )
     .sort((left, right) => scheduledTime(left) - scheduledTime(right));

@@ -27,7 +27,7 @@ import { PoolFlag } from "@/components/pool-flag";
 import { ProgressiveList } from "@/components/progressive-list";
 import { TeamFlag } from "@/components/team-flag";
 import { UserAvatar } from "@/components/user-avatar";
-import { isLiveMatch } from "@/lib/match-display";
+import { isLiveMatch, isOpenMatch } from "@/lib/match-display";
 import {
   type MatchPoolComparison,
   type PredictionComparisonEntry,
@@ -1046,7 +1046,7 @@ function selectFocusMatches(matches: DemoMatch[]) {
   if (awaiting.length > 0) return awaiting;
 
   const upcoming = matches
-    .filter((match) => !match.locked && !match.result && match.providerStatus !== "finished")
+    .filter((match) => isOpenMatch(match) && match.providerStatus !== "finished")
     .sort((left, right) => scheduledTime(left) - scheduledTime(right));
   if (upcoming.length > 0) return upcoming;
 

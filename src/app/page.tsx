@@ -12,7 +12,7 @@ import { SpecialHomeSummary } from "@/components/special-home-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
-import { isLiveMatch } from "@/lib/match-display";
+import { isLiveMatch, isOpenMatch } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
 export default async function HomePage() {
@@ -129,8 +129,7 @@ function selectUpcomingMatches(matches: DemoMatch[]) {
     .filter(
       (match) =>
         !isLiveMatch(match) &&
-        !match.locked &&
-        !match.result &&
+        isOpenMatch(match) &&
         match.providerStatus !== "finished",
     )
     .sort((left, right) => scheduledTime(left) - scheduledTime(right));
