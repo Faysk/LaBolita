@@ -145,7 +145,8 @@ begin
   limit 1;
 
   if v_tournament_id is null then
-    raise exception 'active tournament not found' using errcode = 'P0001';
+    raise notice 'active tournament not found; skipping official FIFA schedule alignment';
+    return;
   end if;
 
   select string_agg(code, ', ' order by code)
