@@ -8,6 +8,7 @@ import { StatCard } from "@/components/stat-card";
 import { calculateDemoRanking } from "@/lib/demo-engine";
 import type { PublicPoolHighlight } from "@/lib/data/pools";
 import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
+import { isOpenMatch } from "@/lib/match-display";
 import { rankingLabel } from "@/lib/ranking-display";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { UserAvatar } from "@/components/user-avatar";
@@ -39,9 +40,7 @@ export function HomeOverview({
   const visiblePoolRanking = usesSupabase
     ? primaryPoolRanking
     : calculateDemoRanking(primaryPoolRanking, matches, localPredictions, localResults);
-  const openMatches = matches.filter(
-    (match) => !match.locked && !match.result && !localResults[match.id],
-  );
+  const openMatches = matches.filter((match) => isOpenMatch(match) && !localResults[match.id]);
   const savedPredictions = matches.filter(
     (match) => match.prediction || localPredictions[match.id],
   ).length;

@@ -129,6 +129,29 @@ describe("match display priorities", () => {
       ]),
     ).toBe("all");
   });
+
+  it("does not treat unresolved knockout participants as open predictions", () => {
+    const unresolved = match("unresolved-knockout", {
+      stage: "round_of_16",
+      stageLabel: "Oitavas de final",
+      homeTeam: {
+        id: "unknown-vencedor-da-partida-74",
+        name: "Vencedor da partida 74",
+        shortName: "Vencedor da partida 74",
+        flag: "•",
+      },
+      awayTeam: {
+        id: "unknown-vencedor-da-partida-77",
+        name: "Vencedor da partida 77",
+        shortName: "Vencedor da partida 77",
+        flag: "•",
+      },
+    });
+
+    expect(initialPredictionFilter([unresolved])).toBe("all");
+    expect(selectLiveOrNextMatch([unresolved])).toBeNull();
+    expect(selectHomeTimelineMatches([unresolved])).toEqual([]);
+  });
 });
 
 function match(id: string, overrides: Partial<DemoMatch> = {}): DemoMatch {

@@ -25,6 +25,7 @@ import type { DemoMatch, ScorePrediction } from "@/lib/types";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { friendlyServerError } from "@/lib/user-errors";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
+import { hasDefinedMatchTeams } from "@/lib/match-display";
 
 type EditablePrediction = {
   homeScore: number | "";
@@ -65,11 +66,12 @@ export function MatchCard({
     };
   const { homeScore, awayScore } = currentPrediction;
   const result = usesSupabase ? match.result : localResults[match.id] ?? match.result;
+  const awaitingParticipants = match.stage !== "group" && !hasDefinedMatchTeams(match) && !result;
   const effectiveLocked = match.locked || Boolean(result);
   const loginRequired = usesSupabase && !isAuthenticated && !effectiveLocked;
   const termsRequired = usesSupabase && isAuthenticated && !termsAccepted && !effectiveLocked;
   const inputDisabled =
-    effectiveLocked || syncState === "saving" || loginRequired || termsRequired;
+    effectiveLocked || awaitingParticipants || syncState === "saving" || loginRequired || termsRequired;
   const saved =
     draft === null &&
     Boolean(persistedPrediction);
@@ -229,6 +231,8 @@ export function MatchCard({
           className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold ${
             effectiveLocked
               ? "status-neutral"
+              : awaitingParticipants
+                ? "status-info"
               : syncState === "error" || syncState === "auth-required" || syncState === "terms-required"
                 ? "status-danger"
                 : syncState === "saving"
@@ -240,6 +244,8 @@ export function MatchCard({
         >
           {effectiveLocked ? (
             <LockKeyhole className="size-3" />
+          ) : awaitingParticipants ? (
+            <Clock3 className="size-3" />
           ) : loginRequired || termsRequired || syncState === "error" || syncState === "auth-required" || syncState === "terms-required" ? (
             <TriangleAlert className="size-3" />
           ) : syncState === "saving" ? (
@@ -253,6 +259,8 @@ export function MatchCard({
             ? result
               ? "Finalizado"
               : "Bloqueado"
+            : awaitingParticipants
+              ? "Aguardando times"
             : loginRequired || syncState === "auth-required"
               ? "Entre para salvar"
               : termsRequired || syncState === "terms-required"
@@ -332,7 +340,7 @@ export function MatchCard({
           )}
         </label>
       )}
-      {!loginRequired && !termsRequired && !effectiveLocked && (!saved || dirty) && (
+      {!loginRequired && !termsRequired && !effectiveLocked && !awaitingParticipants && (!saved || dirty) && (
         <div className="mt-4 flex items-center gap-2">
           {dirty && (
             <button

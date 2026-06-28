@@ -13,8 +13,12 @@ export function isLiveMatch(match: DemoMatch) {
   return match.providerStatus === "live" && !match.result;
 }
 
+export function hasDefinedMatchTeams(match: DemoMatch) {
+  return !match.homeTeam.id.startsWith("unknown-") && !match.awayTeam.id.startsWith("unknown-");
+}
+
 export function isOpenMatch(match: DemoMatch) {
-  return !match.locked && !match.result;
+  return !match.locked && !match.result && hasDefinedMatchTeams(match);
 }
 
 export function isHomeTimelineMatch(match: DemoMatch) {
@@ -48,7 +52,9 @@ export function selectHomeTimelineMatches(matches: DemoMatch[], limit = 3) {
 export function selectLiveOrNextMatch(matches: DemoMatch[]) {
   return (
     prioritizeHomeMatches(matches).find(
-      (match) => isLiveMatch(match) || (!match.result && match.providerStatus !== "finished"),
+      (match) =>
+        isLiveMatch(match) ||
+        (!match.result && hasDefinedMatchTeams(match) && match.providerStatus !== "finished"),
     ) ?? null
   );
 }

@@ -25,6 +25,7 @@ import { useLocalPredictions, useLocalResults } from "@/lib/local-state";
 import {
   initialPredictionFilter,
   isLiveMatch,
+  isOpenMatch,
   type PredictionFilter,
 } from "@/lib/match-display";
 import {
@@ -59,9 +60,7 @@ export function PredictionBoard({
   const isComplete = (match: DemoMatch) =>
     Boolean(match.prediction) || Boolean(predictions[match.id]);
   const resultForMatch = (match: DemoMatch) => results[match.id] ?? match.result;
-  const openMatches = matches.filter(
-    (match) => !match.locked && !match.result && !results[match.id],
-  );
+  const openMatches = matches.filter((match) => isOpenMatch(match) && !results[match.id]);
   const pendingMatches = openMatches.filter((match) => !isComplete(match));
   const savedMatches = openMatches.filter(isComplete);
   const liveMatches = matches.filter(isLiveMatch);
@@ -127,8 +126,7 @@ export function PredictionBoard({
     if (filter === "pending") {
       return (
         !isComplete(match) &&
-        !match.locked &&
-        !match.result &&
+        isOpenMatch(match) &&
         !results[match.id]
       );
     }
