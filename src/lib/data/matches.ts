@@ -14,6 +14,7 @@ type DatabaseTeam = {
 
 type DatabaseMatch = {
   id: string;
+  match_number: number;
   stage: MatchStage;
   group_name: string | null;
   home_placeholder: string | null;
@@ -79,6 +80,7 @@ export async function getMatches(): Promise<DemoMatch[]> {
     .select(
       `
         id,
+        match_number,
         stage,
         group_name,
         home_placeholder,
@@ -132,6 +134,7 @@ export async function getMatches(): Promise<DemoMatch[]> {
     const prediction = predictionsByMatch.get(match.id);
     return {
       id: match.id,
+      matchNumber: match.match_number,
       stage: match.stage,
       stageLabel:
         match.stage === "group" && match.group_name
@@ -144,6 +147,8 @@ export async function getMatches(): Promise<DemoMatch[]> {
       locked:
         !["scheduled", "postponed"].includes(match.status) ||
         Date.now() >= new Date(match.prediction_lock_at).getTime(),
+      homeSourceMatchNumber: sourceMatchNumber(match.home_placeholder),
+      awaySourceMatchNumber: sourceMatchNumber(match.away_placeholder),
       homeTeam: mapTeam(match.home_team, match.home_placeholder ?? "Mandante"),
       awayTeam: mapTeam(match.away_team, match.away_placeholder ?? "Visitante"),
       prediction: prediction
@@ -276,4 +281,9 @@ function formatTime(date: string) {
     hour12: false,
     timeZone: "America/Sao_Paulo",
   }).format(new Date(date));
+}
+
+function sourceMatchNumber(value: string | null) {
+  const match = /^(?:Vencedor|Perdedor) da partida (\d+)$/i.exec(value ?? "");
+  return match ? Number(match[1]) : null;
 }

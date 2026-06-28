@@ -13,6 +13,8 @@ export type GroupStanding = {
   provisional: boolean;
 };
 
+export type KnockoutRound = readonly [string, DemoMatch[]];
+
 export function buildGroupStandings(matches: DemoMatch[]) {
   const groups = new Map<string, Map<string, GroupStanding>>();
 
@@ -43,7 +45,7 @@ export function buildGroupStandings(matches: DemoMatch[]) {
     ] as const);
 }
 
-export function groupKnockoutMatches(matches: DemoMatch[]) {
+export function groupKnockoutMatches(matches: DemoMatch[]): KnockoutRound[] {
   const stageOrder: DemoMatch["stage"][] = [
     "round_of_32",
     "round_of_16",
@@ -53,9 +55,67 @@ export function groupKnockoutMatches(matches: DemoMatch[]) {
     "final",
   ];
   return stageOrder.flatMap((stage) => {
-    const stageMatches = matches.filter((match) => match.stage === stage);
+    const stageMatches = matches
+      .filter((match) => match.stage === stage)
+      .sort(compareMatchSchedule);
     return stageMatches.length > 0 ? [[stageMatches[0].stageLabel, stageMatches] as const] : [];
   });
+}
+
+export function orderKnockoutRoundsForBracket(rounds: readonly KnockoutRound[]) {
+  const orderedMatches = rounds.map(([, matches]) => [...matches]);
+  const sourceRankByNumber = knockoutSourceRankByNumber(orderedMatches);
+
+  for (let roundIndex = orderedMatches.length - 2; roundIndex >= 0; roundIndex -= 1) {
+    const current = orderedMatches[roundIndex];
+    const next = orderedMatches[roundIndex + 1];
+    const currentByNumber = matchNumberMap(current);
+    if (currentByNumber.size === 0) continue;
+
+    const currentRank = new Map(
+      current.flatMap((match, index) =>
+        typeof match.matchNumber === "number" ? [[match.matchNumber, index] as const] : [],
+      ),
+    );
+    const seen = new Set<number>();
+    const reordered: DemoMatch[] = [];
+
+    for (const target of next) {
+      const sources = knockoutSourceMatchNumbers(target)
+        .filter((number) => currentByNumber.has(number))
+        .sort(
+          (left, right) =>
+            (sourceRankByNumber.get(left) ?? currentRank.get(left) ?? 0) -
+            (sourceRankByNumber.get(right) ?? currentRank.get(right) ?? 0),
+        );
+
+      for (const sourceNumber of sources) {
+        if (seen.has(sourceNumber)) continue;
+        const source = currentByNumber.get(sourceNumber);
+        if (!source) continue;
+        seen.add(sourceNumber);
+        reordered.push(source);
+      }
+    }
+
+    if (reordered.length === 0) continue;
+
+    for (const match of current) {
+      if (typeof match.matchNumber !== "number" || !seen.has(match.matchNumber)) {
+        reordered.push(match);
+      }
+    }
+
+    orderedMatches[roundIndex] = reordered;
+  }
+
+  return rounds.map(([stage], index) => [stage, orderedMatches[index]] as const);
+}
+
+export function knockoutSourceMatchNumbers(match: DemoMatch) {
+  return [match.homeSourceMatchNumber, match.awaySourceMatchNumber].filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
 }
 
 export function findTeamById(matches: DemoMatch[], teamId: string) {
@@ -107,7 +167,39 @@ export function opponentForTeam(match: DemoMatch, teamId: string) {
 function compareMatchSchedule(left: DemoMatch, right: DemoMatch) {
   const leftTime = left.scheduledAt ? new Date(left.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER;
   const rightTime = right.scheduledAt ? new Date(right.scheduledAt).getTime() : Number.MAX_SAFE_INTEGER;
-  return leftTime - rightTime || left.stageLabel.localeCompare(right.stageLabel, "pt-BR");
+  return (
+    leftTime - rightTime ||
+    left.stageLabel.localeCompare(right.stageLabel, "pt-BR") ||
+    (left.matchNumber ?? Number.MAX_SAFE_INTEGER) -
+      (right.matchNumber ?? Number.MAX_SAFE_INTEGER)
+  );
+}
+
+function matchNumberMap(matches: DemoMatch[]) {
+  return new Map(
+    matches.flatMap((match) =>
+      typeof match.matchNumber === "number" ? [[match.matchNumber, match] as const] : [],
+    ),
+  );
+}
+
+function knockoutSourceRankByNumber(rounds: DemoMatch[][]) {
+  const sourceRankByNumber = new Map<number, number>();
+
+  for (const matches of rounds) {
+    for (const [index, match] of matches.entries()) {
+      if (typeof match.matchNumber !== "number") continue;
+      const sourceRanks = knockoutSourceMatchNumbers(match)
+        .map((number) => sourceRankByNumber.get(number))
+        .filter((value): value is number => typeof value === "number");
+      sourceRankByNumber.set(
+        match.matchNumber,
+        sourceRanks.length > 0 ? Math.min(...sourceRanks) : index,
+      );
+    }
+  }
+
+  return sourceRankByNumber;
 }
 
 function groupName(match: DemoMatch) {

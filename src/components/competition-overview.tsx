@@ -10,10 +10,12 @@ import { TeamFlag } from "@/components/team-flag";
 import {
   buildGroupStandings,
   groupKnockoutMatches,
+  knockoutSourceMatchNumbers,
   nextMatchForTeam,
   opponentForTeam,
+  orderKnockoutRoundsForBracket,
 } from "@/lib/competition";
-import type { GroupStanding } from "@/lib/competition";
+import type { GroupStanding, KnockoutRound } from "@/lib/competition";
 import { isLiveMatch } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
@@ -254,7 +256,9 @@ function KnockoutBracket({
   knockout: ReturnType<typeof groupKnockoutMatches>;
 }) {
   const thirdPlace = knockout.find(([stage]) => stage === "Terceiro lugar");
-  const mainRounds = knockout.filter(([stage]) => stage !== "Terceiro lugar");
+  const mainRounds = orderKnockoutRoundsForBracket(
+    knockout.filter(([stage]) => stage !== "Terceiro lugar"),
+  );
   const layout = buildBracketLayout(mainRounds);
 
   if (mainRounds.length === 0) {
@@ -381,7 +385,7 @@ function BracketMatchCard({
   );
 }
 
-function buildBracketLayout(rounds: ReturnType<typeof groupKnockoutMatches>) {
+function buildBracketLayout(rounds: KnockoutRound[]) {
   const laidOutRounds = rounds.map(([stage, matches], roundIndex) => {
     const x = roundIndex * (CARD_WIDTH + ROUND_GAP);
     return {
@@ -397,10 +401,12 @@ function buildBracketLayout(rounds: ReturnType<typeof groupKnockoutMatches>) {
   for (let roundIndex = 1; roundIndex < laidOutRounds.length; roundIndex += 1) {
     const previous = laidOutRounds[roundIndex - 1].matches;
     laidOutRounds[roundIndex].matches = laidOutRounds[roundIndex].matches.map((item, index) => {
-      const first = previous[index * 2];
-      const second = previous[index * 2 + 1] ?? first;
-      const firstCenter = first.y + CARD_HEIGHT / 2;
-      const secondCenter = second.y + CARD_HEIGHT / 2;
+      const sources = sourceLayoutItems(item.match, previous) ?? [
+        previous[index * 2],
+        previous[index * 2 + 1] ?? previous[index * 2],
+      ].filter(Boolean);
+      const firstCenter = Math.min(...sources.map((source) => source.y + CARD_HEIGHT / 2));
+      const secondCenter = Math.max(...sources.map((source) => source.y + CARD_HEIGHT / 2));
       return {
         ...item,
         y: (firstCenter + secondCenter) / 2 - CARD_HEIGHT / 2,
@@ -412,7 +418,7 @@ function buildBracketLayout(rounds: ReturnType<typeof groupKnockoutMatches>) {
     const nextRound = laidOutRounds[roundIndex + 1];
     if (!nextRound) return [];
     return nextRound.matches.flatMap((target, targetIndex) => {
-      const sources = [
+      const sources = sourceLayoutItems(target.match, round.matches) ?? [
         round.matches[targetIndex * 2],
         round.matches[targetIndex * 2 + 1],
       ].filter(Boolean);
@@ -446,6 +452,23 @@ function buildBracketLayout(rounds: ReturnType<typeof groupKnockoutMatches>) {
     thirdPlaceX,
     thirdPlaceY,
   };
+}
+
+function sourceLayoutItems(
+  target: DemoMatch,
+  previous: Array<{ match: DemoMatch; y: number }>,
+) {
+  const previousByNumber = new Map(
+    previous.flatMap((item) =>
+      typeof item.match.matchNumber === "number" ? [[item.match.matchNumber, item] as const] : [],
+    ),
+  );
+  const sources = knockoutSourceMatchNumbers(target)
+    .map((number) => previousByNumber.get(number))
+    .filter((item): item is { match: DemoMatch; y: number } => Boolean(item))
+    .sort((left, right) => left.y - right.y);
+
+  return sources.length > 0 ? sources : null;
 }
 
 function describeNextMatch(teamId: string, match: DemoMatch | null) {

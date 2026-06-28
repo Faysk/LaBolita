@@ -17,6 +17,7 @@ export type DemoTeam = {
 
 export type DemoMatch = {
   id: string;
+  matchNumber?: number;
   stage: MatchStage;
   stageLabel: string;
   dateLabel: string;
@@ -24,6 +25,8 @@ export type DemoMatch = {
   scheduledAt?: string;
   venue: string;
   locked: boolean;
+  homeSourceMatchNumber?: number | null;
+  awaySourceMatchNumber?: number | null;
   homeTeam: DemoTeam;
   awayTeam: DemoTeam;
   prediction?: {
