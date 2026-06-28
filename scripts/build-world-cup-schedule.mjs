@@ -2,6 +2,8 @@ import { writeFile } from "node:fs/promises";
 
 const OUTPUT_PATH = process.argv[2] ?? "data/world-cup-2026.json";
 const FEED_BASE = "https://worldcup26.ir/get";
+const FIFA_CALENDAR_URL =
+  "https://api.fifa.com/api/v3/calendar/matches?language=en&count=500&idSeason=285023&idCompetition=17";
 const FIFA_SOURCE =
   "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/match-schedule-fixtures-results-teams-stadiums";
 
@@ -56,95 +58,62 @@ const TEAM_NAMES = {
   UZB: "Uzbequistão",
 };
 
-const STAGE_BY_TYPE = {
-  group: "group",
-  r32: "round_of_32",
-  r16: "round_of_16",
-  qf: "quarter_final",
-  sf: "semi_final",
-  third: "third_place",
-  final: "final",
+const STAGE_BY_FIFA_NAME = {
+  "First Stage": "group",
+  "Round of 32": "round_of_32",
+  "Round of 16": "round_of_16",
+  "Quarter-final": "quarter_final",
+  "Semi-final": "semi_final",
+  "Play-off for third place": "third_place",
+  Final: "final",
 };
 
-// Confirmed against FIFA venue pages when the structured community feed differs.
-const OFFICIAL_KICKOFF_OVERRIDES = {
-  // Brazil x Haiti, Philadelphia Stadium: Friday 19 June, 20:30 EDT.
-  29: "2026-06-20T00:30:00.000Z",
-};
-
-// UTC offsets during June/July 2026 for each official host stadium.
-const STADIUM_UTC_OFFSETS = {
-  1: -6,
-  2: -6,
-  3: -6,
-  4: -5,
-  5: -5,
-  6: -5,
-  7: -4,
-  8: -4,
-  9: -4,
-  10: -4,
-  11: -4,
-  12: -4,
-  13: -7,
-  14: -7,
-  15: -7,
-  16: -7,
-};
-
-const [gamesPayload, teamsPayload, stadiumsPayload] = await Promise.all([
-  getJson(`${FEED_BASE}/games`),
+const [calendarPayload, teamsPayload] = await Promise.all([
+  getJson(FIFA_CALENDAR_URL),
   getJson(`${FEED_BASE}/teams`),
-  getJson(`${FEED_BASE}/stadiums`),
 ]);
 
-assertCount(gamesPayload.games, 104, "partidas");
+assertCount(calendarPayload.Results, 104, "partidas oficiais FIFA");
 assertCount(teamsPayload.teams, 48, "seleções");
-assertCount(stadiumsPayload.stadiums, 16, "estádios");
 
-const teamById = new Map(teamsPayload.teams.map((team) => [team.id, team]));
-const stadiumById = new Map(stadiumsPayload.stadiums.map((stadium) => [stadium.id, stadium]));
+const iso2ByCode = new Map(teamsPayload.teams.map((team) => [team.fifa_code, team.iso2]));
+const groupByCode = groupAssignments(calendarPayload.Results);
 
 const schedule = {
   source: FIFA_SOURCE,
-  generatedFrom: "https://worldcup26.ir/",
-  verifiedAt: "2026-06-07",
+  generatedFrom: FIFA_CALENDAR_URL,
+  verifiedAt: new Date().toISOString().slice(0, 10),
   tournamentSlug: "copa-do-mundo-2026",
-  teams: teamsPayload.teams
-    .map((team) => {
-      const name = TEAM_NAMES[team.fifa_code];
-      if (!name) throw new Error(`Nome em português ausente para ${team.fifa_code}.`);
+  teams: [...groupByCode.entries()]
+    .map(([code, group]) => {
+      const name = TEAM_NAMES[code];
+      if (!name) throw new Error(`Nome em português ausente para ${code}.`);
       return {
-        code: team.fifa_code,
+        code,
         name,
-        shortName: shortName(team.fifa_code, name),
-        flag: flagFor(team.iso2, team.fifa_code),
-        group: team.groups,
+        shortName: shortName(code, name),
+        flag: flagFor(iso2ByCode.get(code), code),
+        group,
       };
     })
     .sort((a, b) => a.code.localeCompare(b.code)),
-  matches: gamesPayload.games
-    .map((game) => {
-      const stadium = stadiumById.get(game.stadium_id);
-      if (!stadium) throw new Error(`Estádio desconhecido na partida ${game.id}.`);
-      const homeTeam = teamById.get(game.home_team_id);
-      const awayTeam = teamById.get(game.away_team_id);
-      const stage = STAGE_BY_TYPE[game.type];
-      if (!stage) throw new Error(`Fase desconhecida na partida ${game.id}: ${game.type}`);
+  matches: calendarPayload.Results
+    .map((match) => {
+      const stage = stageFromFifa(match);
+      const number = Number(match.MatchNumber);
+      const isGroup = stage === "group";
 
       return {
-        number: Number(game.id),
+        number,
         stage,
-        group: game.type === "group" ? game.group : null,
-        homeCode: homeTeam?.fifa_code ?? null,
-        awayCode: awayTeam?.fifa_code ?? null,
-        homeLabel: translateLabel(game.home_team_label),
-        awayLabel: translateLabel(game.away_team_label),
-        scheduledAt:
-          OFFICIAL_KICKOFF_OVERRIDES[game.id] ??
-          localDateToUtc(game.local_date, STADIUM_UTC_OFFSETS[game.stadium_id]),
-        venue: stadium.fifa_name,
-        providerMatchId: `worldcup26:${game.id}`,
+        group: isGroup ? groupFromFifa(match) : null,
+        homeCode: teamCode(match.Home),
+        awayCode: teamCode(match.Away),
+        homeLabel: isGroup ? null : translateLabel(match.PlaceHolderA),
+        awayLabel: isGroup ? null : translateLabel(match.PlaceHolderB),
+        scheduledAt: new Date(match.Date).toISOString(),
+        venue: localizedDescription(match.Stadium?.Name),
+        providerMatchId: `worldcup26:${number}`,
       };
     })
     .sort((a, b) => a.number - b.number),
@@ -165,14 +134,6 @@ function assertCount(values, expected, label) {
   }
 }
 
-function localDateToUtc(value, offsetHours) {
-  if (typeof offsetHours !== "number") throw new Error(`Fuso ausente para ${value}.`);
-  const match = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})$/.exec(value);
-  if (!match) throw new Error(`Data local inválida: ${value}`);
-  const [, month, day, year, hour, minute] = match.map(Number);
-  return new Date(Date.UTC(year, month - 1, day, hour - offsetHours, minute)).toISOString();
-}
-
 function shortName(code, name) {
   if (code === "BIH") return "Bósnia";
   if (code === "COD") return "RD Congo";
@@ -189,10 +150,69 @@ function flagFor(iso2, fifaCode) {
 
 function translateLabel(value) {
   if (!value) return null;
+  const winnerGroup = /^1([A-L])$/.exec(value);
+  if (winnerGroup) return `1º do Grupo ${winnerGroup[1]}`;
+
+  const runnerUpGroup = /^2([A-L])$/.exec(value);
+  if (runnerUpGroup) return `2º do Grupo ${runnerUpGroup[1]}`;
+
+  const thirdGroup = /^3([A-L]+)$/.exec(value);
+  if (thirdGroup) return `3º de ${thirdGroup[1].split("").join("/")}`;
+
+  const winnerMatch = /^W(\d+)$/.exec(value);
+  if (winnerMatch) return `Vencedor da partida ${winnerMatch[1]}`;
+
+  const loserMatch = /^(?:L|RU)(\d+)$/.exec(value);
+  if (loserMatch) return `Perdedor da partida ${loserMatch[1]}`;
+
   return value
     .replace(/^Winner Group ([A-L])$/, "1º do Grupo $1")
     .replace(/^Runner-up Group ([A-L])$/, "2º do Grupo $1")
     .replace(/^3rd Group (.+)$/, "3º de $1")
     .replace(/^Winner Match (\d+)$/, "Vencedor da partida $1")
     .replace(/^Loser Match (\d+)$/, "Perdedor da partida $1");
+}
+
+function groupAssignments(matches) {
+  const assignments = new Map();
+  for (const match of matches) {
+    if (stageFromFifa(match) !== "group") continue;
+    const group = groupFromFifa(match);
+    if (!group) throw new Error(`Grupo ausente na partida ${match.MatchNumber}.`);
+    for (const team of [match.Home, match.Away]) {
+      const code = teamCode(team);
+      if (!code) throw new Error(`Seleção ausente na partida ${match.MatchNumber}.`);
+      const previous = assignments.get(code);
+      if (previous && previous !== group) {
+        throw new Error(`Seleção ${code} aparece nos grupos ${previous} e ${group}.`);
+      }
+      assignments.set(code, group);
+    }
+  }
+  assertCount([...assignments], 48, "seleções oficiais FIFA com grupo");
+  return assignments;
+}
+
+function stageFromFifa(match) {
+  const stageName = localizedDescription(match.StageName);
+  const stage = STAGE_BY_FIFA_NAME[stageName];
+  if (!stage) throw new Error(`Fase FIFA desconhecida na partida ${match.MatchNumber}: ${stageName}`);
+  return stage;
+}
+
+function groupFromFifa(match) {
+  const groupName = localizedDescription(match.GroupName);
+  return /^Group ([A-L])$/.exec(groupName ?? "")?.[1] ?? null;
+}
+
+function teamCode(team) {
+  return (team?.Abbreviation ?? team?.IdCountry ?? null)?.toUpperCase() ?? null;
+}
+
+function localizedDescription(values) {
+  return (
+    values?.find((item) => item.Locale === "en-GB")?.Description ??
+    values?.[0]?.Description ??
+    null
+  );
 }
