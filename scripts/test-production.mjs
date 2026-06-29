@@ -128,14 +128,24 @@ try {
 }
 
 async function gotoProductionPage(page, path) {
-  try {
-    return await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
-  } catch (error) {
-    if (!(error instanceof Error) || !error.message.includes("net::ERR_ABORTED")) {
-      throw error;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
+    } catch (error) {
+      if (!isRetriableNavigationError(error) || attempt === 1) {
+        throw error;
+      }
+      await page.waitForLoadState("domcontentloaded", { timeout: 5_000 }).catch(() => {});
     }
-    return page.goto(`${BASE_URL}${path}`, { waitUntil: "domcontentloaded" });
   }
+}
+
+function isRetriableNavigationError(error) {
+  return (
+    error instanceof Error &&
+    (error.message.includes("net::ERR_ABORTED") ||
+      error.message.includes("is interrupted by another navigation"))
+  );
 }
 
 async function findBrowser() {
