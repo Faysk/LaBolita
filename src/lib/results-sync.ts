@@ -1,7 +1,10 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { readTextWithByteLimit } from "@/lib/bounded-response";
-import { normalizeFifaBracketParticipants } from "@/lib/fifa-bracket-provider";
+import {
+  normalizeFifaBracketParticipants,
+  normalizeFifaBracketResults,
+} from "@/lib/fifa-bracket-provider";
 import {
   assertDatabaseMappingComplete,
   normalizeEspnFeed,
@@ -42,6 +45,7 @@ type BracketSyncSummary = {
   bracketStatus: "ok" | "error" | "skipped";
   bracketObservations: number;
   bracketUpdated: number;
+  bracketFinalized: number;
   bracketError?: string;
 };
 
@@ -145,7 +149,7 @@ export async function syncResultsFeed() {
     matched: matched.length,
     updated: changed.length,
     finalCandidates: observations.filter((item) => item.status === "finished").length,
-    autoFinalized: Number(autoFinalized ?? 0),
+    autoFinalized: Number(autoFinalized ?? 0) + bracketSync.bracketFinalized,
     ignoredRegressions,
     ...bracketSync,
   };
@@ -168,6 +172,7 @@ export async function recordResultsSyncFailure(error: unknown) {
         bracketStatus: "skipped",
         bracketObservations: 0,
         bracketUpdated: 0,
+        bracketFinalized: 0,
         error: sanitizeError(error),
       },
       createServiceClient(),
@@ -210,14 +215,15 @@ async function syncOfficialBracketParticipants(
       bracketStatus: "skipped",
       bracketObservations: 0,
       bracketUpdated: 0,
+      bracketFinalized: 0,
     };
   }
 
   try {
     const bracketUrl = process.env.FIFA_BRACKET_FEED_URL ?? DEFAULT_FIFA_BRACKET_FEED_URL;
-    const participants = normalizeFifaBracketParticipants(
-      await fetchJson(bracketUrl, MAX_BRACKET_FEED_BYTES),
-    );
+    const bracketPayload = await fetchJson(bracketUrl, MAX_BRACKET_FEED_BYTES);
+    const participants = normalizeFifaBracketParticipants(bracketPayload);
+    const results = normalizeFifaBracketResults(bracketPayload);
     const resolvedSlots = participants.reduce(
       (total, participant) =>
         total +
@@ -274,6 +280,12 @@ async function syncOfficialBracketParticipants(
         bracketStatus: "ok",
         bracketObservations: resolvedSlots,
         bracketUpdated: 0,
+        bracketFinalized: await syncOfficialKnockoutResults(
+          supabase,
+          results,
+          matchByNumber,
+          teamByCode,
+        ),
       };
     }
 
@@ -287,6 +299,12 @@ async function syncOfficialBracketParticipants(
       bracketStatus: "ok",
       bracketObservations: resolvedSlots,
       bracketUpdated: Number(updated ?? 0),
+      bracketFinalized: await syncOfficialKnockoutResults(
+        supabase,
+        results,
+        matchByNumber,
+        teamByCode,
+      ),
     };
   } catch (error) {
     console.error("Could not synchronize FIFA knockout bracket", error);
@@ -294,9 +312,54 @@ async function syncOfficialBracketParticipants(
       bracketStatus: "error",
       bracketObservations: 0,
       bracketUpdated: 0,
+      bracketFinalized: 0,
       bracketError: sanitizeError(error),
     };
   }
+}
+
+async function syncOfficialKnockoutResults(
+  supabase: ReturnType<typeof createServiceClient>,
+  results: ReturnType<typeof normalizeFifaBracketResults>,
+  matchByNumber: Map<number, DatabaseMatch>,
+  teamByCode: Map<string, string>,
+) {
+  const updates = results.flatMap((result) => {
+    const match = matchByNumber.get(result.matchNumber);
+    if (!match) {
+      throw new Error(
+        `FIFA bracket result referenced match ${result.matchNumber}, but it is missing locally.`,
+      );
+    }
+    const advancingTeamId = teamByCode.get(result.advancingTeamCode);
+    if (!advancingTeamId) {
+      throw new Error(
+        `FIFA bracket result referenced unknown winning team code ${result.advancingTeamCode}.`,
+      );
+    }
+
+    return [
+      {
+        id: match.id,
+        home_score: result.homeScore,
+        away_score: result.awayScore,
+        advancing_team_id: advancingTeamId,
+      },
+    ];
+  });
+
+  if (updates.length === 0) return 0;
+
+  const { data: finalized, error } = await supabase.rpc(
+    "apply_knockout_result_sync_updates",
+    { p_updates: updates },
+  );
+  if (error) {
+    if (isMissingKnockoutResultSyncFunction(error)) return 0;
+    throw error;
+  }
+
+  return Number(finalized ?? 0);
 }
 
 async function fetchJson(url: string, maxBytes: number) {
@@ -358,6 +421,7 @@ async function recordSyncState(
     bracketStatus: "ok" | "error" | "skipped";
     bracketObservations: number;
     bracketUpdated: number;
+    bracketFinalized: number;
     bracketError?: string;
     error?: string;
   },
@@ -412,6 +476,14 @@ function isMissingAutoFinalizeFunction(error: { code?: string; message?: string 
     error.code === "42883" ||
     error.code === "PGRST202" ||
     /finalize_provider_group_matches/i.test(error.message ?? "")
+  );
+}
+
+function isMissingKnockoutResultSyncFunction(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42883" ||
+    error.code === "PGRST202" ||
+    /apply_knockout_result_sync_updates/i.test(error.message ?? "")
   );
 }
 
