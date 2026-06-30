@@ -28,10 +28,15 @@ const result = spawnSync(
 process.exit(result.status ?? 1);
 
 function findNextBin() {
-  const candidates = [
-    path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next"),
-    path.join(process.cwd(), "..", "node_modules", "next", "dist", "bin", "next"),
-  ];
+  const candidates = [];
+  let currentDir = process.cwd();
+
+  while (true) {
+    candidates.push(path.join(currentDir, "node_modules", "next", "dist", "bin", "next"));
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break;
+    currentDir = parentDir;
+  }
 
   for (const candidate of candidates) {
     try {

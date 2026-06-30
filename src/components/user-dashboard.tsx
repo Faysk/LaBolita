@@ -1,14 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRight,
-  BarChart3,
   CheckCircle2,
   ChevronDown,
-  ChevronUp,
   CircleAlert,
   CircleDot,
   ListChecks,
@@ -16,12 +13,9 @@ import {
   Radio,
   Sparkles,
   Target,
-  TrendingDown,
-  TrendingUp,
   Trophy,
   Users,
 } from "lucide-react";
-import { CarouselRail } from "@/components/carousel-rail";
 import { LocalMatchDateTime } from "@/components/local-match-date-time";
 import { EmptyState } from "@/components/empty-state";
 import { PageShortcuts } from "@/components/page-shortcuts";
@@ -99,9 +93,6 @@ export function UserDashboard({
     (pool, index, all) => all.findIndex((item) => item.id === pool.id) === index,
   );
   const activePools = pools.filter((pool) => !pool.isArchived);
-  const [selectedPoolId, setSelectedPoolId] = useSelectedPoolId(activePools);
-  const selectedPool =
-    activePools.find((pool) => pool.id === selectedPoolId) ?? activePools[0] ?? null;
 
   function predictionFor(match: DemoMatch) {
     return usesSupabase
@@ -141,10 +132,6 @@ export function UserDashboard({
       }),
     }),
   );
-  const selectedSnapshot =
-    snapshots.find((snapshot) => snapshot.pool.id === selectedPool?.id) ??
-    snapshots[0] ??
-    null;
   const leadingSnapshot = snapshots
     .filter((snapshot) => snapshot.currentPlayer)
     .sort(compareSnapshots)[0];
@@ -210,7 +197,7 @@ export function UserDashboard({
 
       <section className="mt-6 overflow-hidden rounded-[1.8rem] border bg-surface/90 shadow-xl shadow-brand/5">
         {liveMatches.length > 0 ? (
-          <LivePanel liveMatches={liveMatches} selectedSnapshot={selectedSnapshot} />
+          <LiveTeaserPanel liveMatches={liveMatches} leadingSnapshot={leadingSnapshot ?? null} />
         ) : (
           <NextActionPanel
             nextMatch={nextPendingMatch}
@@ -227,22 +214,30 @@ export function UserDashboard({
       />
 
       <section className="mt-8 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
-        <div className="dashboard-ranking-panel min-w-0 rounded-[1.5rem] border bg-surface/88 p-4 md:p-5">
+        <section
+          aria-labelledby="dashboard-pool-summary-title"
+          className="dashboard-ranking-panel min-w-0 rounded-[1.5rem] border bg-surface/88 p-4 md:p-5"
+        >
           <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div className="min-w-0">
-              <p className="eyebrow">Disputa nos bolões</p>
-              <h2 className="mt-1 text-2xl font-black">Ranking em movimento</h2>
+              <p className="eyebrow">Resumo dos bolões</p>
+              <h2 id="dashboard-pool-summary-title" className="mt-1 text-2xl font-black">
+                Onde você está na disputa
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+                Aqui ficam só os sinais principais. Ranking completo, participantes e
+                relatórios por palpite moram em Bolões.
+              </p>
             </div>
+            <Link
+              href="/boloes#ranking-do-bolao"
+              className="interactive inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-brand px-4 text-sm font-black text-white"
+            >
+              Ver rankings <ArrowRight className="size-4" />
+            </Link>
           </div>
           {snapshots.length > 0 ? (
-            <PoolSnapshotStrip
-              snapshots={snapshots}
-              selectedPoolId={selectedPool?.id ?? ""}
-              onSelect={setSelectedPoolId}
-            />
-          ) : null}
-          {selectedSnapshot ? (
-            <PoolImpact snapshot={selectedSnapshot} />
+            <PoolSummaryGrid snapshots={snapshots} />
           ) : (
             <EmptyPanel
               icon={Users}
@@ -252,7 +247,7 @@ export function UserDashboard({
               action="Abrir bolões"
             />
           )}
-        </div>
+        </section>
 
         <div className="grid min-w-0 gap-5">
           <ActionQueue
@@ -270,10 +265,6 @@ export function UserDashboard({
       </section>
     </main>
   );
-}
-
-function useSelectedPoolId(pools: PoolSummary[]) {
-  return useState(() => pools[0]?.id ?? "");
 }
 
 function DashboardMetric({
@@ -314,16 +305,14 @@ function DashboardMetric({
   );
 }
 
-function LivePanel({
+function LiveTeaserPanel({
   liveMatches,
-  selectedSnapshot,
+  leadingSnapshot,
 }: {
   liveMatches: LiveMatchView[];
-  selectedSnapshot: PoolSnapshot | null;
+  leadingSnapshot: PoolSnapshot | null;
 }) {
-  const [selectedMatchId, setSelectedMatchId] = useState(liveMatches[0]?.match.id ?? "");
-  const primary =
-    liveMatches.find((item) => item.match.id === selectedMatchId) ?? liveMatches[0];
+  const primary = liveMatches[0];
   const score = primary.match.liveResult;
   const totalLivePoints = liveMatches.reduce(
     (total, item) => total + (item.score?.totalPoints ?? 0),
@@ -331,7 +320,7 @@ function LivePanel({
   );
 
   return (
-    <div className="grid gap-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(18rem,0.75fr)]">
+    <div className="grid gap-0 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
       <div className="bg-brand-strong p-5 text-white md:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase text-accent">
@@ -343,45 +332,12 @@ function LivePanel({
           </span>
         </div>
         <h2 className="mt-4 text-3xl font-black md:text-5xl">
-          Pontos mudando em tempo real
+          Tem jogo mexendo no placar agora
         </h2>
-        {liveMatches.length > 1 ? (
-          <CarouselRail
-            ariaLabel="Jogos ao vivo do painel"
-            initialCount={4}
-            step={4}
-            moreLabel="Ver mais jogos ao vivo"
-            className="mt-5"
-            trackClassName="auto-cols-[13rem] gap-2"
-            buttonClassName="interactive mt-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-black text-accent hover:bg-white/15"
-          >
-            {liveMatches.map((item) => (
-              <button
-                key={item.match.id}
-                type="button"
-                aria-pressed={item.match.id === primary.match.id}
-                onClick={() => setSelectedMatchId(item.match.id)}
-                className={`interactive min-w-[13rem] rounded-2xl border px-3 py-2 text-left ${
-                  item.match.id === primary.match.id
-                    ? "border-accent bg-white/15"
-                    : "border-white/15 bg-white/8"
-                }`}
-              >
-                <span className="block truncate text-xs font-black text-white">
-                  {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
-                </span>
-                <span className="mt-1 flex items-center justify-between gap-2 text-[10px] font-bold text-white/62">
-                  <span>
-                    {item.match.liveResult
-                      ? `${item.match.liveResult.homeScore} x ${item.match.liveResult.awayScore}`
-                      : "ao vivo"}
-                  </span>
-                  <span className="text-accent">{item.score?.totalPoints ?? 0} pts</span>
-                </span>
-              </button>
-            ))}
-          </CarouselRail>
-        ) : null}
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
+          O painel mostra só o alerta. Para comparar palpites, ranking provisório
+          e distribuição do bolão, abra a central ao vivo.
+        </p>
         <div className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
           <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
             <LiveTeam team={primary.match.homeTeam} />
@@ -396,28 +352,34 @@ function LivePanel({
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <LiveStat label="Seu palpite" value={predictionText(primary.prediction)} />
             <LiveStat
-              label="Neste momento"
+              label="Parcial neste jogo"
               value={primary.score ? `${primary.score.totalPoints} pts` : "sem palpite"}
             />
           </div>
         </div>
+        <Link
+          href="/ao-vivo"
+          className="interactive mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-accent px-4 text-sm font-black text-brand-strong"
+        >
+          Abrir central ao vivo <ArrowRight className="size-4" />
+        </Link>
       </div>
       <div className="p-5 md:p-7">
-        <p className="eyebrow">Impacto no bolão</p>
+        <p className="eyebrow">Resumo da disputa</p>
         <h3 className="mt-1 text-2xl font-black">
-          {selectedSnapshot ? selectedSnapshot.pool.name : "Sem bolão ativo"}
+          {leadingSnapshot ? leadingSnapshot.pool.name : "Sem bolão ativo"}
         </h3>
-        {selectedSnapshot?.currentPlayer ? (
+        {leadingSnapshot?.currentPlayer ? (
           <div className="mt-5 grid gap-3">
-            <MovementBadge snapshot={selectedSnapshot} />
+            <SnapshotSummaryCard snapshot={leadingSnapshot} />
             <div className="grid grid-cols-2 gap-3">
               <MiniDashboardStat
                 label="Pontos oficiais"
-                value={`${selectedSnapshot.currentPlayer.points} pts`}
+                value={`${leadingSnapshot.currentPlayer.points} pts`}
               />
               <MiniDashboardStat
                 label="Parcial ao vivo"
-                value={`${selectedSnapshot.currentPlayer.provisionalPoints ?? selectedSnapshot.currentPlayer.points} pts`}
+                value={`${leadingSnapshot.currentPlayer.provisionalPoints ?? leadingSnapshot.currentPlayer.points} pts`}
               />
             </div>
             {liveMatches.length > 1 && (
@@ -425,16 +387,12 @@ function LivePanel({
                 {liveMatches.length} jogos mexendo nos rankings agora.
               </p>
             )}
-            <ProgressiveList
-              initialCount={4}
-              step={4}
-              moreLabel="Ver mais impactos"
-              className="grid gap-2"
+            <Link
+              href="/boloes#ranking-do-bolao"
+              className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border bg-surface px-4 text-sm font-black text-brand hover:border-brand/70"
             >
-              {liveMatches.map((item) => (
-                <LiveMatchImpact key={item.match.id} item={item} />
-              ))}
-            </ProgressiveList>
+              Ver ranking completo <ArrowRight className="size-4" />
+            </Link>
           </div>
         ) : (
           <p className="mt-4 rounded-2xl bg-surface-muted p-4 text-sm font-bold text-muted">
@@ -442,66 +400,6 @@ function LivePanel({
           </p>
         )}
       </div>
-    </div>
-  );
-}
-
-function LiveMatchImpact({ item }: { item: LiveMatchView }) {
-  const score = item.match.liveResult;
-  const [expanded, setExpanded] = useState(false);
-  const Chevron = expanded ? ChevronUp : ChevronDown;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border bg-surface-muted">
-      <button
-        type="button"
-        data-testid="dashboard-live-impact-toggle"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((current) => !current)}
-        className="interactive grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-3 text-left"
-      >
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black">
-            {item.match.homeTeam.shortName} x {item.match.awayTeam.shortName}
-          </p>
-          <p className="mt-1 text-xs font-bold text-muted">
-            Palpite {predictionText(item.prediction)} · parcial{" "}
-            {score ? `${score.homeScore} x ${score.awayScore}` : "ao vivo"}
-          </p>
-        </div>
-        <span className="inline-flex items-center gap-2 rounded-xl bg-surface px-3 py-2 text-sm font-black text-brand">
-          {item.score?.totalPoints ?? 0} pts
-          <Chevron className="size-3.5 text-muted" />
-        </span>
-      </button>
-      {expanded ? (
-        <div
-          data-testid="dashboard-live-impact-details"
-          className="grid gap-2 border-t bg-surface/75 p-3 sm:grid-cols-2"
-        >
-          <MiniDashboardStat
-            label="Categoria"
-            value={item.score ? scoreCategoryLabel(item.score.category) : "sem cálculo"}
-          />
-          <MiniDashboardStat
-            label="Pontos do placar"
-            value={item.score ? `${item.score.matchPoints} pts` : "—"}
-          />
-          <MiniDashboardStat
-            label={item.match.stage === "group" ? "Multiplicador" : "Avanço"}
-            value={
-              item.match.stage === "group"
-                ? item.score
-                  ? `${item.score.multiplier}x`
-                  : "—"
-                : item.score
-                  ? `${item.score.advancementPoints} pts`
-                  : "—"
-            }
-          />
-          <MiniDashboardStat label="Atualização" value={providerUpdateText(item.match)} />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -574,287 +472,67 @@ function NextActionPanel({
   );
 }
 
-function PoolImpact({ snapshot }: { snapshot: PoolSnapshot }) {
-  const ordered = [...snapshot.ranking].sort(
-    (left, right) =>
-      (left.provisionalPosition ?? left.position) -
-        (right.provisionalPosition ?? right.position) ||
-      left.name.localeCompare(right.name, "pt-BR"),
-  );
-  const [expanded, setExpanded] = useState(false);
-  const [selectedPlayerKey, setSelectedPlayerKey] = useState(
-    () => (snapshot.currentPlayer ? dashboardRankingKey(snapshot.currentPlayer) : ""),
-  );
-  const compactRows = ordered.slice(0, 5);
-  const visibleRows = expanded ? ordered : compactRows;
-  const fallbackPlayerKey = snapshot.currentPlayer
-    ? dashboardRankingKey(snapshot.currentPlayer)
-    : ordered[0]
-      ? dashboardRankingKey(ordered[0])
-      : "";
-  const activePlayerKey = ordered.some(
-    (player) => dashboardRankingKey(player) === selectedPlayerKey,
-  )
-    ? selectedPlayerKey
-    : fallbackPlayerKey;
-
+function PoolSummaryGrid({ snapshots }: { snapshots: PoolSnapshot[] }) {
   return (
-    <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(13.5rem,0.68fr)_minmax(0,1.32fr)] lg:items-start">
-      <div className="dashboard-pool-summary self-start rounded-[1.35rem] border bg-surface-muted p-3.5">
-        <div className="flex items-center gap-3">
-          <PoolFlag code={snapshot.pool.flagCode} size="sm" />
-          <div className="min-w-0">
-            <p className="truncate text-base font-black">{snapshot.pool.name}</p>
-            <p className="mt-0.5 text-xs font-bold text-muted">
-              {snapshot.pool.members} jogadores
-            </p>
-          </div>
-        </div>
-        {snapshot.currentPlayer ? (
-          <>
-            <div className="mt-3">
-              <MovementBadge snapshot={snapshot} />
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <MiniDashboardStat
-                label="Oficial"
-                value={`${rankingLabel(snapshot.currentPlayer, snapshot.ranking)} · ${snapshot.currentPlayer.points} pts`}
-              />
-              <MiniDashboardStat
-                label="Ao vivo"
-                value={`${rankingLabel(snapshot.currentPlayer, snapshot.ranking, { provisional: true, tiedSuffix: "=" })} · ${snapshot.currentPlayer.provisionalPoints ?? snapshot.currentPlayer.points} pts`}
-              />
-            </div>
-            {snapshot.gapToLeader > 0 ? (
-              <p className="mt-3 rounded-2xl border bg-surface px-3 py-2 text-xs font-bold text-muted">
-                {snapshot.gapToLeader} pts atrás de {snapshot.leader?.name}.
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <p className="mt-5 rounded-2xl bg-surface p-4 text-sm font-bold text-muted">
-            Sua posição aparece assim que o ranking tiver participantes.
-          </p>
-        )}
-      </div>
-      <div className="dashboard-ranking-list overflow-hidden rounded-[1.35rem] border bg-surface">
-        <div className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 border-b bg-surface-muted/55 px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-muted">
-          <span className="text-center">Pos.</span>
-          <span>Participante</span>
-          <span className="text-right">Parcial</span>
-        </div>
-        {visibleRows.map((player) => {
-          const key = dashboardRankingKey(player);
-          const selected = key === activePlayerKey;
-
-          return (
-            <div key={key} className="border-b last:border-b-0">
-              <button
-                type="button"
-                aria-expanded={selected}
-                onClick={() => setSelectedPlayerKey(key)}
-                className={`interactive grid w-full grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left ${
-                  selected ? "dashboard-ranking-row-selected" : player.isCurrentUser ? "dashboard-ranking-row-current" : "hover:bg-surface-muted/60"
-                }`}
-              >
-                <span className={`text-center text-sm font-black ${selected ? "text-brand-strong/75" : "text-muted"}`}>
-                  {rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" })}
-                </span>
-                <div className="flex min-w-0 items-center gap-3">
-                  <UserAvatar name={player.name} initials={player.initials} avatarUrl={player.avatarUrl} />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black">{player.name}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <p className={`text-xs font-bold ${selected ? "text-brand-strong/70" : "text-muted"}`}>
-                        {player.exact} exatas · {player.correct} acertos
-                      </p>
-                      {!selected ? <PlayerMovementChip player={player} /> : null}
-                    </div>
-                  </div>
-                </div>
-                <span className={`text-right text-sm font-black ${selected ? "text-brand-strong" : "text-brand"}`}>
-                  {player.provisionalPoints ?? player.points} pts
-                </span>
-              </button>
-              {selected ? (
-                <DashboardRankingDetail player={player} snapshot={snapshot} />
-              ) : null}
-            </div>
-          );
-        })}
-        {ordered.length > compactRows.length ? (
-          <button
-            type="button"
-            onClick={() => setExpanded((current) => !current)}
-            className="dashboard-ranking-toggle interactive flex w-full items-center justify-center gap-2 px-4 py-3 text-xs font-black text-brand hover:bg-surface-muted"
-          >
-            {expanded ? (
-              <>
-                Mostrar menos <ChevronUp className="size-4" />
-              </>
-            ) : (
-              <>
-                Ver mais participantes ({ordered.length - compactRows.length}) <ChevronDown className="size-4" />
-              </>
-            )}
-          </button>
-        ) : null}
-      </div>
-    </div>
+    <ProgressiveList
+      initialCount={4}
+      step={4}
+      autoLoad={false}
+      moreLabel="Ver mais bolões"
+      className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4"
+      buttonClassName="dashboard-ranking-toggle interactive flex w-full items-center justify-center gap-2 rounded-2xl border bg-surface-muted px-4 py-3 text-xs font-black text-brand hover:border-brand/60 md:col-span-2 xl:col-span-4"
+    >
+      {snapshots.map((snapshot) => (
+        <SnapshotSummaryCard key={snapshot.pool.id} snapshot={snapshot} />
+      ))}
+    </ProgressiveList>
   );
 }
 
-function DashboardRankingDetail({
-  player,
-  snapshot,
-}: {
-  player: RankingEntry;
-  snapshot: PoolSnapshot;
-}) {
-  const points = player.provisionalPoints ?? player.points;
-  const leaderPoints = snapshot.leader?.provisionalPoints ?? snapshot.leader?.points ?? points;
-  const gap = Math.max(0, leaderPoints - points);
+function SnapshotSummaryCard({ snapshot }: { snapshot: PoolSnapshot }) {
+  const player = snapshot.currentPlayer;
+  const toneClass =
+    snapshot.movement.tone === "up"
+      ? "status-success"
+      : snapshot.movement.tone === "down"
+        ? "status-warning"
+        : "bg-surface-muted";
 
   return (
-    <div className="dashboard-ranking-detail border-t px-4 py-3">
-      <div className="grid grid-cols-2 gap-2">
-        <MiniDashboardStat label="Oficial" value={`${rankingLabel(player, snapshot.ranking)} · ${player.points} pts`} />
+    <Link
+      href="/boloes#ranking-do-bolao"
+      className={`interactive block rounded-[1.25rem] border p-3 hover:border-brand/70 ${toneClass}`}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <PoolFlag code={snapshot.pool.flagCode} size="sm" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black">{snapshot.pool.name}</p>
+          <p className="mt-0.5 text-xs font-bold text-muted">
+            {snapshot.pool.members} jogadores
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <MiniDashboardStat
-          label="Ao vivo"
-          value={`${rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" })} · ${points} pts`}
+          label="Posição"
+          value={
+            player
+              ? rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" })
+              : "—"
+          }
+        />
+        <MiniDashboardStat
+          label="Pontos"
+          value={player ? `${player.provisionalPoints ?? player.points}` : "—"}
         />
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-muted">
-        <PlayerMovementChip player={player} />
-        {gap > 0 && snapshot.leader ? <span>{gap} pts atrás de {snapshot.leader.name}</span> : <span>na disputa pela ponta</span>}
-      </div>
-    </div>
-  );
-}
-
-function PoolSnapshotStrip({
-  snapshots,
-  selectedPoolId,
-  onSelect,
-}: {
-  snapshots: PoolSnapshot[];
-  selectedPoolId: string;
-  onSelect: (poolId: string) => void;
-}) {
-  return (
-    <div className="mt-4 rounded-[1.25rem] border bg-surface-muted/55 p-2.5">
-      <div className="mb-2 flex items-center justify-between gap-3 px-1">
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-muted">
-          Bolões em movimento
-        </p>
-        <span className="rounded-full border bg-surface px-2 py-1 text-[10px] font-black text-muted">
-          {snapshots.length}
-        </span>
-      </div>
-      <CarouselRail
-        ariaLabel="Bolões em movimento"
-        initialCount={4}
-        step={4}
-        moreLabel="Ver mais bolões"
-        trackClassName="auto-cols-[minmax(12.5rem,78vw)] gap-2 sm:auto-cols-[13.5rem]"
-        buttonClassName="interactive mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border bg-surface px-4 py-2.5 text-xs font-black text-brand hover:border-brand/60"
-      >
-        {snapshots.map((snapshot) => {
-          const selected = snapshot.pool.id === selectedPoolId;
-          const player = snapshot.currentPlayer;
-
-          return (
-            <button
-              key={snapshot.pool.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onSelect(snapshot.pool.id)}
-              className={`interactive grid min-w-[12.5rem] gap-2 rounded-2xl border p-2.5 text-left sm:min-w-[13.5rem] ${
-                selected ? "pool-snapshot-card-selected" : "bg-surface hover:border-brand/70"
-              }`}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <PoolFlag code={snapshot.pool.flagCode} size="sm" />
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-black">{snapshot.pool.name}</span>
-                  <span className={`block text-xs font-bold ${selected ? "text-brand-strong/70" : "text-muted"}`}>
-                    {snapshot.pool.members} jogadores
-                  </span>
-                </span>
-              </span>
-              <span className="grid grid-cols-3 gap-1.5 text-center">
-                <SnapshotMiniMetric
-                  selected={selected}
-                  label="Pos."
-                  value={player ? rankingLabel(player, snapshot.ranking, { provisional: true, tiedSuffix: "=" }) : "—"}
-                />
-                <SnapshotMiniMetric
-                  selected={selected}
-                  label="Parcial"
-                  value={player ? `${player.provisionalPoints ?? player.points}` : "—"}
-                />
-                <SnapshotMiniMetric
-                  selected={selected}
-                  label="Mov."
-                  value={snapshot.movement.delta === 0 ? "=" : `${snapshot.movement.delta > 0 ? "+" : ""}${snapshot.movement.delta}`}
-                  tone={snapshot.movement.tone}
-                />
-              </span>
-            </button>
-          );
-        })}
-      </CarouselRail>
-    </div>
-  );
-}
-
-function SnapshotMiniMetric({
-  label,
-  value,
-  selected,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string;
-  selected: boolean;
-  tone?: "up" | "down" | "neutral";
-}) {
-  const toneClass =
-    selected
-      ? "border-brand-strong/15 bg-white/40 text-brand-strong"
-      : tone === "up"
-        ? "status-success"
-        : tone === "down"
-          ? "status-warning"
-          : "bg-surface";
-
-  return (
-    <span className={`rounded-xl border px-2 py-1 ${toneClass}`}>
-      <span className={`block text-[8px] font-black uppercase ${selected ? "text-brand-strong/60" : "text-muted"}`}>
-        {label}
-      </span>
-      <span className="mt-0.5 block text-[11px] font-black">
-        {value}
-      </span>
-    </span>
-  );
-}
-
-function PlayerMovementChip({ player }: { player: RankingEntry }) {
-  const movement = rankingMovement(player);
-  const Icon = movement.icon;
-  const toneClass =
-    movement.tone === "up"
-      ? "status-success"
-      : movement.tone === "down"
-        ? "status-warning"
-        : "status-neutral";
-
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black ${toneClass}`}>
-      <Icon className="size-3" />
-      {movement.label}
-    </span>
+      <p className="mt-3 text-xs font-black text-muted">
+        {snapshot.movement.label}
+        {snapshot.gapToLeader > 0 && snapshot.leader
+          ? ` · ${snapshot.gapToLeader} pts atrás de ${snapshot.leader.name}`
+          : ""}
+      </p>
+    </Link>
   );
 }
 
@@ -1334,35 +1012,6 @@ function EmptyPanel({
   );
 }
 
-function MovementBadge({ snapshot }: { snapshot: PoolSnapshot }) {
-  const Icon =
-    snapshot.movement.tone === "up"
-      ? TrendingUp
-      : snapshot.movement.tone === "down"
-        ? TrendingDown
-        : BarChart3;
-  const toneClass =
-    snapshot.movement.tone === "up"
-      ? "status-success"
-      : snapshot.movement.tone === "down"
-        ? "status-warning"
-        : "status-neutral";
-
-  return (
-    <div className={`rounded-2xl border px-3 py-2.5 ${toneClass}`}>
-      <div className="flex items-center gap-2">
-        <Icon className="size-4" />
-        <p className="text-sm font-black">{snapshot.movement.label}</p>
-      </div>
-      <p className="mt-1 text-xs font-bold text-muted">
-        {snapshot.livePoints > 0
-          ? `+${snapshot.livePoints} pts no parcial`
-          : "sem ponto parcial neste momento"}
-      </p>
-    </div>
-  );
-}
-
 function MiniDashboardStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="dashboard-soft-stat rounded-2xl border bg-surface px-3 py-2.5">
@@ -1614,44 +1263,12 @@ function rankingSummary(snapshot: PoolSnapshot) {
   return `${rankingLabel(snapshot.currentPlayer, snapshot.ranking, { provisional: true, tiedSuffix: "=" })} · ${snapshot.currentPlayer.provisionalPoints ?? snapshot.currentPlayer.points} pts`;
 }
 
-function rankingMovement(player: RankingEntry): {
-  label: string;
-  tone: "neutral" | "up" | "down";
-  icon: typeof BarChart3;
-} {
-  if (!player.provisionalPosition || player.provisionalPosition === player.position) {
-    return { label: "mantém", tone: "neutral", icon: BarChart3 };
-  }
-  if (player.provisionalPosition < player.position) {
-    return {
-      label: `sobe ${player.position - player.provisionalPosition}`,
-      tone: "up",
-      icon: TrendingUp,
-    };
-  }
-  return {
-    label: `cai ${player.provisionalPosition - player.position}`,
-    tone: "down",
-    icon: TrendingDown,
-  };
-}
-
 function scoreCategoryLabel(category: ScoreBreakdown["category"]) {
   if (category === "exact") return "cravado";
   if (category === "refined") return "refinado";
   if (category === "result") return "resultado";
   if (category === "one-score") return "um placar";
   return "sem acerto";
-}
-
-function providerUpdateText(match: DemoMatch) {
-  if (!match.providerUpdatedAt) return "agora";
-  const date = new Date(match.providerUpdatedAt);
-  if (Number.isNaN(date.getTime())) return "sincronizado";
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
 }
 
 function predictionText(prediction?: ScorePrediction | null) {
@@ -1674,8 +1291,4 @@ function specialCompletionText(
     return `${entry.completedMarkets} fina${entry.completedMarkets === 1 ? "l" : "is"}`;
   }
   return `${entry.completedMarkets}/${totalMarkets} finais`;
-}
-
-function dashboardRankingKey(player: RankingEntry) {
-  return player.userId ?? `${player.position}:${player.name}`;
 }

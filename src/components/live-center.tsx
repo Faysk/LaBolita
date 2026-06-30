@@ -168,6 +168,10 @@ export function LiveCenter({
     );
   }
 
+  if (liveMatches.length === 0) {
+    return <LiveIdlePage selectedMatch={selectedMatch} focusMatches={focusMatches} />;
+  }
+
   const currentMovement = currentPlayer ? rankingMovement(currentPlayer) : null;
   const popular = selectedComparison
     ? popularOutcome(selectedComparison, selectedMatch)
@@ -394,7 +398,7 @@ export function LiveCenter({
               icon={Trophy}
               label="Pontos agora"
               value={currentMatchPoints === null ? "—" : `${currentMatchPoints} pts`}
-              detail={score ? scoreCategoryText(currentPrediction, score, selectedMatch) : "parcial aparece com placar"}
+              detail={score ? scoreBreakdownText(currentPrediction, score, selectedMatch) : "parcial aparece com placar"}
               tone={currentMatchPoints === null ? "neutral" : "live"}
             />
             <MatchFact
@@ -657,6 +661,127 @@ export function LiveCenter({
             </p>
           )}
         </article>
+      </section>
+    </main>
+  );
+}
+
+function LiveIdlePage({
+  selectedMatch,
+  focusMatches,
+}: {
+  selectedMatch: DemoMatch;
+  focusMatches: DemoMatch[];
+}) {
+  const status = liveMatchStatus(selectedMatch);
+  const StatusIcon = status.icon;
+  const score = visibleScore(selectedMatch);
+  const awaitingOfficial = selectedMatch.providerStatus === "finished" && !selectedMatch.result;
+  const upcoming = focusMatches.filter(
+    (match) => !match.result && match.providerStatus !== "finished",
+  );
+
+  return (
+    <main className="page-container py-7 md:py-10">
+      <section className="rounded-[1.5rem] border bg-surface p-5 shadow-sm md:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="eyebrow">Ao vivo</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight md:text-5xl">
+              {awaitingOfficial ? "Resultado aguardando confirmação" : "Sem jogo ao vivo agora"}
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-muted md:text-base">
+              {awaitingOfficial
+                ? "O placar do provedor já chegou, mas o resultado oficial ainda precisa confirmar classificado e pontuação final."
+                : "A central ao vivo fica enxuta fora da bola rolando. Use este atalho para ver a próxima partida ou volte quando houver jogo em andamento."}
+            </p>
+          </div>
+          <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${status.className}`}>
+            <StatusIcon className="size-4" />
+            {status.label}
+          </span>
+        </div>
+
+        <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.65fr)]">
+          <article className="rounded-[1.35rem] border bg-surface-muted p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="eyebrow">{selectedMatch.stageLabel}</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight">
+                  {selectedMatch.homeTeam.shortName} x {selectedMatch.awayTeam.shortName}
+                </h2>
+                <LocalMatchDateTime
+                  scheduledAt={selectedMatch.scheduledAt}
+                  fallbackDate={selectedMatch.dateLabel}
+                  fallbackTime={selectedMatch.timeLabel}
+                  includeZone
+                  className="mt-2 block text-sm font-bold text-muted"
+                />
+              </div>
+              <Link
+                href={focusedPredictionHref(selectedMatch)}
+                className="interactive inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-brand px-4 text-sm font-black text-white"
+              >
+                Abrir jogo <ArrowRight className="size-4" />
+              </Link>
+            </div>
+
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-[1.25rem] bg-surface px-3 py-5">
+              <ScoreTeam team={selectedMatch.homeTeam} align="right" />
+              <div className="min-w-20 text-center">
+                <p className="text-4xl font-black tracking-tight md:text-5xl">
+                  {score ? (
+                    <>
+                      {score.homeScore}<span className="text-brand">x</span>{score.awayScore}
+                    </>
+                  ) : (
+                    <span className="text-brand">x</span>
+                  )}
+                </p>
+                <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-muted">
+                  {score ? "placar atual" : "sem placar"}
+                </p>
+              </div>
+              <ScoreTeam team={selectedMatch.awayTeam} align="left" />
+            </div>
+
+            {awaitingOfficial ? (
+              <p className="mt-4 rounded-2xl border bg-surface px-3 py-2 text-xs font-bold leading-5 text-muted">
+                Em mata-mata, o bônus de avanço entra só quando o classificado oficial
+                estiver confirmado.
+              </p>
+            ) : null}
+          </article>
+
+          <aside className="rounded-[1.35rem] border bg-surface p-4">
+            <p className="eyebrow">Atalhos úteis</p>
+            <div className="mt-4 grid gap-2">
+              <Link
+                href="/jogos"
+                className="interactive flex min-h-11 items-center justify-between gap-3 rounded-2xl border bg-surface-muted px-4 text-sm font-black text-brand hover:border-brand/70"
+              >
+                Calendário completo <CalendarDays className="size-4" />
+              </Link>
+              <Link
+                href="/palpites"
+                className="interactive flex min-h-11 items-center justify-between gap-3 rounded-2xl border bg-surface-muted px-4 text-sm font-black text-brand hover:border-brand/70"
+              >
+                Revisar palpites <Target className="size-4" />
+              </Link>
+              <Link
+                href="/boloes#ranking-do-bolao"
+                className="interactive flex min-h-11 items-center justify-between gap-3 rounded-2xl border bg-surface-muted px-4 text-sm font-black text-brand hover:border-brand/70"
+              >
+                Ver rankings <BarChart3 className="size-4" />
+              </Link>
+            </div>
+            {upcoming.length > 1 ? (
+              <p className="mt-4 rounded-2xl bg-surface-muted p-3 text-xs font-bold text-muted">
+                Próximos monitorados: {upcoming.slice(0, 3).map((match) => `${match.homeTeam.shortName} x ${match.awayTeam.shortName}`).join(" · ")}
+              </p>
+            ) : null}
+          </aside>
+        </div>
       </section>
     </main>
   );
@@ -1126,13 +1251,17 @@ function findCurrentPrediction(
   return comparison?.entries.find((entry) => entry.isCurrentUser)?.prediction ?? match.prediction ?? null;
 }
 
-function scoreCategoryText(
+function scoreBreakdownText(
   prediction: ScorePrediction | null,
   result: MatchResult,
   match: DemoMatch,
 ) {
   if (!prediction) return "sem palpite para comparar";
-  return scoreCategoryLabel(calculateScore(prediction, result, match.stage).category);
+  const score = calculateScore(prediction, result, match.stage);
+  if (match.stage !== "group" && match.stage !== "third_place") {
+    return `${scoreCategoryLabel(score.category)} · ${score.matchPoints} placar + ${score.advancementPoints} avanço`;
+  }
+  return `${scoreCategoryLabel(score.category)} · ${score.matchPoints} pts`;
 }
 
 function scoreCategoryLabel(category: ScoreBreakdown["category"]) {

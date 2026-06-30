@@ -58,23 +58,42 @@ try {
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/ao-vivo`);
-  await page.getByRole("heading", { name: /Tudo pronto para acompanhar|O jogo está mexendo/ }).waitFor();
-  await page.getByText(/Atualização automática|atualizar sozinha/).waitFor();
-  await page.getByRole("heading", { name: "Impacto agora" }).waitFor();
-  await page.getByText("Tendência do bolão").waitFor();
-  const liveFocusedHref = await page.getByRole("link", { name: "Abrir este jogo" }).getAttribute("href");
-  assert.match(
-    liveFocusedHref ?? "",
-    /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
-    "live impact shortcut must open the focused prediction",
-  );
-  await page.getByText("Seu palpite", { exact: true }).waitFor();
-  await page.getByText("Distribuição dos palpites").waitFor();
-  await page.getByText("Cravadas").first().waitFor();
-  if (await page.getByText("Pontos do placar").count()) {
-    await page.getByText("Pontos do placar").first().waitFor();
+  await page
+    .getByRole("heading", {
+      name: /Sem jogo ao vivo agora|Resultado aguardando confirmação|Tudo pronto para acompanhar|O jogo está mexendo/,
+    })
+    .waitFor();
+  const idleLiveCenter = await page
+    .getByRole("heading", { name: /Sem jogo ao vivo agora|Resultado aguardando confirmação/ })
+    .count();
+  if (idleLiveCenter) {
+    await page.getByRole("link", { name: /Calendário completo/ }).waitFor();
+    await page.getByRole("link", { name: /Revisar palpites/ }).waitFor();
+    await page.getByRole("link", { name: /Ver rankings/ }).waitFor();
+    const idleFocusedHref = await page.getByRole("link", { name: /Abrir jogo/ }).getAttribute("href");
+    assert.match(
+      idleFocusedHref ?? "",
+      /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+      "idle live shortcut must open the focused prediction",
+    );
+  } else {
+    await page.getByText(/Atualização automática|atualizar sozinha/).waitFor();
+    await page.getByRole("heading", { name: "Impacto agora" }).waitFor();
+    await page.getByText("Tendência do bolão").waitFor();
+    const liveFocusedHref = await page.getByRole("link", { name: "Abrir este jogo" }).getAttribute("href");
+    assert.match(
+      liveFocusedHref ?? "",
+      /^\/palpites\?jogo=[^#]+#lista-de-jogos$/,
+      "live impact shortcut must open the focused prediction",
+    );
+    await page.getByText("Seu palpite", { exact: true }).waitFor();
+    await page.getByText("Distribuição dos palpites").waitFor();
+    await page.getByText("Cravadas").first().waitFor();
+    if (await page.getByText("Pontos do placar").count()) {
+      await page.getByText("Pontos do placar").first().waitFor();
+    }
+    await page.getByRole("link", { name: "Abrir bolões" }).waitFor();
   }
-  await page.getByRole("link", { name: "Abrir bolões" }).waitFor();
   await waitForFlagFallbacks(page);
 
   await page.goto(`${BASE_URL}/painel`);
@@ -291,7 +310,7 @@ try {
     "ranking player report must start closed until a participant is selected",
   );
   await page.getByTestId("ranking-current-user").click();
-  await page.getByTestId("ranking-player-report").getByText("Palpites finalizados").waitFor();
+  await page.getByTestId("ranking-player-report").getByText("Palpites analisáveis").waitFor();
   assert.equal(
     await page.getByTestId("ranking-current-user").evaluate((element) =>
       Boolean(element.parentElement?.querySelector('[data-testid="ranking-player-report"]')),
@@ -372,12 +391,17 @@ try {
 
   await page.goto(`${BASE_URL}/painel`);
   await page.getByRole("heading", { name: "Meu painel" }).waitFor();
-  await page.getByText("Ranking em movimento").waitFor();
-  await page.getByRole("region", { name: "Bolões em movimento" }).waitFor();
-  await page.getByText("mantém").first().waitFor();
-  await page.getByRole("button", { name: /Faysk/ }).first().click();
-  await page.getByText(/pts atrás de|na disputa pela ponta/).first().waitFor();
-  await assertDashboardRankingDarkContrast(page);
+  const dashboardSummary = page.getByRole("region", { name: "Onde você está na disputa" });
+  await dashboardSummary.waitFor();
+  await dashboardSummary.getByText("Resumo dos bolões").waitFor();
+  await dashboardSummary.getByText(/Ranking completo, participantes e/).waitFor();
+  const dashboardRankingHref = await dashboardSummary.getByRole("link", { name: /Ver rankings/ }).getAttribute("href");
+  assert.equal(
+    dashboardRankingHref,
+    "/boloes#ranking-do-bolao",
+    "dashboard pool summary must delegate full ranking details to pools",
+  );
+  await assertDashboardSummaryDarkContrast(page);
   await waitForFlagFallbacks(page);
 
   for (const path of [
@@ -608,10 +632,15 @@ async function findBrowser() {
 }
 
 async function findNextBin() {
-  const candidates = [
-    path.join(process.cwd(), "node_modules", "next", "dist", "bin", "next"),
-    path.join(process.cwd(), "..", "node_modules", "next", "dist", "bin", "next"),
-  ];
+  const candidates = [];
+  let currentDir = process.cwd();
+
+  while (true) {
+    candidates.push(path.join(currentDir, "node_modules", "next", "dist", "bin", "next"));
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break;
+    currentDir = parentDir;
+  }
 
   for (const candidate of candidates) {
     try {
@@ -680,19 +709,20 @@ async function assertMobilePageShell(page, path) {
   );
 }
 
-async function assertDashboardRankingDarkContrast(page) {
+async function assertDashboardSummaryDarkContrast(page) {
   const darkToggle = page.getByRole("button", { name: "Usar tema escuro" });
   if ((await darkToggle.count()) > 0) {
     await darkToggle.click();
   }
   assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), "dark");
-  await page.locator(".dashboard-ranking-row-selected").first().waitFor();
+  await page.locator(".dashboard-ranking-panel").first().waitFor();
 
   const contrast = await page.evaluate(() => {
-    const selected = document.querySelector(".dashboard-ranking-row-selected");
     const panel = document.querySelector(".dashboard-ranking-panel");
-    const summary = document.querySelector(".dashboard-pool-summary");
-    const ranking = document.querySelector(".dashboard-ranking-list");
+    const rankingLinks = Array.from(
+      panel?.querySelectorAll('a[href="/boloes#ranking-do-bolao"]') ?? [],
+    );
+    const summaryCard = rankingLinks.find((element) => element.textContent?.includes("Posição")) ?? rankingLinks[0] ?? null;
 
     function luminanceFromColor(color) {
       const channels = color.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
@@ -704,36 +734,32 @@ async function assertDashboardRankingDarkContrast(page) {
     }
 
     return {
-      selectedColor: selected ? getComputedStyle(selected).color : "",
-      selectedLuminance: selected ? luminanceFromColor(getComputedStyle(selected).color) : 1,
-      selectedBackground: selected ? getComputedStyle(selected).backgroundImage : "",
       panelWidth: panel?.getBoundingClientRect().width ?? 0,
-      summaryWidth: summary?.getBoundingClientRect().width ?? 0,
-      rankingWidth: ranking?.getBoundingClientRect().width ?? 0,
+      linkCount: rankingLinks.length,
+      cardWidth: summaryCard?.getBoundingClientRect().width ?? 0,
+      cardColor: summaryCard ? getComputedStyle(summaryCard).color : "",
+      cardLuminance: summaryCard ? luminanceFromColor(getComputedStyle(summaryCard).color) : 1,
       viewportWidth: window.innerWidth,
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
     };
   });
 
-  assert.equal(contrast.overflow, false, "dashboard ranking must not overflow in dark mode");
+  assert.equal(contrast.overflow, false, "dashboard pool summary must not overflow in dark mode");
+  assert.ok(contrast.linkCount >= 1, "dashboard pool summary must link to the full pools ranking");
   assert.ok(
-    contrast.selectedBackground.includes("gradient"),
-    "dashboard selected ranking row must keep a contrasting selected background",
-  );
-  assert.ok(
-    contrast.selectedLuminance < 0.18,
-    `dashboard selected ranking text must be dark on the bright selected row: ${contrast.selectedColor}`,
+    contrast.cardLuminance > 0.55,
+    `dashboard pool summary card text must stay readable in dark mode: ${contrast.cardColor}`,
   );
   if (contrast.viewportWidth >= 1024) {
     assert.ok(
-      contrast.rankingWidth > contrast.summaryWidth,
-      "dashboard ranking list must have more room than the summary on desktop-sized layouts",
+      contrast.panelWidth > contrast.viewportWidth * 0.5,
+      "dashboard pool summary must keep useful desktop width",
     );
   } else {
     assert.ok(
-      contrast.rankingWidth > contrast.viewportWidth * 0.82 &&
-        contrast.summaryWidth > contrast.viewportWidth * 0.82,
-      "dashboard ranking summary and list must stack with usable width on mobile",
+      contrast.panelWidth > contrast.viewportWidth * 0.82 &&
+        contrast.cardWidth > contrast.viewportWidth * 0.7,
+      "dashboard pool summary cards must keep usable width on mobile",
     );
   }
 }

@@ -524,42 +524,8 @@ option {
     );
 }
 
-.dashboard-pool-summary,
-.dashboard-ranking-list {
-  border-color: color-mix(in srgb, var(--line) 86%, var(--brand) 14%);
-}
-
-.dashboard-pool-summary {
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--surface-muted) 72%, var(--surface) 28%),
-      color-mix(in srgb, var(--surface) 72%, var(--surface-muted) 28%)
-    );
-}
-
-.dashboard-ranking-list {
-  background: color-mix(in srgb, var(--surface) 96%, var(--surface-muted) 4%);
-}
-
-.dashboard-ranking-row-selected,
-.pool-snapshot-card-selected {
-  border-color: color-mix(in srgb, var(--brand) 38%, var(--line));
-  background:
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--accent) 22%, var(--brand) 78%),
-      color-mix(in srgb, var(--brand) 72%, var(--surface) 28%)
-    );
-  color: var(--brand-strong);
-}
-
 .dashboard-ranking-row-current {
   background: color-mix(in srgb, var(--accent) 16%, var(--surface));
-}
-
-.dashboard-ranking-detail {
-  background: color-mix(in srgb, var(--surface-muted) 68%, var(--surface));
 }
 
 .dashboard-soft-stat {
