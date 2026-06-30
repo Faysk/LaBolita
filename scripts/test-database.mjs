@@ -438,6 +438,69 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     1,
   );
 
+  await db.exec(`
+    update public.matches
+    set
+      scheduled_at = now() - interval '2 hours',
+      prediction_lock_at = now() - interval '2 hours',
+      provider_status = 'finished'
+    where id = '${KNOCKOUT_MATCH_ID}';
+  `);
+  await asUser(USER_ONE, async () => {
+    await assert.rejects(
+      db.query("select public.apply_knockout_result_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: KNOCKOUT_MATCH_ID,
+            home_score: 1,
+            away_score: 1,
+            advancing_team_id: AWAY_TEAM_ID,
+          },
+        ]),
+      ]),
+      "only the service role may automatically finalize FIFA knockout results",
+    );
+  });
+  await asService(async () => {
+    assert.equal(
+      await scalar("select public.apply_knockout_result_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: KNOCKOUT_MATCH_ID,
+            home_score: 1,
+            away_score: 1,
+            advancing_team_id: AWAY_TEAM_ID,
+          },
+        ]),
+      ]),
+      1,
+      "official FIFA knockout results must auto-finalize after a winner is known",
+    );
+  });
+  assert.equal(
+    await scalar("select status from public.matches where id = $1", [KNOCKOUT_MATCH_ID]),
+    "finished",
+  );
+  assert.equal(
+    await scalar("select advancing_team_id from public.matches where id = $1", [
+      KNOCKOUT_MATCH_ID,
+    ]),
+    AWAY_TEAM_ID,
+    "penalty winners from the official bracket must become the advancing team",
+  );
+  assert.equal(
+    await scalar(
+      "select total_points::integer from public.prediction_scores where match_id = $1 and user_id = $2",
+      [KNOCKOUT_MATCH_ID, USER_ONE],
+    ),
+    50,
+    "a user can still score the exact draw while missing the official penalty winner",
+  );
+  await db.exec(`
+    delete from public.prediction_scores where match_id = '${KNOCKOUT_MATCH_ID}';
+    delete from public.predictions where match_id = '${KNOCKOUT_MATCH_ID}';
+  `);
+
   await db.exec(
     "update public.app_settings set current_terms_version = '2026-06-08' where id",
   );
