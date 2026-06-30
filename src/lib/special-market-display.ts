@@ -28,9 +28,9 @@ export type SpecialMarketDisplay = {
   dataNote: string;
 };
 
-export const SPECIAL_LOCK_DATE_LABEL = "22 de junho, 23:59";
+export const SPECIAL_LOCK_DATE_LABEL = "4 de julho, 16:59 UTC";
 export const SPECIAL_LOCK_RATIONALE =
-  "Prazo pensado para dar tempo de participar antes que a Copa mostre tendências fortes demais.";
+  "Prazo estendido para dar mais tempo de participar, fechando antes do início das oitavas de final.";
 
 type MarketProgressLike = {
   key: string;
