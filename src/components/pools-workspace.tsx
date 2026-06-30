@@ -340,8 +340,6 @@ export function PoolsWorkspace({
         />
       )}
 
-      {spotlightMatch ? <PoolMatchSpotlight match={spotlightMatch} /> : null}
-
       <PoolCommandCenter
         snapshots={activePoolSnapshots}
         selectedSnapshot={selectedPoolSnapshot}
@@ -573,8 +571,12 @@ function PoolCommandCenter({
           <div>
             <p className="eyebrow">Mapa dos bolões</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight">
-              Tudo em um lugar
+              Rankings, convites e participantes
             </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+              A página de bolões concentra gestão e classificação. Placar em tempo
+              real fica na central ao vivo.
+            </p>
           </div>
           <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black ${live ? "status-live" : "status-info"}`}>
             {live ? <span className="live-dot" aria-hidden="true" /> : <CalendarClock className="size-4" />}
@@ -744,65 +746,6 @@ function PoolSection({ title, subtitle, children }: { title: string; subtitle: s
       <p className="mt-1 text-sm text-muted">{subtitle}</p>
       <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{children}</div>
     </section>
-  );
-}
-
-function PoolMatchSpotlight({ match }: { match: DemoMatch }) {
-  const live = isLiveMatch(match);
-  const score = match.liveResult ?? match.result;
-  const scoreLabel = score ? `${score.homeScore} x ${score.awayScore}` : "x";
-
-  return (
-    <section className="mt-8 overflow-hidden rounded-[1.8rem] border border-brand/25 bg-gradient-to-r from-brand-strong via-brand to-brand-soft p-4 text-white shadow-2xl shadow-brand/15 md:p-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-accent">
-            {live ? <span className="live-dot" aria-hidden="true" /> : <CalendarClock className="size-3.5" />}
-            {live ? "Ao vivo nos bolões" : "Próximo jogo"}
-          </p>
-          <h2 className="mt-3 text-2xl font-black tracking-[-0.05em] md:text-3xl">
-            {live ? "Placar mexendo no ranking" : "Próxima chance de pontuar"}
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-white/75">
-            {match.stageLabel} · {match.dateLabel} · {match.timeLabel}
-            {match.venue ? ` · ${match.venue}` : ""}
-          </p>
-        </div>
-        <div className="rounded-[1.4rem] border border-white/15 bg-black/10 p-3 lg:min-w-[26rem]">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
-            <PoolSpotlightTeam team={match.homeTeam} />
-            <div className="rounded-2xl border border-white/15 bg-brand-strong/45 px-4 py-3 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white/50">
-                {live ? "Parcial" : "Início"}
-              </p>
-              <p className={`mt-1 whitespace-nowrap text-2xl font-black text-accent md:text-3xl ${live ? "live-number" : ""}`}>
-                {scoreLabel}
-              </p>
-            </div>
-            <PoolSpotlightTeam team={match.awayTeam} align="right" />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PoolSpotlightTeam({
-  team,
-  align = "left",
-}: {
-  team: DemoMatch["homeTeam"];
-  align?: "left" | "right";
-}) {
-  return (
-    <div className={`min-w-0 ${align === "right" ? "text-right" : ""}`}>
-      <div className={`flex items-center gap-2 ${align === "right" ? "justify-end" : ""}`}>
-        <TeamFlag team={team} size="lg" />
-      </div>
-      <p className="mt-2 truncate text-sm font-black md:text-base">
-        {team.shortName || team.name}
-      </p>
-    </div>
   );
 }
 
@@ -1499,7 +1442,7 @@ function RankingPlayerReport({
       <div data-testid="ranking-player-finished-picks" className="mt-4 rounded-2xl border bg-surface p-3">
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-black uppercase tracking-[0.12em] text-muted">
-            Palpites finalizados
+            Palpites analisáveis
           </p>
           <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-black text-muted">
             {finishedPicks.length} jogos
@@ -1535,6 +1478,7 @@ function FinishedPickRow({
   entry: PredictionComparisonEntry;
 }) {
   const result = match.result ?? match.liveResult;
+  const provisional = !match.result && Boolean(match.liveResult);
   const updatedAt = formatShortDateTime(entry.updatedAt);
   const [expanded, setExpanded] = useState(false);
   const score = finishedPickScore(entry, match, result);
@@ -1560,6 +1504,9 @@ function FinishedPickRow({
             </span>
             <MiniMatchTeam team={match.awayTeam} align="right" />
           </div>
+          {provisional ? (
+            <p className="mt-1 text-[10px] font-bold text-muted">parcial/provisório</p>
+          ) : null}
         </div>
         <div className="rounded-xl bg-surface-muted px-3 py-2">
           <p className="text-[9px] font-black uppercase tracking-[0.1em] text-muted">
@@ -1577,7 +1524,7 @@ function FinishedPickRow({
           </p>
           {score ? (
             <p className="text-[10px] font-bold text-muted">
-              {scoreCategoryLabel(score.category)}
+              {scoreCategoryLabel(score.category)} · {scorePointsBreakdown(score, match)}
             </p>
           ) : null}
         </div>
@@ -1588,7 +1535,7 @@ function FinishedPickRow({
           data-testid="finished-pick-details"
           className="grid gap-2 border-t bg-surface-muted/55 p-3 sm:grid-cols-2 lg:grid-cols-4"
         >
-          <PickDetail label="Resultado" value={result ? `${result.homeScore} x ${result.awayScore}` : "aguardando"} />
+          <PickDetail label={provisional ? "Parcial" : "Resultado"} value={result ? `${result.homeScore} x ${result.awayScore}` : "aguardando"} />
           <PickDetail label="Categoria" value={score ? scoreCategoryLabel(score.category) : "sem cálculo"} />
           <PickDetail label="Pontos do placar" value={score ? `${score.matchPoints} pts` : "—"} />
           <PickDetail
@@ -1820,6 +1767,13 @@ function scoreCategoryLabel(category: ScoreBreakdown["category"]) {
   if (category === "result") return "resultado";
   if (category === "one-score") return "um placar";
   return "sem acerto";
+}
+
+function scorePointsBreakdown(score: ScoreBreakdown, match: DemoMatch) {
+  if (match.stage === "group" || match.stage === "third_place") {
+    return `${score.matchPoints} pts placar`;
+  }
+  return `${score.matchPoints} placar + ${score.advancementPoints} avanço`;
 }
 
 function formatShortDateTime(value?: string) {
