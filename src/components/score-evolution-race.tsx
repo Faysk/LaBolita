@@ -500,7 +500,7 @@ export function ScoreEvolutionRace({
           </div>
         </div>
 
-        <div className="grid min-w-0 gap-0 overflow-visible xl:grid-cols-[minmax(0,1fr)_14.75rem]">
+        <div className="grid min-w-0 items-start gap-0 overflow-visible xl:grid-cols-[minmax(0,1fr)_14.75rem]">
           <div className="relative z-10 min-h-[18rem] min-w-0 overflow-visible px-0 pb-0 pt-0 md:min-h-[27rem] xl:min-h-[30rem]">
             <div className="absolute left-3 top-3 z-10 rounded-full bg-black/18 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-white/58 ring-1 ring-white/8 backdrop-blur md:left-4 md:top-4">
               Pontuação acumulada
@@ -869,7 +869,7 @@ export function ScoreEvolutionRace({
             ) : null}
           </div>
 
-          <aside className="relative z-20 border-t border-white/[0.06] bg-black/8 p-2.5 xl:border-l xl:border-t-0 xl:border-white/[0.06]">
+          <aside className="relative z-20 border-t border-white/[0.06] bg-black/8 p-2.5 xl:max-h-[30rem] xl:overflow-y-auto xl:border-l xl:border-t-0 xl:border-white/[0.06]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.12em] text-accent">
