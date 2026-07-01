@@ -8,17 +8,20 @@ import { LiveRefresh } from "@/components/live-refresh";
 import { MatchTimeline } from "@/components/match-timeline";
 import { NextMatchSummary } from "@/components/next-match-summary";
 import { PageShortcuts } from "@/components/page-shortcuts";
+import { ScoreEvolutionRace } from "@/components/score-evolution-race";
 import { SpecialHomeSummary } from "@/components/special-home-summary";
 import { getViewerState } from "@/lib/auth";
 import { getMatches } from "@/lib/data/matches";
+import { getPublicScoreEvolution } from "@/lib/data/score-evolution";
 import { getSpecialMarketsOverview } from "@/lib/data/specials";
 import { isLiveMatch, isOpenMatch } from "@/lib/match-display";
 import type { DemoMatch } from "@/lib/types";
 
 export default async function HomePage() {
-  const [matches, viewer] = await Promise.all([
+  const [matches, viewer, scoreEvolution] = await Promise.all([
     getMatches(),
     getViewerState(),
+    getPublicScoreEvolution(8),
   ]);
   const liveMatches = matches.filter(isLiveMatch);
   const nextMatches = selectUpcomingMatches(matches);
@@ -61,6 +64,8 @@ export default async function HomePage() {
         routeKeys={["live", "games", "predictions", "pools"]}
         className="mt-5 md:mt-6"
       />
+
+      <ScoreEvolutionRace overview={scoreEvolution} />
 
       {hasLiveMatch ? (
         <section className="mt-7 md:mt-10">
