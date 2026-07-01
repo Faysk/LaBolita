@@ -660,6 +660,18 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       1,
       "anonymous visitors can see the global ranking aggregated from public pools",
     );
+    const initialEvolution = await db.query(
+      "select display_name, avatar_url, match_number::integer, total_points::integer from public.get_public_score_evolution(3)",
+    );
+    assert.ok(
+      initialEvolution.rows.length > 0,
+      "anonymous visitors can see public score evolution rows",
+    );
+    assert.equal(
+      initialEvolution.rows.some((row) => row.avatar_url !== null),
+      false,
+      "public score evolution must respect avatar privacy",
+    );
   });
 
   await asUser(USER_TWO, async () => {
@@ -958,6 +970,16 @@ async function verifyPredictionPrivacyAndResultCorrection() {
       HOME_TEAM_ID,
       "a confirmed knockout winner must propagate to the next match",
     );
+    const evolution = await db.query(
+      "select points_in_match::integer, total_points::integer, rank_after_match::integer from public.get_public_score_evolution(5) where display_name = 'Owner' and match_number = 1",
+    );
+    assert.equal(evolution.rows[0]?.points_in_match, 5);
+    assert.equal(
+      evolution.rows[0]?.total_points,
+      5,
+      "public score evolution must expose accumulated points after each match",
+    );
+    assert.equal(evolution.rows[0]?.rank_after_match, 1);
   });
 
   const officialPoolId = await scalar(
