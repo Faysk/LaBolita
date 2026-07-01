@@ -36,6 +36,10 @@ describe("score evolution overview", () => {
         rankAfterMatch: 1,
         positionDelta: 1,
       });
+    expect(overview.highlights.find((highlight) => highlight.title === "Maior queda"))
+      .toMatchObject({
+        detail: "França x Suécia · jogo 2",
+      });
     expect(overview.highlights.length).toBeGreaterThan(0);
   });
 });

@@ -356,7 +356,7 @@ function buildHighlights(
     highlights.push({
       title: "Maior queda",
       value: player ? `${player.name} ${biggestDrop.positionDelta}` : `${biggestDrop.positionDelta} posições`,
-      detail: match ? `No jogo ${match.number}` : "queda mais forte da corrida",
+      detail: match ? `${match.label} · jogo ${match.number}` : "queda mais forte da corrida",
       tone: "down",
     });
   }
