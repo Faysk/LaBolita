@@ -2,16 +2,26 @@ name: Production smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
   schedule:
     - cron: "17,47 * * * *"
 
 permissions:
   contents: read
 
+concurrency:
+  group: production-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_VERSION: "22"
   # GitHub-hosted runners can receive 403 from the proxied custom domain.
   PRODUCTION_URL: https://labolita-sable.vercel.app
+  EXPECTED_COMMIT_REF: ${{ github.event_name == 'push' && github.ref_name || '' }}
+  EXPECTED_COMMIT_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
+  SMOKE_DEPLOYMENT_TIMEOUT_SECONDS: ${{ github.event_name == 'push' && '600' || '0' }}
 
 jobs:
   smoke:
@@ -19,10 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
       - run: npm run test:production

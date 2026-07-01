@@ -23,3 +23,15 @@ importantes.
 Quando homologacao precisa espelhar a producao, a copia deve ser tratada como dado
 sensivel. O objetivo e validar comportamento real sem expor informacoes fora do
 ambiente controlado.
+
+Antes de sobrescrever o branch `homolog` com `main`, mantenha uma referencia de
+backup do estado anterior, por exemplo:
+
+```bash
+git push origin origin/homolog:refs/heads/backup/homolog-before-main-sync-YYYYMMDDHHMM
+```
+
+Essa branch de backup protege o historico de testes de homologacao enquanto o
+ambiente volta a ficar alinhado com producao. Para dados, use o workflow
+`Restore Homolog From Production`, que exige confirmacao manual e recusa URLs de
+banco identicas entre producao e homologacao.
