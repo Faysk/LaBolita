@@ -496,6 +496,57 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     50,
     "a user can still score the exact draw while missing the official penalty winner",
   );
+  await asService(async () => {
+    assert.equal(
+      await scalar("select public.apply_knockout_result_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: KNOCKOUT_MATCH_ID,
+            home_score: 2,
+            away_score: 1,
+            advancing_team_id: HOME_TEAM_ID,
+          },
+        ]),
+      ]),
+      1,
+      "official FIFA knockout corrections must update already finalized matches",
+    );
+  });
+  assert.equal(
+    await scalar("select advancing_team_id from public.matches where id = $1", [
+      KNOCKOUT_MATCH_ID,
+    ]),
+    HOME_TEAM_ID,
+    "corrected official winners must replace stale advancing teams",
+  );
+  assert.equal(
+    await scalar(
+      "select result_version::integer from public.matches where id = $1",
+      [KNOCKOUT_MATCH_ID],
+    ),
+    2,
+    "official knockout corrections must increment the result version",
+  );
+  assert.equal(
+    await scalar(
+      "select total_points::integer from public.prediction_scores where match_id = $1 and user_id = $2",
+      [KNOCKOUT_MATCH_ID, USER_ONE],
+    ),
+    13,
+    "corrected official results must recalculate existing prediction scores",
+  );
+  await asService(async () => {
+    await scalar("select public.apply_knockout_result_sync_updates($1::jsonb)", [
+      JSON.stringify([
+        {
+          id: KNOCKOUT_MATCH_ID,
+          home_score: 1,
+          away_score: 1,
+          advancing_team_id: AWAY_TEAM_ID,
+        },
+      ]),
+    ]);
+  });
   await db.exec(`
     delete from public.prediction_scores where match_id = '${KNOCKOUT_MATCH_ID}';
     delete from public.predictions where match_id = '${KNOCKOUT_MATCH_ID}';
