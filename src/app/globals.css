@@ -630,6 +630,318 @@ option {
   transform: scale(1.02);
 }
 
+.knockout-stage-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--line) 52%, transparent);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(223, 255, 101, 0.18), transparent 13rem),
+    radial-gradient(circle at 18% 18%, rgba(101, 215, 144, 0.16), transparent 18rem),
+    radial-gradient(circle at 88% 72%, rgba(104, 167, 255, 0.12), transparent 17rem),
+    linear-gradient(155deg, #06130d 0%, #071b12 48%, #030806 100%);
+  color: white;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 80px rgba(var(--shadow-color) / 0.18);
+}
+
+.knockout-stage-shell::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+  mask-image: radial-gradient(circle at 50% 48%, black, transparent 74%);
+  pointer-events: none;
+}
+
+.knockout-stage-shell::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 32%;
+  content: "";
+  background: linear-gradient(180deg, transparent, rgba(3, 8, 6, 0.78));
+  pointer-events: none;
+}
+
+.knockout-orbit-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  padding: clamp(0.25rem, 2vw, 1rem) 0 clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.knockout-orbit {
+  position: relative;
+  aspect-ratio: 1;
+  width: min(100%, 58rem);
+  min-width: 0;
+}
+
+.knockout-team-node,
+.knockout-match-node,
+.knockout-trophy-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.knockout-team-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+.knockout-team-node:focus-visible .knockout-team-orb {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--accent) 68%, transparent),
+    0 0 0 7px rgba(255, 255, 255, 0.1);
+}
+
+.knockout-team-orb {
+  --team-color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.15rem;
+  height: 3.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.34), transparent 35%),
+    color-mix(in srgb, var(--team-color) 25%, #06130d);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px rgba(0, 0, 0, 0.28);
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.knockout-team-node:hover .knockout-team-orb,
+.knockout-team-node:focus-visible .knockout-team-orb {
+  transform: scale(1.08);
+}
+
+.knockout-team-orb .team-flag,
+.knockout-match-node .team-flag,
+.knockout-trophy-node .team-flag {
+  box-shadow: none;
+}
+
+.knockout-team-orb .team-flag {
+  width: 2.55rem;
+  height: 1.8rem;
+  border-radius: 0.65rem;
+}
+
+.knockout-match-node .team-flag {
+  width: 1.85rem;
+  height: 1.32rem;
+  border-radius: 0.42rem;
+}
+
+.knockout-team-orb-advanced {
+  border-color: color-mix(in srgb, var(--team-color) 72%, white);
+  animation: knockout-node-pulse 2.6s ease-in-out infinite;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--team-color) 26%, transparent),
+    0 0 30px color-mix(in srgb, var(--team-color) 46%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.knockout-team-tooltip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 0.35rem);
+  max-width: 7rem;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(3, 8, 6, 0.86);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -0.15rem);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  white-space: nowrap;
+}
+
+.knockout-team-node:hover .knockout-team-tooltip,
+.knockout-team-node:focus-visible .knockout-team-tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.knockout-match-node {
+  --team-color: var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(7, 23, 15, 0.78);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.knockout-match-node-advanced {
+  border-color: color-mix(in srgb, var(--team-color) 76%, white);
+  background:
+    radial-gradient(circle at 35% 20%, rgba(255, 255, 255, 0.32), transparent 38%),
+    color-mix(in srgb, var(--team-color) 30%, #07170f);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--team-color) 22%, transparent),
+    0 0 22px color-mix(in srgb, var(--team-color) 38%, transparent);
+}
+
+.knockout-match-node-live {
+  animation: knockout-live-blink 1.8s ease-in-out infinite;
+}
+
+.knockout-trophy-node {
+  left: 50%;
+  top: 50%;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.knockout-trophy-halo {
+  position: absolute;
+  width: 9.8rem;
+  height: 9.8rem;
+  border: 1px solid rgba(223, 255, 101, 0.22);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(223, 255, 101, 0.19), transparent 64%);
+  animation: knockout-trophy-pulse 3.2s ease-in-out infinite;
+}
+
+.knockout-flow-line {
+  animation: knockout-flow 1.35s linear infinite;
+  stroke-dasharray: 10 14;
+}
+
+.knockout-match-chip {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 0.75rem;
+  color: white;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+}
+
+@keyframes knockout-flow {
+  to {
+    stroke-dashoffset: -48;
+  }
+}
+
+@keyframes knockout-node-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes knockout-live-blink {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px rgba(223, 255, 101, 0.16),
+      0 0 18px rgba(223, 255, 101, 0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 5px rgba(223, 255, 101, 0.05),
+      0 0 30px rgba(223, 255, 101, 0.28);
+  }
+}
+
+@keyframes knockout-trophy-pulse {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 640px) {
+  .knockout-stage-shell {
+    margin-inline: -0.5rem;
+    border-radius: 1rem;
+  }
+
+  .knockout-orbit-wrap {
+    padding-block: 0.25rem 0.6rem;
+  }
+
+  .knockout-orbit {
+    width: min(100%, 31rem);
+  }
+
+  .knockout-team-orb {
+    width: 2.46rem;
+    height: 2.46rem;
+  }
+
+  .knockout-team-orb .team-flag {
+    width: 2.1rem;
+    height: 1.48rem;
+    border-radius: 0.55rem;
+  }
+
+  .knockout-match-node {
+    width: 1.78rem;
+    height: 1.78rem;
+  }
+
+  .knockout-match-node .team-flag {
+    width: 1.38rem;
+    height: 0.98rem;
+    border-radius: 0.32rem;
+  }
+
+  .knockout-trophy-halo {
+    width: 7.6rem;
+    height: 7.6rem;
+  }
+
+  .knockout-team-tooltip {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .knockout-flow-line,
+  .knockout-team-orb-advanced,
+  .knockout-match-node-live,
+  .knockout-trophy-halo {
+    animation: none;
+  }
+}
+
 .pool-flag {
   border-color: var(--line);
 }
