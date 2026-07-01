@@ -505,7 +505,7 @@ export function ScoreEvolutionRace({
             <div className="absolute left-3 top-3 z-10 rounded-full bg-black/18 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-white/58 ring-1 ring-white/8 backdrop-blur md:left-4 md:top-4">
               Pontuação acumulada
             </div>
-            <div className="race-chart-stage absolute -bottom-2 -right-10 -top-2 left-0 md:-right-14 xl:-right-16">
+            <div className="race-chart-stage absolute -bottom-2 left-0 right-0 -top-2">
               <svg
                 viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
                 role="img"
