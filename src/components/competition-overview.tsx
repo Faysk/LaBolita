@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useId, useMemo } from "react";
 import { ArrowRight, Radio, Table2, Trophy } from "lucide-react";
 import { LiveRefresh } from "@/components/live-refresh";
 import { TeamFlag } from "@/components/team-flag";
@@ -42,8 +42,8 @@ export function CompetitionOverview({
   matches: DemoMatch[];
   view: "groups" | "knockout";
 }) {
-  const groups = buildGroupStandings(matches);
-  const knockout = groupKnockoutMatches(matches);
+  const groups = useMemo(() => buildGroupStandings(matches), [matches]);
+  const knockout = useMemo(() => groupKnockoutMatches(matches), [matches]);
   const hasLive = matches.some(isLiveMatch);
   const awaitingOfficial = matches.some(
     (match) => match.providerStatus === "finished" && !match.result,
@@ -258,6 +258,8 @@ function KnockoutBracket({
   const mainRounds = orderKnockoutRoundsForBracket(
     knockout.filter(([stage]) => stage !== "Terceiro lugar"),
   );
+  const trophyGlowId = useId();
+  const lineGlowId = useId();
 
   if (mainRounds.length === 0) {
     return (
@@ -310,12 +312,12 @@ function KnockoutBracket({
             viewBox={`0 0 ${RADIAL_BRACKET_SIZE} ${RADIAL_BRACKET_SIZE}`}
           >
             <defs>
-              <radialGradient id="knockout-trophy-glow" cx="50%" cy="50%" r="50%">
+              <radialGradient id={trophyGlowId} cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.34" />
                 <stop offset="48%" stopColor="var(--brand)" stopOpacity="0.13" />
                 <stop offset="100%" stopColor="transparent" stopOpacity="0" />
               </radialGradient>
-              <filter id="knockout-line-glow" x="-30%" y="-30%" width="160%" height="160%">
+              <filter id={lineGlowId} x="-30%" y="-30%" width="160%" height="160%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
@@ -328,7 +330,7 @@ function KnockoutBracket({
               cx={RADIAL_CENTER}
               cy={RADIAL_CENTER}
               r="172"
-              fill="url(#knockout-trophy-glow)"
+              fill={`url(#${trophyGlowId})`}
             />
             {[TEAM_ORBIT_RADIUS, OUTER_MATCH_RADIUS, 196, 126].map((radius) => (
               <circle
@@ -360,7 +362,7 @@ function KnockoutBracket({
                     className="knockout-flow-line"
                     d={connection.path}
                     fill="none"
-                    filter="url(#knockout-line-glow)"
+                    filter={`url(#${lineGlowId})`}
                     stroke={connection.color}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -537,6 +539,8 @@ function MatchOrbitNode({ node }: { node: RadialMatchNode }) {
         "--team-color": node.color,
       } as React.CSSProperties}
       title={title}
+      role="img"
+      aria-label={title}
     >
       {node.winner ? (
         <TeamFlag team={node.winner} size="sm" />
