@@ -501,7 +501,7 @@ export function ScoreEvolutionRace({
         </div>
 
         <div className="grid min-w-0 gap-0 overflow-visible xl:grid-cols-[minmax(0,1fr)_14.75rem]">
-          <div className="relative z-10 min-h-[34rem] min-w-0 overflow-visible px-0 pb-0 pt-0 md:min-h-[38rem] xl:min-h-[41rem]">
+          <div className="relative z-10 min-h-[18rem] min-w-0 overflow-visible px-0 pb-0 pt-0 md:min-h-[27rem] xl:min-h-[30rem]">
             <div className="absolute left-3 top-3 z-10 rounded-full bg-black/18 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-white/58 ring-1 ring-white/8 backdrop-blur md:left-4 md:top-4">
               Pontuação acumulada
             </div>
