@@ -6,11 +6,13 @@ const REQUIRED_MATCHES = 104;
 
 export async function GET() {
   const supabase = await createServerSupabaseClient();
+  const deployment = getDeploymentMetadata();
 
   if (!supabase) {
     return NextResponse.json({
       status: "ok",
       app: "labolita",
+      deployment,
       database: "demo",
       launchReady: false,
       schedule: {
@@ -121,6 +123,7 @@ export async function GET() {
   return NextResponse.json({
     status: "ok",
     app: "labolita",
+    deployment,
     database: "connected",
     launchReady,
     schedule: {
@@ -141,4 +144,12 @@ export async function GET() {
     resultsSync: resultsSync.data ?? { status: "unknown" },
     timestamp: new Date().toISOString(),
   });
+}
+
+function getDeploymentMetadata() {
+  return {
+    environment: process.env.VERCEL_ENV ?? null,
+    commitRef: process.env.VERCEL_GIT_COMMIT_REF ?? null,
+    commitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+  };
 }

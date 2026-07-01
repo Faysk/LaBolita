@@ -2,16 +2,26 @@ name: Homolog smoke
 
 on:
   workflow_dispatch:
+  push:
+    branches: [homolog]
   schedule:
     - cron: "23 */4 * * *"
 
 permissions:
   contents: read
 
+concurrency:
+  group: homolog-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_VERSION: "22"
   SMOKE_URL: ${{ vars.HOMOLOG_URL || 'https://homolog.labolita.faysk.dev' }}
   VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+  EXPECTED_COMMIT_REF: ${{ github.event_name == 'push' && github.ref_name || '' }}
+  EXPECTED_COMMIT_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
+  SMOKE_DEPLOYMENT_TIMEOUT_SECONDS: ${{ github.event_name == 'push' && '600' || '0' }}
 
 jobs:
   smoke:
@@ -19,10 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
       - run: npm run test:homolog -- --strict-sync

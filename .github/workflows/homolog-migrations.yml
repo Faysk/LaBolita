@@ -17,18 +17,19 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_VERSION: "22"
 
 jobs:
   migrate:
     name: Apply migrations to homolog
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - run: npm ci
@@ -36,12 +37,18 @@ jobs:
       - name: Apply pending migrations
         shell: bash
         env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           SUPABASE_HOMOLOG_DB_URL: ${{ secrets.SUPABASE_HOMOLOG_DB_URL }}
         run: |
           set -euo pipefail
 
           if [ -z "${SUPABASE_HOMOLOG_DB_URL:-}" ]; then
             echo "SUPABASE_HOMOLOG_DB_URL secret is required."
+            exit 1
+          fi
+
+          if [ -n "${SUPABASE_DB_URL:-}" ] && [ "$SUPABASE_DB_URL" = "$SUPABASE_HOMOLOG_DB_URL" ]; then
+            echo "Production and homolog database URLs are identical. Refusing to migrate."
             exit 1
           fi
 
