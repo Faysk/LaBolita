@@ -5,6 +5,7 @@ import {
   normalizeFifaBracketParticipants,
   normalizeFifaBracketResults,
 } from "@/lib/fifa-bracket-provider";
+import { providerObservationSyncDecision } from "@/lib/provider-sync-policy";
 import {
   assertDatabaseMappingComplete,
   normalizeEspnFeed,
@@ -95,18 +96,20 @@ export async function syncResultsFeed() {
     if (isUnsafeEarlyStatus(match, observation)) {
       throw new Error(`Provider reported ${observation.status} before kickoff window.`);
     }
-    if (match.status === "finished") return [];
-    if (isStatusRegression(match.provider_status, observation.status)) {
+    const decision = providerObservationSyncDecision(
+      {
+        status: match.status,
+        providerStatus: match.provider_status,
+        liveHomeScore: match.live_home_score,
+        liveAwayScore: match.live_away_score,
+      },
+      observation,
+    );
+    if (decision === "regression") {
       ignoredRegressions += 1;
       return [];
     }
-    if (
-      match.provider_status === observation.status &&
-      match.live_home_score === observation.homeScore &&
-      match.live_away_score === observation.awayScore
-    ) {
-      return [];
-    }
+    if (decision === "skip") return [];
     return [{ match, observation }];
   });
 
@@ -401,11 +404,6 @@ function isUnsafeEarlyStatus(match: DatabaseMatch, observation: ProviderObservat
     observation.status !== "scheduled" &&
     Date.now() + EARLY_STATUS_TOLERANCE_MS < new Date(match.scheduled_at).getTime()
   );
-}
-
-function isStatusRegression(current: string | null, incoming: ProviderObservation["status"]) {
-  const order: Record<string, number> = { scheduled: 0, live: 1, finished: 2 };
-  return current !== null && (order[incoming] ?? 0) < (order[current] ?? 0);
 }
 
 async function recordSyncState(

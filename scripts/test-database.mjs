@@ -596,6 +596,35 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     13,
     "corrected official results must recalculate existing prediction scores",
   );
+  await db.exec(`
+    update public.matches
+    set provider_status = 'live'
+    where id = '${KNOCKOUT_MATCH_ID}';
+  `);
+  await asService(async () => {
+    assert.equal(
+      await scalar("select public.apply_knockout_result_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: KNOCKOUT_MATCH_ID,
+            home_score: 1,
+            away_score: 0,
+            advancing_team_id: HOME_TEAM_ID,
+          },
+        ]),
+      ]),
+      1,
+      "official corrections must still apply when a finished match has stale live provider metadata",
+    );
+  });
+  assert.equal(
+    await scalar(
+      "select result_version::integer from public.matches where id = $1",
+      [KNOCKOUT_MATCH_ID],
+    ),
+    3,
+    "stale provider metadata must not block corrected result versions",
+  );
   await asService(async () => {
     await scalar("select public.apply_knockout_result_sync_updates($1::jsonb)", [
       JSON.stringify([
