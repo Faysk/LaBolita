@@ -441,9 +441,70 @@ async function verifyPredictionPrivacyAndResultCorrection() {
   await db.exec(`
     update public.matches
     set
+      scheduled_at = now() - interval '1 hour',
+      prediction_lock_at = now() - interval '1 hour',
+      status = 'live',
+      provider_status = 'live',
+      live_home_score = 1,
+      live_away_score = 0,
+      home_score = null,
+      away_score = null,
+      advancing_team_id = null,
+      finalized_at = null,
+      result_version = 0
+    where id = '${KNOCKOUT_MATCH_ID}';
+  `);
+  await asService(async () => {
+    assert.equal(
+      await scalar("select public.apply_knockout_result_sync_updates($1::jsonb)", [
+        JSON.stringify([
+          {
+            id: KNOCKOUT_MATCH_ID,
+            home_score: 1,
+            away_score: 0,
+            advancing_team_id: HOME_TEAM_ID,
+          },
+        ]),
+      ]),
+      0,
+      "live FIFA knockout bracket scores must not finalize matches early",
+    );
+  });
+  assert.equal(
+    await scalar("select status from public.matches where id = $1", [KNOCKOUT_MATCH_ID]),
+    "live",
+    "live knockout matches must remain live until the official final status arrives",
+  );
+  assert.equal(
+    await scalar("select home_score::integer from public.matches where id = $1", [
+      KNOCKOUT_MATCH_ID,
+    ]),
+    null,
+    "live knockout bracket scores must not become final scores",
+  );
+  assert.equal(
+    await scalar(
+      "select count(*)::integer from public.prediction_scores where match_id = $1",
+      [KNOCKOUT_MATCH_ID],
+    ),
+    0,
+    "live knockout bracket scores must not create prediction scores",
+  );
+
+  await db.exec(`
+    update public.matches
+    set
       scheduled_at = now() - interval '2 hours',
       prediction_lock_at = now() - interval '2 hours',
-      provider_status = 'finished'
+      status = 'scheduled',
+      provider_status = 'finished',
+      live_home_score = null,
+      live_away_score = null,
+      home_score = null,
+      away_score = null,
+      advancing_team_id = null,
+      finalized_at = null,
+      result_version = 0
     where id = '${KNOCKOUT_MATCH_ID}';
   `);
   await asUser(USER_ONE, async () => {

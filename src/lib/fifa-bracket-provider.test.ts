@@ -80,6 +80,7 @@ describe("normalizeFifaBracketResults", () => {
             Matches: [
               {
                 MatchNumber: 74,
+                MatchStatus: 0,
                 HomeTeam: { Abbreviation: "GER", IdTeam: "43942" },
                 AwayTeam: { Abbreviation: "PAR", IdTeam: "43928" },
                 HomeTeamScore: 1,
@@ -90,6 +91,7 @@ describe("normalizeFifaBracketResults", () => {
               },
               {
                 MatchNumber: 76,
+                MatchStatus: 0,
                 HomeTeam: { Abbreviation: "BRA", IdTeam: "43924" },
                 AwayTeam: { Abbreviation: "JPN", IdTeam: "43819" },
                 HomeTeamScore: 2,
@@ -98,6 +100,7 @@ describe("normalizeFifaBracketResults", () => {
               },
               {
                 MatchNumber: 80,
+                MatchStatus: 0,
                 HomeTeam: { Abbreviation: "ENG" },
                 AwayTeam: { Abbreviation: "COD" },
                 HomeTeamScore: null,
@@ -132,6 +135,7 @@ describe("normalizeFifaBracketResults", () => {
             Matches: [
               {
                 MatchNumber: 75,
+                MatchStatus: 0,
                 HomeTeam: { Abbreviation: "NED", IdTeam: "43960" },
                 AwayTeam: { Abbreviation: "MAR", IdTeam: "43872" },
                 HomeTeamScore: 1,
@@ -160,11 +164,34 @@ describe("normalizeFifaBracketResults", () => {
             Matches: [
               {
                 MatchNumber: 75,
+                MatchStatus: 0,
                 HomeTeam: { Abbreviation: "NED" },
                 AwayTeam: { Abbreviation: "MAR" },
                 HomeTeamScore: 1,
                 AwayTeamScore: 1,
                 Winner: null,
+              },
+            ],
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("ignores live bracket scores until FIFA marks the match as finished", () => {
+    expect(
+      normalizeFifaBracketResults({
+        KnockoutStages: [
+          {
+            Matches: [
+              {
+                MatchNumber: 84,
+                MatchStatus: 3,
+                HomeTeam: { Abbreviation: "ESP" },
+                AwayTeam: { Abbreviation: "AUT" },
+                HomeTeamScore: 2,
+                AwayTeamScore: 0,
+                Winner: "ESP",
               },
             ],
           },
@@ -181,6 +208,7 @@ describe("normalizeFifaBracketResults", () => {
             Matches: [
               {
                 MatchNumber: 73,
+                MatchStatus: 0,
                 HomeTeam: { Abbreviation: "RSA" },
                 AwayTeam: { Abbreviation: "CAN" },
                 HomeTeamScore: 0,
@@ -188,6 +216,7 @@ describe("normalizeFifaBracketResults", () => {
               },
               {
                 MatchNumber: 73,
+                MatchStatus: 0,
                 HomeTeam: { Abbreviation: "RSA" },
                 AwayTeam: { Abbreviation: "CAN" },
                 HomeTeamScore: 0,
