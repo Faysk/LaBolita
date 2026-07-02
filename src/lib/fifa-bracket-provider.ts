@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const FIFA_MATCH_STATUS_FINISHED = 0;
+
 const fifaTeamSchema = z
   .object({
     Abbreviation: z.string().nullish(),
@@ -15,6 +17,7 @@ const fifaBracketMatchSchema = z
     AwayTeam: fifaTeamSchema.nullish(),
     HomeTeamScore: z.coerce.number().int().min(0).max(30).nullish(),
     AwayTeamScore: z.coerce.number().int().min(0).max(30).nullish(),
+    MatchStatus: z.coerce.number().int().nullish(),
     Winner: z.union([fifaTeamSchema, z.coerce.string()]).nullish(),
   })
   .passthrough();
@@ -68,6 +71,8 @@ export function normalizeFifaBracketResults(input: unknown): FifaBracketResult[]
   const bracket = fifaBracketSchema.parse(input);
   const results = bracket.KnockoutStages.flatMap((stage) =>
     stage.Matches.flatMap((match) => {
+      if (match.MatchStatus !== FIFA_MATCH_STATUS_FINISHED) return [];
+
       const homeScore = match.HomeTeamScore;
       const awayScore = match.AwayTeamScore;
       if (homeScore === null || homeScore === undefined) return [];
