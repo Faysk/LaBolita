@@ -496,7 +496,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
     set
       scheduled_at = now() - interval '2 hours',
       prediction_lock_at = now() - interval '2 hours',
-      status = 'scheduled',
+      status = 'live',
       provider_status = 'finished',
       live_home_score = null,
       live_away_score = null,
@@ -535,7 +535,7 @@ async function verifyPredictionPrivacyAndResultCorrection() {
         ]),
       ]),
       1,
-      "official FIFA knockout results must auto-finalize after a winner is known",
+      "official FIFA knockout results must auto-finalize after the provider finishes a live match",
     );
   });
   assert.equal(
